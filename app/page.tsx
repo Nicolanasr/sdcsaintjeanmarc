@@ -1,6 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import { BsCompass, BsFlag } from "react-icons/bs";
+import { FaHandsHelping, FaWhatsapp } from "react-icons/fa";
+import { FiPhoneCall } from "react-icons/fi";
+import { HiOutlineMail } from "react-icons/hi";
 
 const CONTACT_EMAIL = "info@sdcsaintjeanmarc.org";
 const CONTACT_PHONE = "+9613724473";
@@ -83,19 +87,19 @@ function ContactCard() {
         {
             label: CONTACT_EMAIL,
             href: `mailto:${CONTACT_EMAIL}`,
-            icon: MailIcon,
+            icon: HiOutlineMail,
             description: "Email",
         },
         {
             label: CONTACT_PHONE,
             href: `tel:${CONTACT_PHONE.replace(/[^+\d]/g, "")}`,
-            icon: PhoneIcon,
+            icon: FiPhoneCall,
             description: "Call",
         },
         {
             label: CONTACT_WHATSAPP,
             href: `https://wa.me/${CONTACT_WHATSAPP.replace(/\D/g, "")}`,
-            icon: WhatsAppIcon,
+            icon: FaWhatsapp,
             description: "WhatsApp",
             external: true,
         },
@@ -129,9 +133,9 @@ function ContactCard() {
 
 function Pillars() {
     const items = [
-        { label: "Adventure", icon: CompassIcon },
-        { label: "Leadership", icon: FlagIcon },
-        { label: "Service", icon: HandshakeIcon },
+        { label: "Adventure", icon: BsCompass },
+        { label: "Leadership", icon: BsFlag },
+        { label: "Service", icon: FaHandsHelping },
     ];
 
     return (
@@ -175,60 +179,6 @@ function Stars() {
                     fill="rgba(255,255,255,0.6)"
                 />
             ))}
-        </svg>
-    );
-}
-
-function MailIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="5" width="18" height="14" rx="2" />
-            <path d="m3 7 9 6 9-6" />
-        </svg>
-    );
-}
-
-function PhoneIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 4h3l2 5-2.2 1.1a11 11 0 0 0 5.1 5.1L13 13l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4 6.2 2 2 0 0 1 4 4z" />
-        </svg>
-    );
-}
-
-function WhatsAppIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.04 2a9.9 9.9 0 0 0-8.48 15.08L3 22l4.1-1.54A10 10 0 1 0 12.04 2Zm5.96 14.28c-.25.7-1.44 1.33-2 1.42-.52.08-1.2.11-1.94-.12-.45-.14-1.02-.33-1.76-.65-3.1-1.35-5.12-4.48-5.28-4.69-.16-.21-1.26-1.66-1.26-3.17 0-1.5.79-2.23 1.07-2.54.28-.3.62-.38.82-.38h.6c.19 0 .44-.07.69.53.25.6.85 2.07.93 2.22.08.15.13.32.02.52-.11.21-.16.32-.32.5-.16.18-.34.4-.48.54-.16.16-.32.33-.14.65.18.32.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.5 1.54.32.16.5.14.68-.09.18-.23.78-.91.99-1.22.21-.3.42-.25.7-.15.28.1 1.79.84 2.1.99.32.15.53.22.61.34.08.12.08.68-.17 1.38Z" />
-        </svg>
-    );
-}
-
-function CompassIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polygon points="12 8 16 16 8 16 12 8" />
-        </svg>
-    );
-}
-
-function FlagIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 4v16" />
-            <path d="M4 4h10l-2.5 4L14 12H4" />
-        </svg>
-    );
-}
-
-function HandshakeIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 12 7 8h3l2 2 2-2h3l4 4" />
-            <path d="M17 9v7a2 2 0 0 1-2 2h-1l-1.5-2" />
-            <path d="m8 10-5 5a2 2 0 0 0 2.83 2.83L8 15" />
-            <path d="m14 14 2 3a2 2 0 0 0 2.83 0L22 14" />
         </svg>
     );
 }
