@@ -56,7 +56,7 @@ export default function Home() {
             <section className="space-y-6 mt-auto relative">
                 <Image src="/sdc-logo-removebg-preview.png" alt="logo" height={200} width={200} className="relative mx-auto z-50 brightness-[100]" />
                 <p className="text-xs font-semibold uppercase tracking-[0.5em] text-emerald-300/80">
-                    Site Under Reconstruction
+                    Site Under construction
                 </p>
                 <h1 className="text-balance text-5xl font-bold tracking-[0.2em] text-white md:text-6xl">
                     Coming Soon
