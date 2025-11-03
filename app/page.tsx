@@ -66,7 +66,7 @@ export default function Home() {
                     Coming Soon
                 </h1>
                 <div className="mx-auto h-1 w-56 rounded-full bg-emerald-500/40">
-                    <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-emerald-400 via-emerald-200 to-emerald-100 shadow-lg" />
+                    <div className="h-full w-1/2 rounded-full from-emerald-400 via-emerald-200 to-emerald-100 shadow-lg" />
                 </div>
             </section>
 
