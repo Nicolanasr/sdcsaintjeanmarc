@@ -51,10 +51,10 @@ const STAR_POINTS = [
 
 export default function Home() {
     return (
-        <div className="flex w-full flex-col items-center gap-12 text-center md:py-20 fixed top-0 bottom-0">
+        <div className="flex w-full flex-col items-center gap-12 text-center md:py-20 fixed top-0 bottom-0 overflow-auto">
             <BackgroundGlow />
             <section className="space-y-6 mt-auto relative">
-                <Image src="/sdc-logo-removebg-preview.png" alt="logo" height={200} width={200} className="relative mx-auto z-50 brightness-[100]" />
+                <Image src="/sdc-logo-removebg-preview.png" alt="logo" height={200} width={200} className="relative mx-auto z-50 brightness-[5]" />
                 <p className="text-xs font-semibold uppercase tracking-[0.5em] text-emerald-300/80">
                     Site Under construction
                 </p>
@@ -135,7 +135,7 @@ function Pillars() {
     ];
 
     return (
-        <div className="flex flex-wrap items-center justify-center gap-6 text-sm uppercase tracking-[0.35em] text-slate-300/70 relative">
+        <div className="flex flex-wrap items-center flex-col md:flex-row justify-center gap-6 text-sm uppercase tracking-[0.35em] text-slate-300/70 relative">
             {items.map(({ label, icon: Icon }) => (
                 <span key={label} className="flex items-center gap-3">
                     <Icon className="h-5 w-5 text-emerald-300/80" />
