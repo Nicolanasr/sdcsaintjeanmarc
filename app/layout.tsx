@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Head from "next/head";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -13,14 +14,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SDC Saint Jean Marc",
-  description:
-    "Discover the scouting spirit of SDC Saint Jean Marc. Learn about our sections, upcoming activities, and how to join our community.",
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
+    title: "SDC Saint Jean Marc",
+    description:
+        "Discover the scouting spirit of SDC Saint Jean Marc. Learn about our sections, upcoming activities, and how to join our community.",
+    icons: {
+        icon: "/images/favicon.ico",
+        shortcut: "/images/favicon.ico",
+        apple: "/images/apple-touch-icon.png",
+    },
 };
 
 export default function RootLayout({
@@ -30,6 +31,12 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
+            <Head>
+                <link rel="shortcut icon" href="/images/favicon.ico" />
+                <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
+                <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png" />
+                <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png" />
+            </Head>
             <body
                 className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-[#05070F] text-slate-100 antialiased`}
             >
