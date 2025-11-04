@@ -3,6 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { GiCampfire, GiPathDistance, GiLaurelCrown } from "react-icons/gi";
+import { FaHandsHelping } from "react-icons/fa";
+
+import { CTAButton } from "@/components/cta-button";
 import { useLanguage } from "@/components/language-provider";
 import { translations } from "@/lib/translations";
 
@@ -11,6 +15,29 @@ export default function Home() {
     const content = translations[language].home;
     const { hero, whoWeAre, sections, activities, gallery, callToAction } =
         content;
+
+    const whoHighlights = [
+        {
+            icon: GiCampfire,
+            title: whoWeAre.highlights.mission.title,
+            description: whoWeAre.highlights.mission.description,
+        },
+        {
+            icon: GiPathDistance,
+            title: whoWeAre.highlights.rhythm.title,
+            description: whoWeAre.highlights.rhythm.description,
+        },
+        {
+            icon: FaHandsHelping,
+            title: whoWeAre.highlights.service.title,
+            description: whoWeAre.highlights.service.description,
+        },
+        {
+            icon: GiLaurelCrown,
+            title: whoWeAre.highlights.leadership.title,
+            description: whoWeAre.highlights.leadership.description,
+        },
+    ];
 
     const heroStats =
         language === "ar"
@@ -28,8 +55,8 @@ export default function Home() {
     return (
         <div className="space-y-16 pb-20">
             <div className="-mx-6 md:-mx-12 lg:-mx-16">
-                <section className="overflow-hidden rounded-3xl border border-slate-900/40 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 shadow-xl md:px-12">
-                    <div className="flex flex-col gap-12 md:flex-row md:items-center">
+                <section className="overflow-hidden md:rounded-3xl border border-slate-900/40 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 shadow-xl md:px-12">
+                    <div className="flex flex-col gap-12 md:flex-row md:items-center max-w-6xl mx-auto">
                         <div className="space-y-7 text-left text-white md:flex-1">
                             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100 shadow-sm">
                                 {hero.badge}
@@ -63,7 +90,7 @@ export default function Home() {
                                     alt="Scouts illustration"
                                     width={1920}
                                     height={1920}
-                                    className="h-full w-full object-cover"
+                                    className="h-full max-h-96 w-full object-cover"
                                     priority
                                 />
                             </div>
@@ -81,34 +108,55 @@ export default function Home() {
                     </div>
                 </section>
             </div>
-            <section className="mx-auto grid w-full max-w-6xl gap-10 rounded-3xl border border-slate-200 bg-white p-10 shadow-sm md:grid-cols-[2fr,3fr] md:items-center">
-                <div className="space-y-5">
-                    <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
-                        {whoWeAre.title}
-                    </h2>
-                    {whoWeAre.paragraphs.map((paragraph, index) => (
-                        <p key={index} className="text-base text-slate-600 md:text-lg">
-                            {paragraph}
-                        </p>
-                    ))}
-                </div>
-                <div className="grid gap-4 rounded-3xl bg-slate-50 p-6">
-                    <HighlightBlock
-                        title={whoWeAre.highlights.mission.title}
-                        description={whoWeAre.highlights.mission.description}
-                    />
-                    <HighlightBlock
-                        title={whoWeAre.highlights.rhythm.title}
-                        description={whoWeAre.highlights.rhythm.description}
-                    />
-                    <HighlightBlock
-                        title={whoWeAre.highlights.service.title}
-                        description={whoWeAre.highlights.service.description}
-                    />
-                    <HighlightBlock
-                        title={whoWeAre.highlights.leadership.title}
-                        description={whoWeAre.highlights.leadership.description}
-                    />
+            <section className="mx-auto w-full max-w-6xl overflow-hidden md:rounded-3xl md:border md:border-slate-200 md:bg-white md:shadow-sm">
+                <div className="grid gap-0 md:grid-cols-[1.1fr,0.9fr]">
+                    <div className="space-y-6 md:bg-emerald-50/60 md:p-10">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.45em] text-emerald-700">
+                            {language === "ar" ? "من نحن" : "Who We Are"}
+                        </span>
+                        <div className="space-y-4">
+                            <h2 className="text-3xl font-semibold text-slate-900 md:text-4xl">
+                                {whoWeAre.title}
+                            </h2>
+                            {whoWeAre.paragraphs.map((paragraph, index) => (
+                                <p key={index} className="text-base leading-relaxed text-slate-600 md:text-lg">
+                                    {paragraph}
+                                </p>
+                            ))}
+                        </div>
+                        <div className="grid gap-3 text-sm text-slate-600">
+                            <p className="flex items-center gap-3">
+                                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                {language === "ar"
+                                    ? "برامج تربوية متوازنة من مرحلة إلى أخرى"
+                                    : "Balanced programs that grow with each age section."}
+                            </p>
+                            <p className="flex items-center gap-3">
+                                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                {language === "ar"
+                                    ? "رحلات وخدمة تعزز روح الفريق"
+                                    : "Adventures and service projects that build teamwork."}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-4 md:bg-white mt-4 md:mt-0 md:p-8">
+                        {whoHighlights.map(({ icon: Icon, title, description }) => (
+                            <div
+                                key={title}
+                                className="flex items-start gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/40 px-5 py-4 shadow-sm"
+                            >
+                                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow">
+                                    <Icon className="h-6 w-6" />
+                                </span>
+                                <div className="space-y-1">
+                                    <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+                                        {title}
+                                    </p>
+                                    <p className="text-sm text-slate-600">{description}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </section>
 
@@ -216,23 +264,6 @@ export default function Home() {
     );
 }
 
-function HighlightBlock({
-    title,
-    description,
-}: {
-    title: string;
-    description: string;
-}) {
-    return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
-                {title}
-            </p>
-            <p className="mt-2 text-sm text-slate-600">{description}</p>
-        </div>
-    );
-}
-
 function SectionBlock({
     title,
     subtitle,
@@ -267,29 +298,3 @@ function SectionBlock({
     );
 }
 
-function CTAButton({
-    href,
-    children,
-    variant,
-}: {
-    href: string;
-    children: React.ReactNode;
-    variant: "solid" | "outline" | "light" | "ghost";
-}) {
-    const base =
-        "rounded-full px-6 py-3 text-base font-semibold transition hover:-translate-y-0.5";
-    const styles =
-        variant === "solid"
-            ? "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
-            : variant === "light"
-                ? "bg-white text-emerald-700 shadow-sm hover:bg-slate-100"
-                : variant === "ghost"
-                    ? "border border-white/70 text-white hover:border-white hover:bg-white/10"
-                    : "border border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:text-emerald-800";
-
-    return (
-        <Link href={href} className={`${base} ${styles}`}>
-            {children}
-        </Link>
-    );
-}

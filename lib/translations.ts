@@ -25,7 +25,7 @@ export type HomeContent = {
 		description: string;
 		primaryCta: string;
 		secondaryCta: string;
-		heroImage: string;
+    heroImage: string;
 	};
 	whoWeAre: {
 		title: string;
@@ -102,7 +102,7 @@ export const translations: Record<string, Translations> = {
 				join: "Join Us",
 				contact: "Contact",
 			},
-			groupTagline: "Scout Group",
+			groupTagline: "Scout Des Cedres",
 			groupName: "Saint Jean Marc",
 			footerMission: "Growing together in adventure, service, and faith.",
 			footerSchedule: "Meetings every Saturday afternoon",
@@ -121,7 +121,9 @@ export const translations: Record<string, Translations> = {
 					"A vibrant scout family for children and teens to grow through adventure, service, and friendship. Join us to discover the joys of scouting in a warm, faith-filled community.",
 				primaryCta: "Join Our Group",
 				secondaryCta: "Discover Our Sections",
-				heroImage: "/images/scout-illustration.jpg",
+        heroImage:
+          "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1500&q=80",
+				// /images/scout-illustration.jpg
 			},
 			whoWeAre: {
 				title: "Who We Are",
@@ -270,7 +272,8 @@ export const translations: Record<string, Translations> = {
 					"عائلة كشفية نابضة بالحياة تساعد الأطفال واليافعين على النمو من خلال المغامرة والخدمة والصداقة. انضموا إلينا لتكتشفوا متعة الكشافة في جو دافئ مليء بالإيمان.",
 				primaryCta: "انضموا إلى فوجنا",
 				secondaryCta: "تعرّفوا على فروعنا",
-				heroImage: "/images/scout-illustration.jpg",
+        heroImage:
+          "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1500&q=80",
 			},
 			whoWeAre: {
 				title: "من نحن",
