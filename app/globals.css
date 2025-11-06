@@ -36,3 +36,69 @@ body {
 .animate-pulse-slow {
   animation: pulse-slow 12s ease-in-out infinite;
 }
+
+.calendar-activities .rbc-toolbar {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.calendar-activities .rbc-toolbar button {
+  border-radius: 9999px;
+  background-color: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #047857;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  padding: 0.45rem 1rem;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.calendar-activities .rbc-toolbar button:hover,
+.calendar-activities .rbc-toolbar button:focus {
+  background-color: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.calendar-activities .rbc-toolbar button.rbc-active {
+  background-color: #047857;
+  border-color: rgba(4, 120, 87, 0.45);
+  color: #fff;
+}
+
+.calendar-activities .rbc-month-view {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.calendar-activities .rbc-header {
+  background-color: rgba(16, 185, 129, 0.08);
+  border: none;
+  color: #03624a;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  padding: 0.75rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.calendar-activities .rbc-off-range-bg {
+  background-color: #f8fafc;
+}
+
+.calendar-activities .rbc-today {
+  background-color: rgba(16, 185, 129, 0.12);
+}
+
+.calendar-activities .rbc-event {
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.calendar-activities .rbc-event:focus {
+  box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.25);
+}

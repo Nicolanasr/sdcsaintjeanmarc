@@ -7,8 +7,8 @@ import { FiPhoneCall } from "react-icons/fi";
 import { HiOutlineMail } from "react-icons/hi";
 
 const CONTACT_EMAIL = "info@sdcsaintjeanmarc.org";
-const CONTACT_PHONE = "+9613724473";
-const CONTACT_WHATSAPP = "+9613724473";
+const CONTACT_PHONE = "+96179013907";
+const CONTACT_WHATSAPP = "+96179013907";
 
 const STAR_POINTS = [
     { cx: 6, cy: 12, r: 0.18 },

@@ -6,10 +6,18 @@ export type SectionContent = {
 };
 
 export type ActivityContent = {
+	slug: string;
 	title: string;
 	date: string;
 	description: string;
 	location: string;
+	datetime: string;
+	endTime: string;
+	image: string;
+	section: string;
+	highlights: string[];
+	gear: string[];
+	contact: string;
 };
 
 export type GalleryContent = {
@@ -187,22 +195,92 @@ export const translations: Record<string, Translations> = {
 				cta: "View full calendar →",
 				items: [
 					{
+						slug: "family-welcome-campfire",
 						title: "Family Welcome Campfire",
-						date: "September 14",
+						date: "September 14, 2024",
 						description: "An evening of songs, games, and meeting the leaders to kick off the scouting year.",
 						location: "Parc Saint Jean",
+						datetime: "2024-09-14T18:00:00+03:00",
+						endTime: "2024-09-14T21:00:00+03:00",
+						image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80",
+						section: "All Sections",
+						highlights: [
+							"Campfire songs and skits to welcome new families",
+							"Parent orientation with Q&A circles led by our scouters",
+							"Icebreaker challenges for every age group",
+						],
+						gear: [
+							"Reusable water bottle",
+							"Camp chair or picnic blanket",
+							"Scout neckerchief",
+						],
+						contact: "Leader Marie · +961 372 4473",
 					},
 					{
+						slug: "autumn-skills-camp",
 						title: "Autumn Skills Camp",
-						date: "October 4 – 6",
+						date: "October 4 – 6, 2024",
 						description: "Weekend camp focusing on outdoor cooking, pioneering, and teamwork challenges.",
 						location: "Camp Lac Vert",
+						datetime: "2024-10-04T17:00:00+03:00",
+						endTime: "2024-10-06T12:00:00+03:00",
+						image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1600&q=80",
+						section: "Scouts & Pionniers",
+						highlights: [
+							"Patrol camp setup and wilderness cooking labs",
+							"Night navigation challenge through cedar trails",
+							"Sunday closing liturgy and parent debrief",
+						],
+						gear: [
+							"Complete weekend pack",
+							"Sleeping bag (3-season)",
+							"Hiking boots & rain shell",
+						],
+						contact: "Leader Joseph · +961 711 554 892",
 					},
 					{
+						slug: "community-service-day",
 						title: "Community Service Day",
-						date: "November 9",
+						date: "November 9, 2024",
 						description: "All sections unite to support our neighborhood through a day of helpful service projects.",
 						location: "Community Center",
+						datetime: "2024-11-09T09:00:00+03:00",
+						endTime: "2024-11-09T15:00:00+03:00",
+						image: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=1600&q=80",
+						section: "All Sections",
+						highlights: [
+							"Neighborhood cleanup and tree planting teams",
+							"Castors craft cards for the parish seniors",
+							"Hot lunch prepared by the parent committee",
+						],
+						gear: [
+							"Work gloves",
+							"Refillable water bottle",
+							"Group t-shirt or neckerchief",
+						],
+						contact: "Leader Sarah · +961 702 220 456",
+					},
+					{
+						slug: "winter-leadership-hike",
+						title: "Winter Leadership Hike",
+						date: "December 7, 2024",
+						description: "Senior scouts tackle a ridge hike focused on leadership rotations and winter prep skills.",
+						location: "Chouf Cedar Reserve",
+						datetime: "2024-12-07T08:00:00+02:00",
+						endTime: "2024-12-07T17:00:00+02:00",
+						image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1600&q=80",
+						section: "Pionniers",
+						highlights: [
+							"Rotating leadership checkpoints with mentor feedback",
+							"Winter shelter building and stove safety clinics",
+							"Solo reflection overlooking the cedar valleys",
+						],
+						gear: [
+							"Daypack with layered clothing",
+							"Trekking poles",
+							"Thermos with hot drink",
+						],
+						contact: "Leader Antoine · +961 356 9911",
 					},
 				],
 			},
@@ -337,22 +415,92 @@ export const translations: Record<string, Translations> = {
 				cta: "اطلعوا على التقويم الكامل →",
 				items: [
 					{
+						slug: "family-welcome-campfire",
 						title: "أمسية نار المخيم الترحيبية",
-						date: "14 أيلول",
+						date: "14 أيلول 2024",
 						description: "أغانٍ وألعاب ولقاء مع القادة لافتتاح السنة الكشفية الجديدة.",
 						location: "حديقة سان جان",
+						datetime: "2024-09-14T18:00:00+03:00",
+						endTime: "2024-09-14T21:00:00+03:00",
+						image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80",
+						section: "كل الفروع",
+						highlights: [
+							"أغاني ونشاطات حول النار لاستقبال العائلات الجديدة",
+							"جلسة تعارف وأسئلة وأجوبة مع القادة",
+							"ألعاب تعارف لكل الفئات العمرية",
+						],
+						gear: [
+							"عبوة ماء قابلة لإعادة التعبئة",
+							"كرسي تخييم أو بطانية",
+							"منديل الكشافة",
+						],
+						contact: "القائدة ماري · ‎+961 372 4473",
 					},
 					{
+						slug: "autumn-skills-camp",
 						title: "مخيم مهارات الخريف",
-						date: "4 – 6 تشرين الأول",
+						date: "4 – 6 تشرين الأول 2024",
 						description: "نهاية أسبوع نركّز فيها على الطهي في الهواء الطلق والفنون الكشفية وتحديات العمل الجماعي.",
 						location: "مخيم لاك فير",
+						datetime: "2024-10-04T17:00:00+03:00",
+						endTime: "2024-10-06T12:00:00+03:00",
+						image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1600&q=80",
+						section: "الكشافة والرواد",
+						highlights: [
+							"إعداد المخيم ومختبرات الطهي في الطبيعة",
+							"تحدي الملاحة الليلية بين الأرز",
+							"قداس واختتام مع الأهل نهار الأحد",
+						],
+						gear: [
+							"حقيبة تخييم كاملة",
+							"كيس نوم ثلاثي المواسم",
+							"حذاء مشي وجاكيت مقاوم للمطر",
+						],
+						contact: "القائد جوزيف · ‎+961 711 554 892",
 					},
 					{
+						slug: "community-service-day",
 						title: "يوم الخدمة المجتمعية",
-						date: "9 تشرين الثاني",
+						date: "9 تشرين الثاني 2024",
 						description: "تجتمع كل الفروع لدعم حيّنا عبر سلسلة من مشاريع الخدمة.",
 						location: "المركز المجتمعي",
+						datetime: "2024-11-09T09:00:00+03:00",
+						endTime: "2024-11-09T15:00:00+03:00",
+						image: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=1600&q=80",
+						section: "كل الفروع",
+						highlights: [
+							"تنظيف الحي وتشجير الزوايا العامة",
+							"القنادس يصنعون بطاقات للمسنين في الرعية",
+							"غداء ساخن من إعداد لجنة الأهل",
+						],
+						gear: [
+							"قفازات عمل",
+							"عبوة ماء شخصية",
+							"قميص أو منديل الفرقة",
+						],
+						contact: "القائدة سارة · ‎+961 702 220 456",
+					},
+					{
+						slug: "winter-leadership-hike",
+						title: "مسير القيادة الشتوي",
+						date: "7 كانون الأول 2024",
+						description: "الكشافة المتقدمون يخوضون مسيراً جبلياً للتركيز على القيادة والتجهيز لموسم الشتاء.",
+						location: "محمية أرز الشوف",
+						datetime: "2024-12-07T08:00:00+02:00",
+						endTime: "2024-12-07T17:00:00+02:00",
+						image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1600&q=80",
+						section: "الرواد",
+						highlights: [
+							"محطات قيادة بالتناوب مع تقييم من القادة",
+							"ورش بناء مأوى شتوي واستعمال مواقد الغاز",
+							"لحظات تأمل فردية مطلّة على وديان الأرز",
+						],
+						gear: [
+							"حقيبة ظهر مع ملابس طبقات",
+							"عصي مشي",
+							"ترمس مع مشروب ساخن",
+						],
+						contact: "القائد أنطوان · ‎+961 356 9911",
 					},
 				],
 			},
