@@ -5,10 +5,12 @@ import { ActivityDetail } from "@/components/activity-detail";
 import type { ActivityContent } from "@/lib/translations";
 import { translations } from "@/lib/translations";
 
+type EventParams = {
+    event: string;
+};
+
 type EventPageProps = {
-    params: {
-        event: string;
-    };
+    params: Promise<EventParams>;
 };
 
 const englishActivities = translations.en.home.activities.items;
@@ -23,8 +25,9 @@ export function generateStaticParams() {
     }));
 }
 
-export function generateMetadata({ params }: EventPageProps): Metadata {
-    const activity = findActivityBySlug(params.event, englishActivities);
+export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
+    const { event } = await params;
+    const activity = findActivityBySlug(event, englishActivities);
 
     if (!activity) {
         return {};
@@ -36,16 +39,17 @@ export function generateMetadata({ params }: EventPageProps): Metadata {
     };
 }
 
-export default function ActivityEventPage({ params }: EventPageProps) {
-    const englishEvent = findActivityBySlug(params.event, englishActivities);
-    const arabicEvent = findActivityBySlug(params.event, arabicActivities);
+export default async function ActivityEventPage({ params }: EventPageProps) {
+    const { event } = await params;
+    const englishEvent = findActivityBySlug(event, englishActivities);
+    const arabicEvent = findActivityBySlug(event, arabicActivities);
 
     if (!englishEvent || !arabicEvent) {
         notFound();
     }
 
-    const relatedEnglish = englishActivities.filter((item) => item.slug !== params.event);
-    const relatedArabic = arabicActivities.filter((item) => item.slug !== params.event);
+    const relatedEnglish = englishActivities.filter((item) => item.slug !== event);
+    const relatedArabic = arabicActivities.filter((item) => item.slug !== event);
 
     return (
         <ActivityDetail
