@@ -33,7 +33,7 @@ export type HomeContent = {
 		description: string;
 		primaryCta: string;
 		secondaryCta: string;
-    heroImage: string;
+		heroImage: string;
 	};
 	whoWeAre: {
 		title: string;
@@ -62,6 +62,18 @@ export type HomeContent = {
 		subtitle: string;
 		cta: string;
 		items: GalleryContent[];
+	};
+	highlightStrip: {
+		nextEventLabel: string;
+		stats: { value: string; label: string }[];
+	};
+	testimonial: {
+		title: string;
+		items: {
+			quote: string;
+			author: string;
+			role: string;
+		}[];
 	};
 	callToAction: {
 		title: string;
@@ -129,8 +141,7 @@ export const translations: Record<string, Translations> = {
 					"A vibrant scout family for children and teens to grow through adventure, service, and friendship. Join us to discover the joys of scouting in a warm, faith-filled community.",
 				primaryCta: "Join Our Group",
 				secondaryCta: "Discover Our Sections",
-        heroImage:
-          "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1500&q=80",
+				heroImage: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1500&q=80",
 				// /images/scout-illustration.jpg
 			},
 			whoWeAre: {
@@ -164,16 +175,16 @@ export const translations: Record<string, Translations> = {
 				cta: "Meet every section →",
 				items: [
 					{
+						name: "Louveteaux / Jeanettes",
+						ageRange: "Ages 6 – 11",
+						description: "Discovering teamwork, creativity, and nature through camps and fun-filled outings.",
+						color: "from-lime-400 to-emerald-500",
+					},
+					{
 						name: "Castors",
 						ageRange: "Ages 6 – 8",
 						description: "Playful adventures and first steps into scouting through games, songs, and simple challenges.",
 						color: "from-emerald-500 to-emerald-700",
-					},
-					{
-						name: "Louveteaux",
-						ageRange: "Ages 8 – 11",
-						description: "Discovering teamwork, creativity, and nature through camps and fun-filled outings.",
-						color: "from-lime-400 to-emerald-500",
 					},
 					{
 						name: "Scouts",
@@ -209,11 +220,7 @@ export const translations: Record<string, Translations> = {
 							"Parent orientation with Q&A circles led by our scouters",
 							"Icebreaker challenges for every age group",
 						],
-						gear: [
-							"Reusable water bottle",
-							"Camp chair or picnic blanket",
-							"Scout neckerchief",
-						],
+						gear: ["Reusable water bottle", "Camp chair or picnic blanket", "Scout neckerchief"],
 						contact: "Leader Marie · +961 372 4473",
 					},
 					{
@@ -231,11 +238,7 @@ export const translations: Record<string, Translations> = {
 							"Night navigation challenge through cedar trails",
 							"Sunday closing liturgy and parent debrief",
 						],
-						gear: [
-							"Complete weekend pack",
-							"Sleeping bag (3-season)",
-							"Hiking boots & rain shell",
-						],
+						gear: ["Complete weekend pack", "Sleeping bag (3-season)", "Hiking boots & rain shell"],
 						contact: "Leader Joseph · +961 711 554 892",
 					},
 					{
@@ -253,11 +256,7 @@ export const translations: Record<string, Translations> = {
 							"Castors craft cards for the parish seniors",
 							"Hot lunch prepared by the parent committee",
 						],
-						gear: [
-							"Work gloves",
-							"Refillable water bottle",
-							"Group t-shirt or neckerchief",
-						],
+						gear: ["Work gloves", "Refillable water bottle", "Group t-shirt or neckerchief"],
 						contact: "Leader Sarah · +961 702 220 456",
 					},
 					{
@@ -275,11 +274,7 @@ export const translations: Record<string, Translations> = {
 							"Winter shelter building and stove safety clinics",
 							"Solo reflection overlooking the cedar valleys",
 						],
-						gear: [
-							"Daypack with layered clothing",
-							"Trekking poles",
-							"Thermos with hot drink",
-						],
+						gear: ["Daypack with layered clothing", "Trekking poles", "Thermos with hot drink"],
 						contact: "Leader Antoine · +961 356 9911",
 					},
 				],
@@ -308,6 +303,36 @@ export const translations: Record<string, Translations> = {
 						title: "Adventure Weekend",
 						description: "Team challenges that build lifelong friendships.",
 						background: "bg-gradient-to-br from-lime-200 via-emerald-50 to-slate-100",
+					},
+				],
+			},
+			highlightStrip: {
+				nextEventLabel: "Next big outing",
+				stats: [
+					{ value: "80+", label: "Active scouts" },
+					{ value: "20", label: "Volunteer leaders" },
+				],
+			},
+			testimonial: {
+				title: "Parents see the difference",
+				items: [
+					{
+						quote:
+							"“SDC Saint Jean Marc has given our kids confidence, lifelong friends, and a deeper love for service. Every Saturday they come home glowing with stories.”",
+						author: "Rita A.",
+						role: "Scout mom",
+					},
+					{
+						quote:
+							"“The leaders are so intentional. Our son now volunteers at church because he learned how meaningful service can be in this troop.”",
+						author: "Marc L.",
+						role: "Castor parent",
+					},
+					{
+						quote:
+							"“It feels like family. Camps, liturgies, and projects are all beautifully organized—we trust the team completely.”",
+						author: "Nadia S.",
+						role: "Pionnier parent",
 					},
 				],
 			},
@@ -350,8 +375,7 @@ export const translations: Record<string, Translations> = {
 					"عائلة كشفية نابضة بالحياة تساعد الأطفال واليافعين على النمو من خلال المغامرة والخدمة والصداقة. انضموا إلينا لتكتشفوا متعة الكشافة في جو دافئ مليء بالإيمان.",
 				primaryCta: "انضموا إلى فوجنا",
 				secondaryCta: "تعرّفوا على فروعنا",
-        heroImage:
-          "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1500&q=80",
+				heroImage: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1500&q=80",
 			},
 			whoWeAre: {
 				title: "من نحن",
@@ -429,11 +453,7 @@ export const translations: Record<string, Translations> = {
 							"جلسة تعارف وأسئلة وأجوبة مع القادة",
 							"ألعاب تعارف لكل الفئات العمرية",
 						],
-						gear: [
-							"عبوة ماء قابلة لإعادة التعبئة",
-							"كرسي تخييم أو بطانية",
-							"منديل الكشافة",
-						],
+						gear: ["عبوة ماء قابلة لإعادة التعبئة", "كرسي تخييم أو بطانية", "منديل الكشافة"],
 						contact: "القائدة ماري · ‎+961 372 4473",
 					},
 					{
@@ -446,16 +466,8 @@ export const translations: Record<string, Translations> = {
 						endTime: "2024-10-06T12:00:00+03:00",
 						image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1600&q=80",
 						section: "الكشافة والرواد",
-						highlights: [
-							"إعداد المخيم ومختبرات الطهي في الطبيعة",
-							"تحدي الملاحة الليلية بين الأرز",
-							"قداس واختتام مع الأهل نهار الأحد",
-						],
-						gear: [
-							"حقيبة تخييم كاملة",
-							"كيس نوم ثلاثي المواسم",
-							"حذاء مشي وجاكيت مقاوم للمطر",
-						],
+						highlights: ["إعداد المخيم ومختبرات الطهي في الطبيعة", "تحدي الملاحة الليلية بين الأرز", "قداس واختتام مع الأهل نهار الأحد"],
+						gear: ["حقيبة تخييم كاملة", "كيس نوم ثلاثي المواسم", "حذاء مشي وجاكيت مقاوم للمطر"],
 						contact: "القائد جوزيف · ‎+961 711 554 892",
 					},
 					{
@@ -468,16 +480,8 @@ export const translations: Record<string, Translations> = {
 						endTime: "2024-11-09T15:00:00+03:00",
 						image: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=1600&q=80",
 						section: "كل الفروع",
-						highlights: [
-							"تنظيف الحي وتشجير الزوايا العامة",
-							"القنادس يصنعون بطاقات للمسنين في الرعية",
-							"غداء ساخن من إعداد لجنة الأهل",
-						],
-						gear: [
-							"قفازات عمل",
-							"عبوة ماء شخصية",
-							"قميص أو منديل الفرقة",
-						],
+						highlights: ["تنظيف الحي وتشجير الزوايا العامة", "القنادس يصنعون بطاقات للمسنين في الرعية", "غداء ساخن من إعداد لجنة الأهل"],
+						gear: ["قفازات عمل", "عبوة ماء شخصية", "قميص أو منديل الفرقة"],
 						contact: "القائدة سارة · ‎+961 702 220 456",
 					},
 					{
@@ -495,11 +499,7 @@ export const translations: Record<string, Translations> = {
 							"ورش بناء مأوى شتوي واستعمال مواقد الغاز",
 							"لحظات تأمل فردية مطلّة على وديان الأرز",
 						],
-						gear: [
-							"حقيبة ظهر مع ملابس طبقات",
-							"عصي مشي",
-							"ترمس مع مشروب ساخن",
-						],
+						gear: ["حقيبة ظهر مع ملابس طبقات", "عصي مشي", "ترمس مع مشروب ساخن"],
 						contact: "القائد أنطوان · ‎+961 356 9911",
 					},
 				],
@@ -528,6 +528,36 @@ export const translations: Record<string, Translations> = {
 						title: "عطلة نهاية أسبوع مغامِرة",
 						description: "تحديات جماعية تبني صداقات تدوم.",
 						background: "bg-gradient-to-br from-lime-200 via-emerald-50 to-slate-100",
+					},
+				],
+			},
+			highlightStrip: {
+				nextEventLabel: "النشاط القادم",
+				stats: [
+					{ value: "80+", label: "كشاف نشط" },
+					{ value: "20", label: "قائد متطوع" },
+				],
+			},
+			testimonial: {
+				title: "شهادات من الأهالي",
+				items: [
+					{
+						quote:
+							"\"أعاد لنا فوج سان جان مارك روح الجماعة. أولادنا اكتسبوا ثقة بالنفس وحب الخدمة، ونعود كل أسبوع محمّلين بالفرح.\"",
+						author: "ريتا أ.",
+						role: "والدة كشاف",
+					},
+					{
+						quote:
+							"\"القادة يهتمون بكل التفاصيل. ابننا أصبح يبادر بخدمة الرعية لأنه تعلّم قيمة العطاء في الفوج.\"",
+						author: "مارك ل.",
+						role: "والد قندس",
+					},
+					{
+						quote:
+							"\"نشعر أننا ضمن عائلة حقيقية. المخيمات والصلوات والمشاريع كلها منظمة بإتقان ونثق بالفريق بالكامل.\"",
+						author: "ناديا س.",
+						role: "والدة رائد",
 					},
 				],
 			},
