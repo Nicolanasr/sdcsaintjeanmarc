@@ -36,45 +36,16 @@ export default function AboutPage() {
         });
         return map;
     }, [leadership]);
-    const assistantMap = useMemo(() => {
-        const map: Record<string, string[]> = {};
-        leadership.items.forEach((item) => {
-            const match = item.id.match(/^(.+)-assistant(?:-\d+)?$/);
-            if (match) {
-                const base = match[1];
-                map[base] = [...(map[base] ?? []), item.id];
-            }
-        });
-        map["chef-group"] = ["assistant-chef"];
-        return map;
-    }, [leadership]);
-    const sectionLeadIds = leadership.orgChart.sections.filter((id) => !/-assistant/.test(id));
-    const orgBaseRows = [
-        {
-            label: language === "ar" ? "قيادة الفوج" : "Group leadership",
-            ids: leadership.orgChart.top.filter((id) => id === "chef-group"),
-            highlight: true,
-        },
-        {
-            label: language === "ar" ? "الفريق الإداري" : "Administrative team",
-            ids: leadership.orgChart.admin,
-        },
-        {
-            label: language === "ar" ? "قادة الفروع" : "Section leaders",
-            ids: sectionLeadIds,
-            compact: true,
-        },
-    ];
-    const orgRows = orgBaseRows
+    const orgRows = leadership.orgChart.rows
         .map((row) => ({
             ...row,
-            nodes: row.ids
-                .map((id) => {
-                    const leader = leaderMap[id];
+            nodes: row.nodes
+                .map(({ leader: leaderId, assistants: assistantIds }) => {
+                    const leader = leaderMap[leaderId];
                     if (!leader) {
                         return null;
                     }
-                    const assistants = (assistantMap[id] ?? [])
+                    const assistants = assistantIds
                         .map((assistantId) => leaderMap[assistantId])
                         .filter(Boolean) as (typeof leadership.items)[number][];
                     return { leader, assistants };

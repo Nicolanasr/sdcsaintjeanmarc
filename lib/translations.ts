@@ -51,9 +51,12 @@ export type AboutContent = {
 			photo: string;
 		}[];
 		orgChart: {
-			top: string[];
-			admin: string[];
-			sections: string[];
+			rows: {
+				label: string;
+				highlight?: boolean;
+				compact?: boolean;
+				nodes: { leader: string; assistants: string[] }[];
+			}[];
 		};
 	};
 	rhythm: {
@@ -372,20 +375,17 @@ export const translations: Record<string, Translations> = {
 				title: "Parents see the difference",
 				items: [
 					{
-						quote:
-							"“SDC Saint Jean Marc has given our kids confidence, lifelong friends, and a deeper love for service. Every Saturday they come home glowing with stories.”",
+						quote: "“SDC Saint Jean Marc has given our kids confidence, lifelong friends, and a deeper love for service. Every Saturday they come home glowing with stories.”",
 						author: "Rita A.",
 						role: "Scout mom",
 					},
 					{
-						quote:
-							"“The leaders are so intentional. Our son now volunteers at church because he learned how meaningful service can be in this troop.”",
+						quote: "“The leaders are so intentional. Our son now volunteers at church because he learned how meaningful service can be in this troop.”",
 						author: "Marc L.",
 						role: "Castor parent",
 					},
 					{
-						quote:
-							"“It feels like family. Camps, liturgies, and projects are all beautifully organized—we trust the team completely.”",
+						quote: "“It feels like family. Camps, liturgies, and projects are all beautifully organized—we trust the team completely.”",
 						author: "Nadia S.",
 						role: "Pionnier parent",
 					},
@@ -456,43 +456,168 @@ export const translations: Record<string, Translations> = {
 			leadership: {
 				title: "Meet our leadership team",
 				items: [
-					{ id: "chef-group", name: "Marie El Khoury", role: "Chef de groupe", bio: "Guides the entire troop, mentors leaders, and ensures every program stays true to our mission.", photo: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=600&q=80" },
-					{ id: "assistant-chef", name: "Joseph Farah", role: "Assistant chef de groupe", bio: "Supports logistics and high-adventure programming, bringing engineering precision to every camp.", photo: "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=600&q=80" },
-					{ id: "secretary", name: "Lina Saade", role: "Secretary (Amin Serr)", bio: "Keeps parent communication flowing and archives the troop’s memories and milestones.", photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80" },
-					{ id: "treasurer", name: "Karim Boulos", role: "Treasurer (Amin Sandouq)", bio: "Oversees budgets and fundraising so every scout can participate fully.", photo: "https://images.unsplash.com/photo-1502767089025-6572583495b4?auto=format&fit=crop&w=600&q=80" },
-					{ id: "quartermaster", name: "Elie Matar", role: "Quartermaster (Amin Tajhizet)", bio: "Maintains gear, transportation, and safety kits for every outing.", photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80" },
-					{ id: "operations-lead", name: "Nour Chidiac", role: "Administrative lead", bio: "Coordinates calendars, permissions, and training so volunteers stay aligned.", photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80" },
-					{ id: "castors-lead", name: "Rami Chbat", role: "Castors unit leader", bio: "Introduces our youngest scouts to simple adventures and playful prayer.", photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80" },
-					{ id: "castors-assistant", name: "Nadine Fakhry", role: "Castors assistant", bio: "Designs crafts and songs that keep curiosity alive.", photo: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80" },
-					{ id: "louveteaux-lead", name: "Anthony Rizk", role: "Louveteaux unit leader", bio: "Builds teamwork through patrol games and first overnight experiences.", photo: "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=600&q=80" },
-					{ id: "louveteaux-assistant", name: "Yara Saab", role: "Louveteaux assistant", bio: "Coaches songs, skits, and service badges for the pack.", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80" },
-					{ id: "guides-lead", name: "Lea Daher", role: "Guides unit leader", bio: "Accompanies our Mourchidat through identity-forming outdoor journeys.", photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80" },
-					{ id: "guides-assistant", name: "Clara Abboud", role: "Guides assistant", bio: "Leads prayer circles and reflection moments around the campfire.", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80" },
-					{ id: "flowers-lead", name: "Maya Tannous", role: "Zahrat unit leader", bio: "Helps Zaharat discover service through art, dance, and nature walks.", photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80" },
-					{ id: "flowers-assistant", name: "Julie Nasr", role: "Zahrat assistant", bio: "Organizes ceremonies and badge tracking for the floral patrols.", photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80" },
-					{ id: "rovers-lead", name: "Omar Khoury", role: "Jawala unit leader", bio: "Mentors Jouwele in leadership rotations and trek planning.", photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80" },
-					{ id: "rovers-assistant", name: "Sami Abou Khalil", role: "Jawala assistant", bio: "Handles equipment checks and emergency drills for the rovers.", photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80" },
-					{ id: "pioneers-lead", name: "Christelle Nassar", role: "Mounjidet unit leader", bio: "Accompanies senior scouts through discernment, service expeditions, and faith formation.", photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80" },
-					{ id: "pioneers-assistant-1", name: "Hiba Gerges", role: "Mounjidet assistant", bio: "Coordinates formation weekends and service partnerships for the unit.", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80" },
-					{ id: "pioneers-assistant-2", name: "Ranya Fadel", role: "Mounjidet assistant", bio: "Supports leadership coaching and accompanies international exchanges.", photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80" },
+					{
+						id: "chef-group",
+						name: "Marie El Khoury",
+						role: "Chef de groupe",
+						bio: "Guides the entire troop, mentors leaders, and ensures every program stays true to our mission.",
+						photo: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "assistant-chef",
+						name: "Joseph Farah",
+						role: "Assistant chef de groupe",
+						bio: "Supports logistics and high-adventure programming, bringing engineering precision to every camp.",
+						photo: "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "secretary",
+						name: "Lina Saade",
+						role: "Secretary (Amin Serr)",
+						bio: "Keeps parent communication flowing and archives the troop’s memories and milestones.",
+						photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "treasurer",
+						name: "Karim Boulos",
+						role: "Treasurer (Amin Sandouq)",
+						bio: "Oversees budgets and fundraising so every scout can participate fully.",
+						photo: "https://images.unsplash.com/photo-1502767089025-6572583495b4?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "quartermaster",
+						name: "Elie Matar",
+						role: "Quartermaster (Amin Tajhizet)",
+						bio: "Maintains gear, transportation, and safety kits for every outing.",
+						photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "operations-lead",
+						name: "Nour Chidiac",
+						role: "Administrative lead",
+						bio: "Coordinates calendars, permissions, and training so volunteers stay aligned.",
+						photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "castors-lead",
+						name: "Rami Chbat",
+						role: "Castors unit leader",
+						bio: "Introduces our youngest scouts to simple adventures and playful prayer.",
+						photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "castors-assistant",
+						name: "Nadine Fakhry",
+						role: "Castors assistant",
+						bio: "Designs crafts and songs that keep curiosity alive.",
+						photo: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "louveteaux-lead",
+						name: "Anthony Rizk",
+						role: "Louveteaux unit leader",
+						bio: "Builds teamwork through patrol games and first overnight experiences.",
+						photo: "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "louveteaux-assistant",
+						name: "Yara Saab",
+						role: "Louveteaux assistant",
+						bio: "Coaches songs, skits, and service badges for the pack.",
+						photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "guides-lead",
+						name: "Lea Daher",
+						role: "Guides unit leader",
+						bio: "Accompanies our Mourchidat through identity-forming outdoor journeys.",
+						photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "guides-assistant",
+						name: "Clara Abboud",
+						role: "Guides assistant",
+						bio: "Leads prayer circles and reflection moments around the campfire.",
+						photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "flowers-lead",
+						name: "Maya Tannous",
+						role: "Zahrat unit leader",
+						bio: "Helps Zaharat discover service through art, dance, and nature walks.",
+						photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "flowers-assistant",
+						name: "Julie Nasr",
+						role: "Zahrat assistant",
+						bio: "Organizes ceremonies and badge tracking for the floral patrols.",
+						photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "rovers-lead",
+						name: "Omar Khoury",
+						role: "Jawala unit leader",
+						bio: "Mentors Jouwele in leadership rotations and trek planning.",
+						photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "rovers-assistant",
+						name: "Sami Abou Khalil",
+						role: "Jawala assistant",
+						bio: "Handles equipment checks and emergency drills for the rovers.",
+						photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "pioneers-lead",
+						name: "Christelle Nassar",
+						role: "Mounjidet unit leader",
+						bio: "Accompanies senior scouts through discernment, service expeditions, and faith formation.",
+						photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "pioneers-assistant-1",
+						name: "Hiba Gerges",
+						role: "Mounjidet assistant",
+						bio: "Coordinates formation weekends and service partnerships for the unit.",
+						photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "pioneers-assistant-2",
+						name: "Ranya Fadel",
+						role: "Mounjidet assistant",
+						bio: "Supports leadership coaching and accompanies international exchanges.",
+						photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80",
+					},
 				],
 				orgChart: {
-					top: ["chef-group", "assistant-chef"],
-					admin: ["secretary", "treasurer", "quartermaster", "operations-lead"],
-					sections: [
-						"castors-lead",
-						"castors-assistant",
-						"louveteaux-lead",
-						"louveteaux-assistant",
-						"guides-lead",
-						"guides-assistant",
-						"flowers-lead",
-						"flowers-assistant",
-						"rovers-lead",
-						"rovers-assistant",
-						"pioneers-lead",
-						"pioneers-assistant-1",
-						"pioneers-assistant-2",
+					rows: [
+						{
+							label: "Group leadership",
+							highlight: true,
+							nodes: [{ leader: "chef-group", assistants: ["assistant-chef"] }],
+						},
+						{
+							label: "Administrative team",
+							nodes: [
+								{ leader: "secretary", assistants: [] },
+								{ leader: "treasurer", assistants: [] },
+								{ leader: "quartermaster", assistants: [] },
+								{ leader: "operations-lead", assistants: [] },
+							],
+						},
+						{
+							label: "Section leaders",
+							compact: true,
+							nodes: [
+								{ leader: "castors-lead", assistants: ["castors-assistant"] },
+								{ leader: "louveteaux-lead", assistants: ["louveteaux-assistant"] },
+								{ leader: "guides-lead", assistants: ["guides-assistant"] },
+								{ leader: "flowers-lead", assistants: ["flowers-assistant"] },
+								{ leader: "rovers-lead", assistants: ["rovers-assistant"] },
+								{ leader: "pioneers-lead", assistants: ["pioneers-assistant-1", "pioneers-assistant-2"] },
+							],
+						},
 					],
 				},
 			},
@@ -533,13 +658,11 @@ export const translations: Record<string, Translations> = {
 					},
 					{
 						question: "How much does it cost?",
-						answer:
-							"We keep dues modest and offer support when needed. Camps have separate fees, but no child is turned away.",
+						answer: "We keep dues modest and offer support when needed. Camps have separate fees, but no child is turned away.",
 					},
 					{
 						question: "How do you ensure safety?",
-						answer:
-							"All leaders are vetted, trained in youth protection, and every outing has medical and emergency plans.",
+						answer: "All leaders are vetted, trained in youth protection, and every outing has medical and emergency plans.",
 					},
 				],
 			},
@@ -749,20 +872,17 @@ export const translations: Record<string, Translations> = {
 				title: "شهادات من الأهالي",
 				items: [
 					{
-						quote:
-							"\"أعاد لنا فوج سان جان مارك روح الجماعة. أولادنا اكتسبوا ثقة بالنفس وحب الخدمة، ونعود كل أسبوع محمّلين بالفرح.\"",
+						quote: '"أعاد لنا فوج سان جان مارك روح الجماعة. أولادنا اكتسبوا ثقة بالنفس وحب الخدمة، ونعود كل أسبوع محمّلين بالفرح."',
 						author: "ريتا أ.",
 						role: "والدة كشاف",
 					},
 					{
-						quote:
-							"\"القادة يهتمون بكل التفاصيل. ابننا أصبح يبادر بخدمة الرعية لأنه تعلّم قيمة العطاء في الفوج.\"",
+						quote: '"القادة يهتمون بكل التفاصيل. ابننا أصبح يبادر بخدمة الرعية لأنه تعلّم قيمة العطاء في الفوج."',
 						author: "مارك ل.",
 						role: "والد قندس",
 					},
 					{
-						quote:
-							"\"نشعر أننا ضمن عائلة حقيقية. المخيمات والصلوات والمشاريع كلها منظمة بإتقان ونثق بالفريق بالكامل.\"",
+						quote: '"نشعر أننا ضمن عائلة حقيقية. المخيمات والصلوات والمشاريع كلها منظمة بإتقان ونثق بالفريق بالكامل."',
 						author: "ناديا س.",
 						role: "والدة رائد",
 					},
@@ -780,8 +900,7 @@ export const translations: Record<string, Translations> = {
 			hero: {
 				badge: "قصتنا",
 				title: "متجذرون في الإيمان، ننمو بالمغامرة",
-				description:
-					"منذ عام 1957، يرحّب فوج سان جان مارك بالشباب ليكتشفوا القيادة والخدمة والصداقة من خلال فرح الحياة الكشفية.",
+				description: "منذ عام 1957، يرحّب فوج سان جان مارك بالشباب ليكتشفوا القيادة والخدمة والصداقة من خلال فرح الحياة الكشفية.",
 				image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1600&q=80",
 			},
 			history: {
@@ -830,50 +949,175 @@ export const translations: Record<string, Translations> = {
 					},
 				],
 			},
-		leadership: {
-			title: "تعرفوا على فريق القيادة",
-			items: [
-				{ id: "chef-group", name: "ماري الخوري", role: "قائدة الفوج", bio: "تقود العمل التربوي وترافق القادة لضمان انسجام البرامج مع رسالتنا.", photo: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=600&q=80" },
-				{ id: "assistant-chef", name: "جوزيف فرح", role: "مساعد قائد الفوج", bio: "يهتم بالمخيمات واللوجستيات ويضمن جودة المغامرات الهادفة.", photo: "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=600&q=80" },
-				{ id: "secretary", name: "لينا سعادة", role: "أمين سر", bio: "تعتني بالتواصل مع الأهل وتوثيق نشاطات الفوج.", photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80" },
-				{ id: "treasurer", name: "كريم بعلبكي", role: "أمين صندوق", bio: "يدير الميزانيات والحملات الداعمة لضمان مشاركة الجميع.", photo: "https://images.unsplash.com/photo-1502767089025-6572583495b4?auto=format&fit=crop&w=600&q=80" },
-				{ id: "quartermaster", name: "إيلي مطر", role: "أمين تجهيزات", bio: "يشرف على العتاد والسلامة والنقل لكل الطلعات.", photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80" },
-				{ id: "operations-lead", name: "نور شديد", role: "قائد إداري", bio: "ينسّق الجداول، الاستمارات، ودورات التكوين للقادة.", photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80" },
-				{ id: "castors-lead", name: "رامي شبط", role: "قائد فرقة الكشفة", bio: "يعرف الصغار على المغامرة البسيطة والصلاة المرحة.", photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80" },
-				{ id: "castors-assistant", name: "نادين فخري", role: "مساعدة فرقة الكشفة", bio: "تحضر الأشغال اليدوية والأناشيد التي تفتح خيال الأطفال.", photo: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80" },
-				{ id: "louveteaux-lead", name: "أنطوني رزق", role: "قائد فرقة الجرميز", bio: "يرافق الجرميز في ألعاب الطليعة وأول مخيم ليلي.", photo: "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=600&q=80" },
-				{ id: "louveteaux-assistant", name: "يارا صعب", role: "مساعدة الجرميز", bio: "تهتم بالأناشيد والشارات وبناء روح الفريق.", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80" },
-				{ id: "guides-lead", name: "ليا ضاهر", role: "قائدة المرشدات", bio: "ترافق المرشدات في المخيمات التكوينية وتأملات المساء.", photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80" },
-				{ id: "guides-assistant", name: "كلارا عبود", role: "مساعدة المرشدات", bio: "تحضر حلقات المشاركة والصلوات حول النار.", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80" },
-				{ id: "flowers-lead", name: "ميا طنوس", role: "قائدة الزهرات", bio: "تزرع حب الخدمة عبر الفن والرقص والطبيعة.", photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80" },
-				{ id: "flowers-assistant", name: "جولي نصر", role: "مساعدة الزهرات", bio: "تنظم الاحتفالات وتتابع الشارات مع العائلات.", photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80" },
-				{ id: "rovers-lead", name: "عمر خوري", role: "قائد الجوالة", bio: "يدرّب الجوالة على قيادة الرحلات والمشاريع.", photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80" },
-				{ id: "rovers-assistant", name: "سامي أبو خليل", role: "مساعد الجوالة", bio: "يهتم بالتجهيزات والتدريب الطارئ في طلعات الجوالة.", photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80" },
-				{ id: "pioneers-lead", name: "كريستيل نصر", role: "قائدة المنجدات", bio: "ترافق المنجدات في مسيرة الرسالة والخدمة الدولية.", photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80" },
-				{ id: "pioneers-assistant-1", name: "هبة جرجس", role: "مساعدة المنجدات", bio: "تنسّق لقاءات التكوين وخدمة المجتمع مع الشابات.", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80" },
-				{ id: "pioneers-assistant-2", name: "رنيا فاضل", role: "مساعدة المنجدات", bio: "تواكب التحضيرات للمخيمات الطويلة والزيارات الخارجية.", photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80" },
-			],
-			orgChart: {
-				top: ["chef-group", "assistant-chef"],
-				admin: ["secretary", "treasurer", "quartermaster", "operations-lead"],
-				sections: [
-					"castors-lead",
-					"castors-assistant",
-					"louveteaux-lead",
-					"louveteaux-assistant",
-					"guides-lead",
-					"guides-assistant",
-					"flowers-lead",
-					"flowers-assistant",
-					"rovers-lead",
-					"rovers-assistant",
-					"pioneers-lead",
-					"pioneers-assistant-1",
-					"pioneers-assistant-2",
+			leadership: {
+				title: "تعرفوا على فريق القيادة",
+				items: [
+					{
+						id: "chef-group",
+						name: "ماري الخوري",
+						role: "قائدة الفوج",
+						bio: "تقود العمل التربوي وترافق القادة لضمان انسجام البرامج مع رسالتنا.",
+						photo: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "assistant-chef",
+						name: "جوزيف فرح",
+						role: "مساعد قائد الفوج",
+						bio: "يهتم بالمخيمات واللوجستيات ويضمن جودة المغامرات الهادفة.",
+						photo: "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "secretary",
+						name: "لينا سعادة",
+						role: "أمين سر",
+						bio: "تعتني بالتواصل مع الأهل وتوثيق نشاطات الفوج.",
+						photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "treasurer",
+						name: "كريم بعلبكي",
+						role: "أمين صندوق",
+						bio: "يدير الميزانيات والحملات الداعمة لضمان مشاركة الجميع.",
+						photo: "https://images.unsplash.com/photo-1502767089025-6572583495b4?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "quartermaster",
+						name: "إيلي مطر",
+						role: "أمين تجهيزات",
+						bio: "يشرف على العتاد والسلامة والنقل لكل الطلعات.",
+						photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "operations-lead",
+						name: "نور شديد",
+						role: "قائد إداري",
+						bio: "ينسّق الجداول، الاستمارات، ودورات التكوين للقادة.",
+						photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "castors-lead",
+						name: "رامي شبط",
+						role: "قائد فرقة الكشفة",
+						bio: "يعرف الصغار على المغامرة البسيطة والصلاة المرحة.",
+						photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "castors-assistant",
+						name: "نادين فخري",
+						role: "مساعدة فرقة الكشفة",
+						bio: "تحضر الأشغال اليدوية والأناشيد التي تفتح خيال الأطفال.",
+						photo: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "louveteaux-lead",
+						name: "أنطوني رزق",
+						role: "قائد فرقة الجرميز",
+						bio: "يرافق الجرميز في ألعاب الطليعة وأول مخيم ليلي.",
+						photo: "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "louveteaux-assistant",
+						name: "يارا صعب",
+						role: "مساعدة الجرميز",
+						bio: "تهتم بالأناشيد والشارات وبناء روح الفريق.",
+						photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "guides-lead",
+						name: "ليا ضاهر",
+						role: "قائدة المرشدات",
+						bio: "ترافق المرشدات في المخيمات التكوينية وتأملات المساء.",
+						photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "guides-assistant",
+						name: "كلارا عبود",
+						role: "مساعدة المرشدات",
+						bio: "تحضر حلقات المشاركة والصلوات حول النار.",
+						photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "flowers-lead",
+						name: "ميا طنوس",
+						role: "قائدة الزهرات",
+						bio: "تزرع حب الخدمة عبر الفن والرقص والطبيعة.",
+						photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "flowers-assistant",
+						name: "جولي نصر",
+						role: "مساعدة الزهرات",
+						bio: "تنظم الاحتفالات وتتابع الشارات مع العائلات.",
+						photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "rovers-lead",
+						name: "عمر خوري",
+						role: "قائد الجوالة",
+						bio: "يدرّب الجوالة على قيادة الرحلات والمشاريع.",
+						photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "rovers-assistant",
+						name: "سامي أبو خليل",
+						role: "مساعد الجوالة",
+						bio: "يهتم بالتجهيزات والتدريب الطارئ في طلعات الجوالة.",
+						photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "pioneers-lead",
+						name: "كريستيل نصر",
+						role: "قائدة المنجدات",
+						bio: "ترافق المنجدات في مسيرة الرسالة والخدمة الدولية.",
+						photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "pioneers-assistant-1",
+						name: "هبة جرجس",
+						role: "مساعدة المنجدات",
+						bio: "تنسّق لقاءات التكوين وخدمة المجتمع مع الشابات.",
+						photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80",
+					},
+					{
+						id: "pioneers-assistant-2",
+						name: "رنيا فاضل",
+						role: "مساعدة المنجدات",
+						bio: "تواكب التحضيرات للمخيمات الطويلة والزيارات الخارجية.",
+						photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80",
+					},
 				],
+				orgChart: {
+					rows: [
+						{
+							label: "قيادة الفوج",
+							highlight: true,
+							nodes: [{ leader: "chef-group", assistants: ["assistant-chef"] }],
+						},
+						{
+							label: "الفريق الإداري",
+							nodes: [
+								{ leader: "secretary", assistants: [] },
+								{ leader: "treasurer", assistants: [] },
+								{ leader: "quartermaster", assistants: [] },
+								{ leader: "operations-lead", assistants: [] },
+							],
+						},
+						{
+							label: "قادة الفروع",
+							compact: true,
+							nodes: [
+								{ leader: "castors-lead", assistants: ["castors-assistant"] },
+								{ leader: "louveteaux-lead", assistants: ["louveteaux-assistant"] },
+								{ leader: "guides-lead", assistants: ["guides-assistant"] },
+								{ leader: "flowers-lead", assistants: ["flowers-assistant"] },
+								{ leader: "rovers-lead", assistants: ["rovers-assistant"] },
+								{ leader: "pioneers-lead", assistants: ["pioneers-assistant-1", "pioneers-assistant-2"] },
+							],
+						},
+					],
+				},
 			},
-		},
-		rhythm: {
+			rhythm: {
 				title: "إيقاع الأسبوع وكيفية المشاركة",
 				schedule: [
 					{ day: "السبت 2:00 بعد الظهر", description: "القنادس والذئاب يلتقون في قاعة الرعية." },
@@ -920,8 +1164,7 @@ export const translations: Record<string, Translations> = {
 			},
 			callToAction: {
 				title: "امشوا معنا",
-				description:
-					"سواء كنتم عائلة جديدة، أو من قدماء الفوج، أو ترغبون بالتطوع، لديكم مكان في قصة سان جان مارك.",
+				description: "سواء كنتم عائلة جديدة، أو من قدماء الفوج، أو ترغبون بالتطوع، لديكم مكان في قصة سان جان مارك.",
 				primaryCta: "نسّقوا زيارة",
 				secondaryCta: "تحدثوا مع قائد",
 			},
