@@ -248,6 +248,32 @@ export default function Home() {
                     </div>
                 </div>
             </section>
+
+            <section className="mx-auto -mt-6 w-full max-w-6xl rounded-[32px] border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur">
+                <div className="grid gap-4 md:grid-cols-3">
+                    {highlightItems.map((item, index) => {
+                        const Icon = highlightIcons[index % highlightIcons.length];
+                        return (
+                            <div
+                                key={item.label}
+                                className="flex flex-col gap-2 rounded-3xl border border-emerald-50 bg-emerald-50/40 px-5 py-4"
+                            >
+                                <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow">
+                                        <Icon className="h-4 w-4" />
+                                    </span>
+                                    {item.label}
+                                </span>
+                                <p className="text-base font-semibold text-slate-900">
+                                    {item.value}
+                                </p>
+                            </div>
+                        );
+                    })}
+                </div>
+            </section>
+
+            <SectionDivider />
             <SectionBlock
                 title={sections.title}
                 subtitle={sections.subtitle}
@@ -456,7 +482,7 @@ function SectionBlock({
 }) {
     return (
         <section className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-[32px] border border-emerald-50 bg-white/95 p-6 shadow-[0_20px_45px_rgba(15,23,42,0.08)]">
-            <div className="pointer-events-none absolute inset-0 opacity-[0.07] " />
+            <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:url('/forest-silhouette.svg')] [background-position:bottom] [background-repeat:no-repeat]" />
             <div className="relative">
                 <div className="mb-8 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
@@ -475,5 +501,15 @@ function SectionBlock({
                 {children}
             </div>
         </section>
+    );
+}
+
+function SectionDivider() {
+    return (
+        <div className="mx-auto my-12 w-full max-w-6xl">
+            <div className="relative h-12 overflow-hidden rounded-3xl border border-emerald-50 bg-gradient-to-r from-emerald-50 via-white to-emerald-50">
+                <div className="absolute inset-0 opacity-30 [background-image:url('/forest-silhouette.svg')] [background-position:bottom] [background-repeat:repeat-x]" />
+            </div>
+        </div>
     );
 }
