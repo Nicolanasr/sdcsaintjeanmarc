@@ -176,7 +176,7 @@ export default function SectionsPage() {
                     </div>
                     <div className=" grid gap-4 rounded-3xl md:border md:border-slate-200 md:bg-white md:p-6 md:shadow-sm grid-cols-1 md:grid-cols-3">
                         {content.sections.map((section) => (
-                            <div key={section.id} className="flex items-center gap-4 rounded-2xl border border-slate-100/80 bg-slate-50/80 p-4">
+                            <a href={`#${section.id}`} key={section.id} className="flex items-center gap-4 rounded-2xl border border-slate-100/80 bg-slate-50/80 p-4">
                                 <div className="relative h-16 w-16 overflow-hidden rounded-2xl">
                                     <Image
                                         src={section.image}
@@ -191,7 +191,7 @@ export default function SectionsPage() {
                                     <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">{section.ageRange}</p>
                                     <p className="text-xs text-slate-600">{section.motto}</p>
                                 </div>
-                            </div>
+                            </a>
                         ))}
                     </div>
                 </div>
@@ -327,7 +327,7 @@ function SectionCard({
                 : "Toggle to view patrol roster";
 
     return (
-        <article className={` flex flex-col gap-5 md:rounded-3xl border border-slate-200 bg-gradient-to-br ${accent} p-6 shadow-sm`}>
+        <article id={section.id} className={` flex flex-col gap-5 md:rounded-3xl border border-slate-200 bg-gradient-to-br ${accent} p-6 shadow-sm`}>
             <div className="flex flex-col gap-3">
                 <p className="text-xs uppercase tracking-[0.35em] text-emerald-600">{section.ageRange}</p>
                 <div className="flex items-center justify-between gap-2">

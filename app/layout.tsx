@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Cairo } from "next/font/google";
 import "./globals.css";
 import Head from "next/head";
 
+import { Providers } from "@/components/providers";
+
 const geistSans = Geist({
     variable: "--font-geist-sans",
     subsets: ["latin"],
@@ -43,12 +45,8 @@ export default function RootLayout({
                 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png" />
                 <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png" />
             </Head>
-            <body
-                className={`${geistSans.variable} ${geistMono.variable} ${arabicSans.variable} min-h-screen bg-[#05070F] text-slate-100 antialiased`}
-            >
-                <main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden ">
-                    {children}
-                </main>
+            <body className={`${geistSans.variable} ${geistMono.variable} ${arabicSans.variable} min-h-screen bg-[#05070F] text-slate-100 antialiased`}>
+                <Providers>{children}</Providers>
             </body>
         </html>
     );
