@@ -196,32 +196,6 @@ export default function SectionsPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection className="space-y-6">
-                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600">
-                            {language === "ar" ? "إيقاع السنة" : "Year rhythm"}
-                        </p>
-                        <h2 className="text-3xl font-semibold text-slate-900">
-                            {language === "ar" ? "أهم محطات البرنامج" : "Milestones across the program"}
-                        </h2>
-                    </div>
-                </div>
-                <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
-                    <div className="flex flex-col gap-6 md:flex-row md:items-stretch md:justify-between">
-                        {timelineSteps.map((step) => (
-                            <div
-                                key={step.title}
-                                className="flex flex-1 flex-col gap-3 border-l-0 border-t border-slate-100 pt-4 md:border-t-0 md:border-l md:pl-6 md:pt-0 first:border-none"
-                            >
-                                <p className="text-xs uppercase tracking-[0.35em] text-emerald-600">{step.month}</p>
-                                <p className="text-lg font-semibold text-slate-900">{step.title}</p>
-                                <p className="text-sm text-slate-600">{step.description}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </ContentSection>
 
             <ContentSection id="sections-grid" className="space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
