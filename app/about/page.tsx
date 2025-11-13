@@ -69,7 +69,7 @@ export default function AboutPage() {
         .filter((row) => row.nodes.length > 0);
 
     return (
-        <div className="space-y-16 pb-20 ">
+        <div className="space-y-12 pb-20 md:space-y-16">
             <PageHero
                 badge={hero.badge}
                 title={hero.title}
@@ -88,11 +88,11 @@ export default function AboutPage() {
                 }
             />
 
-            <ContentSection id="history" bordered padded>
+            <ContentSection id="history" bordered padded paddingClassName="p-4 md:p-8">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{history.title}</h2>
                 </div>
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-6 sm:grid-cols-2">
                     {history.timeline.map((item) => {
                         const Icon = timelineIconMap[item.icon] ?? GiCampfire;
                         return (
@@ -169,13 +169,13 @@ export default function AboutPage() {
                         </article>
                     ))}
                 </div> */}
-                <div className="space-y-6 rounded-3xl border border-emerald-100 bg-emerald-50/40 md:p-6">
+                <div className="space-y-6 rounded-3xl border border-emerald-100 bg-emerald-50/40 p-0 md:p-6">
                     {orgRows.map((row, rowIndex) => (
                         <div key={rowIndex} className="space-y-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600 text-center">
+                            <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600 md:tracking-[0.35em]">
                                 {row.label}
                             </p>
-                            <div className={`flex flex-wrap justify-center ${row.compact ? "gap-6" : "gap-6"}`}>
+                            <div className="flex flex-wrap justify-center gap-4 md:gap-6">
                                 {row.nodes.map((node) => (
                                     <OrgNode
                                         key={node.leader.id}
@@ -196,7 +196,7 @@ export default function AboutPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection bordered padded className="bg-white/90 space-y-6">
+            <ContentSection className="  md:bg-white/90 space-y-6 ">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-3xl font-semibold text-slate-900">
@@ -212,7 +212,7 @@ export default function AboutPage() {
                         {homeSections.cta}
                     </CTAButton>
                 </div>
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-6 sm:grid-cols-2">
                     {sectionsPreview.map((section, index) => (
                         <article
                             key={section.id}
@@ -269,7 +269,7 @@ export default function AboutPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection bordered padded className="bg-white">
+            <ContentSection bordered padded paddingClassName="p-4 md:p-8" className="bg-white">
                 <div className="grid gap-8 lg:grid-cols-[minmax(0,0.85fr),minmax(0,1.15fr)]">
                     <div className="space-y-4">
                         <h2 className="text-3xl font-semibold text-slate-900">{rhythm.title}</h2>
@@ -319,7 +319,7 @@ export default function AboutPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection bordered padded className="bg-white">
+            <ContentSection bordered padded paddingClassName="p-4 md:p-8" className="bg-white">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{impact.title}</h2>
                 </div>
@@ -333,7 +333,7 @@ export default function AboutPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection bordered padded className="bg-white space-y-6">
+            <ContentSection bordered padded paddingClassName="p-4 md:p-8" className="bg-white space-y-6">
                 <h2 className="text-3xl font-semibold text-slate-900">{faq.title}</h2>
                 <FaqAccordion items={faq.items} initialOpen={0} />
             </ContentSection>
@@ -365,11 +365,11 @@ function OrgNode({
     highlight?: boolean;
     compact?: boolean;
 }) {
-    const widthClass = compact ? "w-36 md:w-56" : "w-36 md:w-56";
+    const widthClass = compact ? "w-36 md:w-56" : "w-40 md:w-56";
     return (
         <div
-            className={`flex  ${widthClass} flex-col items-center gap-4 rounded-3xl border ${highlight ? "border-emerald-300 bg-white" : "border-white/60 bg-white/80"
-                } p-4 text-center shadow`}
+            className={`flex flex-col items-center gap-4 rounded-3xl border ${highlight ? "border-emerald-300 bg-white" : "border-white/60 bg-white/80"
+                } ${widthClass} p-4 text-center shadow`}
         >
             <LeaderCardLink member={leader} size="lg" />
             {assistants.length > 0 ? (
