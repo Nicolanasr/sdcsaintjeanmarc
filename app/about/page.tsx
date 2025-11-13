@@ -227,7 +227,6 @@ export default function AboutPage() {
                                 </div>
                                 <span className="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
                                     {section.motto}
-
                                 </span>
                             </div>
                             <p className="text-sm text-slate-600">{section.motto}</p>

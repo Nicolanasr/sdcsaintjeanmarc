@@ -277,12 +277,14 @@ const getLeaderProfile = (id: string, locale: Locale) => {
 	const leader = leadershipDefinition.items.find((item) => item.id === id);
 	if (!leader) {
 		return {
+			id,
 			name: id,
 			avatar: defaultAvatar,
 		};
 	}
 
 	return {
+		id: leader.id,
 		name: pickLocalized(leader.name, locale),
 		avatar: leader.photo ?? defaultAvatar,
 	};

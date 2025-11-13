@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import type { IconType } from "react-icons";
 import {
@@ -424,8 +425,9 @@ function LeaderBadge({
     const avatarSizesAttr = size === "lg" ? "64px" : "48px";
     const containerSizeClass = size === "lg" ? "flex-1" : "flex-none";
     const nameClass = size === "lg" ? "text-sm" : "text-xs";
-    return (
-        <div className={`flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3 ${containerSizeClass}`}>
+
+    const content = (
+        <>
             <div className={`relative ${avatarSize} overflow-hidden rounded-full border border-emerald-100`}>
                 <Image src={person.avatar} alt={person.name} fill sizes={avatarSizesAttr} className="object-cover" />
             </div>
@@ -433,6 +435,23 @@ function LeaderBadge({
                 <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-600">{label}</p>
                 <p className={`${nameClass} font-semibold text-slate-900`}>{person.name}</p>
             </div>
+        </>
+    );
+
+    if (person.id) {
+        return (
+            <Link
+                href={`/about/leadership/${person.id}`}
+                className={`flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3 transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-white ${containerSizeClass}`}
+            >
+                {content}
+            </Link>
+        );
+    }
+
+    return (
+        <div className={`flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3 ${containerSizeClass}`}>
+            {content}
         </div>
     );
 }

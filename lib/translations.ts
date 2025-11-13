@@ -280,8 +280,8 @@ export type SectionsPageContent = {
 		image: string;
 		focus: string[];
 		leadership: {
-			chief: { name: string; avatar: string };
-			assistants: { name: string; avatar: string }[];
+			chief: { id?: string; name: string; avatar: string };
+			assistants: { id?: string; name: string; avatar: string }[];
 			patrols: { name: string; leader: string; assistant: string; members: string[] }[];
 		};
 	}[];
