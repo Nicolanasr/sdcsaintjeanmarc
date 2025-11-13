@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Cairo } from "next/font/google";
 import "./globals.css";
 import Head from "next/head";
 
@@ -11,6 +11,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
     variable: "--font-geist-mono",
     subsets: ["latin"],
+});
+
+const arabicSans = Cairo({
+    variable: "--font-arabic",
+    subsets: ["arabic"],
+    weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -38,7 +44,7 @@ export default function RootLayout({
                 <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png" />
             </Head>
             <body
-                className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-[#05070F] text-slate-100 antialiased`}
+                className={`${geistSans.variable} ${geistMono.variable} ${arabicSans.variable} min-h-screen bg-[#05070F] text-slate-100 antialiased`}
             >
                 <main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden ">
                     {children}

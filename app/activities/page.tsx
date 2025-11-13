@@ -56,12 +56,7 @@ export default function ActivitiesPage() {
     const featuredActivities = localizedActivities;
     const calendarCulture = language === "ar" ? "ar-SA" : "en-US";
     const locale = language === "ar" ? "ar-LB" : "en-US";
-    const [currentDate, setCurrentDate] = useState(() => {
-        const sortedDates = [...englishActivities]
-            .map((item) => new Date(item.datetime))
-            .sort((a, b) => a.getTime() - b.getTime());
-        return startOfMonth(sortedDates[0] ?? new Date());
-    });
+    const [currentDate, setCurrentDate] = useState(() => startOfMonth(new Date()));
     const monthLabel = useMemo(
         () =>
             new Intl.DateTimeFormat(locale, {

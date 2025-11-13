@@ -1,4 +1,20 @@
+import { buildActivitiesList } from "@/lib/content/shared/activities/data";
+import { buildSectionsContent } from "@/lib/content/shared/sections/data";
 import type { HomeContent } from "@/lib/translations";
+
+const sectionPalette = [
+	"from-emerald-500 to-emerald-700",
+	"from-lime-400 to-emerald-500",
+	"from-teal-500 to-emerald-600",
+	"from-emerald-600 to-green-800",
+];
+
+const homeSectionsAr = buildSectionsContent("ar").map((section, index) => ({
+	name: section.name,
+	ageRange: section.ageRange,
+	description: section.description,
+	color: sectionPalette[index % sectionPalette.length],
+}));
 
 export const homeAr: HomeContent = {
 	hero: {
@@ -39,103 +55,13 @@ export const homeAr: HomeContent = {
 		title: "فروعنا",
 		subtitle: "كل فئة عمرية تتبع برنامجاً يناسب مراحل نموها.",
 		cta: "تعرّفوا على جميع الفروع →",
-		items: [
-			{
-				name: "القنادس",
-				ageRange: "الأعمار 6 – 8",
-				description: "مغامرات مرِحة وخطوات أولى في الكشافة من خلال الألعاب والأناشيد والتحديات البسيطة.",
-				color: "from-emerald-500 to-emerald-700",
-			},
-			{
-				name: "الذئاب الصغار",
-				ageRange: "الأعمار 8 – 11",
-				description: "نكتشف روح العمل الجماعي والإبداع والطبيعة عبر المخيمات والرحلات الممتعة.",
-				color: "from-lime-400 to-emerald-500",
-			},
-			{
-				name: "الكشافة",
-				ageRange: "الأعمار 11 – 14",
-				description: "نبني الثقة بالنفس ونتعلم مهارات الحياة في الهواء الطلق ونكوّن صداقات قوية.",
-				color: "from-teal-500 to-emerald-600",
-			},
-			{
-				name: "الروّاد",
-				ageRange: "الأعمار 14 – 17",
-				description: "نقود مشاريع خدمية، نستكشف العالم، ونعيش قيم الكشافة بعملٍ ملموس.",
-				color: "from-emerald-600 to-green-800",
-			},
-		],
+		items: homeSectionsAr,
 	},
 	activities: {
 		title: "أنشطتنا القادمة",
 		subtitle: "أبرز فعالياتنا خلال الفصل الأول.",
 		cta: "اطلعوا على التقويم الكامل →",
-		items: [
-			{
-				slug: "family-welcome-campfire",
-				title: "أمسية نار المخيم الترحيبية",
-				date: "14 أيلول 2024",
-				description: "أغانٍ وألعاب ولقاء مع القادة لافتتاح السنة الكشفية الجديدة.",
-				location: "حديقة سان جان",
-				datetime: "2024-09-14T18:00:00+03:00",
-				endTime: "2024-09-14T21:00:00+03:00",
-				image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80",
-				section: "كل الفروع",
-				highlights: [
-					"أغاني ونشاطات حول النار لاستقبال العائلات الجديدة",
-					"جلسة تعارف وأسئلة وأجوبة مع القادة",
-					"ألعاب تعارف لكل الفئات العمرية",
-				],
-				gear: ["عبوة ماء قابلة لإعادة التعبئة", "كرسي تخييم أو بطانية", "منديل الكشافة"],
-				contact: "القائدة ماري · ‎+961 372 4473",
-			},
-			{
-				slug: "autumn-skills-camp",
-				title: "مخيم مهارات الخريف",
-				date: "4 – 6 تشرين الأول 2024",
-				description: "نهاية أسبوع نركّز فيها على الطهي في الهواء الطلق والفنون الكشفية وتحديات العمل الجماعي.",
-				location: "مخيم لاك فير",
-				datetime: "2024-10-04T17:00:00+03:00",
-				endTime: "2024-10-06T12:00:00+03:00",
-				image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1600&q=80",
-				section: "الكشافة والرواد",
-				highlights: ["إعداد المخيم ومختبرات الطهي في الطبيعة", "تحدي الملاحة الليلية بين الأرز", "قداس واختتام مع الأهل نهار الأحد"],
-				gear: ["حقيبة تخييم كاملة", "كيس نوم ثلاثي المواسم", "حذاء مشي وجاكيت مقاوم للمطر"],
-				contact: "القائد جوزيف · ‎+961 711 554 892",
-			},
-			{
-				slug: "community-service-day",
-				title: "يوم الخدمة المجتمعية",
-				date: "9 تشرين الثاني 2024",
-				description: "تجتمع كل الفروع لدعم حيّنا عبر سلسلة من مشاريع الخدمة.",
-				location: "المركز المجتمعي",
-				datetime: "2024-11-09T09:00:00+03:00",
-				endTime: "2024-11-09T15:00:00+03:00",
-				image: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=1600&q=80",
-				section: "كل الفروع",
-				highlights: ["تنظيف الحي وتشجير الزوايا العامة", "القنادس يصنعون بطاقات للمسنين في الرعية", "غداء ساخن من إعداد لجنة الأهل"],
-				gear: ["قفازات عمل", "عبوة ماء شخصية", "قميص أو منديل الفرقة"],
-				contact: "القائدة سارة · ‎+961 702 220 456",
-			},
-			{
-				slug: "winter-leadership-hike",
-				title: "مسير القيادة الشتوي",
-				date: "7 كانون الأول 2024",
-				description: "الكشافة المتقدمون يخوضون مسيراً جبلياً للتركيز على القيادة والتجهيز لموسم الشتاء.",
-				location: "محمية أرز الشوف",
-				datetime: "2024-12-07T08:00:00+02:00",
-				endTime: "2024-12-07T17:00:00+02:00",
-				image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1600&q=80",
-				section: "الرواد",
-				highlights: [
-					"محطات قيادة بالتناوب مع تقييم من القادة",
-					"ورش بناء مأوى شتوي واستعمال مواقد الغاز",
-					"لحظات تأمل فردية مطلّة على وديان الأرز",
-				],
-				gear: ["حقيبة ظهر مع ملابس طبقات", "عصي مشي", "ترمس مع مشروب ساخن"],
-				contact: "القائد أنطوان · ‎+961 356 9911",
-			},
-		],
+		items: buildActivitiesList("ar"),
 	},
 	gallery: {
 		title: "لمحات من المعرض",
@@ -193,8 +119,7 @@ export const homeAr: HomeContent = {
 	},
 	callToAction: {
 		title: "جاهزون لبدء المغامرة؟",
-		description:
-			"انضموا إلى عائلتنا الكشفية الدافئة، وتعرّفوا على قادة ملهمين، واكتشفوا تجارب تصنع أثراً في حياة أولادكم. نحن بانتظاركم!",
+		description: "انضموا إلى عائلتنا الكشفية الدافئة، وتعرّفوا على قادة ملهمين، واكتشفوا تجارب تصنع أثراً في حياة أولادكم. نحن بانتظاركم!",
 		primaryCta: "اطلبوا ملف المعلومات",
 		secondaryCta: "تحدثوا مع قائد",
 	},

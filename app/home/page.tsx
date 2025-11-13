@@ -68,7 +68,7 @@ export default function Home() {
             icon: GiAcorn,
             image:
                 "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80",
-            label: language === "ar" ? "فضول" : "Curiosity",
+            label: language === "ar" ? "فضول" : "Curiosity1",
         },
         {
             icon: GiWolfHowl,
@@ -250,29 +250,7 @@ export default function Home() {
                 </div>
             </section>
 
-            <section className="mx-auto -mt-6 w-full max-w-6xl rounded-[32px] border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur">
-                <div className="grid gap-4 md:grid-cols-3">
-                    {highlightItems.map((item, index) => {
-                        const Icon = highlightIcons[index % highlightIcons.length];
-                        return (
-                            <div
-                                key={item.label}
-                                className="flex flex-col gap-2 rounded-3xl border border-emerald-50 bg-emerald-50/40 px-5 py-4"
-                            >
-                                <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow">
-                                        <Icon className="h-4 w-4" />
-                                    </span>
-                                    {item.label}
-                                </span>
-                                <p className="text-base font-semibold text-slate-900">
-                                    {item.value}
-                                </p>
-                            </div>
-                        );
-                    })}
-                </div>
-            </section>
+
 
             <SectionDivider />
             <SectionBlock
@@ -338,7 +316,7 @@ export default function Home() {
                 ctaHref="/activities"
             >
                 <div className="grid gap-6 md:grid-cols-3">
-                    {activities.items.map((activity) => (
+                    {activities.items.filter((activity) => activity.datetime > new Date().toISOString()).slice(0, 3).map((activity) => (
                         <article
                             key={activity.title}
                             className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
