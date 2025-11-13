@@ -1,0 +1,346 @@
+[
+  {
+    "_id": "louveteaux",
+    "_type": "section",
+    "title": "Louveteaux",
+    "slug": {
+      "_type": "slug",
+      "current": "louveteaux"
+    },
+    "ageRange": "Ages 8 – 11",
+    "motto": "Always ready",
+    "meeting": "Saturday · 2:00 PM · Parish hall",
+    "description": "Playful patrol games, first overnight camps, and service badges help Louveteaux discover teamwork and imagination.",
+    "focusAreas": [
+      "Patrol life",
+      "Faith moments",
+      "Crafts"
+    ],
+    "heroImageUrl": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+    "patrols": [
+      {
+        "name": "Meute Saint Jean",
+        "leader": "Karim Chidiac",
+        "assistant": "Nour Maalouf",
+        "members": [
+          "Elias",
+          "Marc",
+          "Rami",
+          "Dalia"
+        ]
+      },
+      {
+        "name": "Patrol Saint Louis",
+        "leader": "Anthony Gerges",
+        "assistant": "Rita Chedid",
+        "members": [
+          "Jad",
+          "Nayla",
+          "Fares",
+          "Myriam"
+        ]
+      },
+      {
+        "name": "Patrol Jeanne d'Arc",
+        "leader": "Toni Farah",
+        "assistant": "Mira Abou Khalil",
+        "members": [
+          "Lea",
+          "Sofia",
+          "Paul",
+          "Youssef"
+        ]
+      }
+    ],
+    "chief": {
+      "_ref": "louveteaux-lead",
+      "_type": "reference"
+    },
+    "assistants": [
+      {
+        "_ref": "louveteaux-assistant",
+        "_type": "reference"
+      }
+    ]
+  },
+  {
+    "_id": "jeanettes",
+    "_type": "section",
+    "title": "Jeannettes",
+    "slug": {
+      "_type": "slug",
+      "current": "jeanettes"
+    },
+    "ageRange": "Ages 8 – 11",
+    "motto": "Joyful service",
+    "meeting": "Saturday · 2:00 PM · Studio room",
+    "description": "Story-based gatherings, ateliers, and songs help Jeannettes grow in creativity and service.",
+    "focusAreas": [
+      "Creative ateliers",
+      "Outreach",
+      "Songs"
+    ],
+    "heroImageUrl": "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
+    "patrols": [
+      {
+        "name": "Ronde Notre Dame",
+        "leader": "Claudia Rizk",
+        "assistant": "Perla Ferzli",
+        "members": [
+          "Elsa",
+          "Maria",
+          "Isabelle",
+          "Noor"
+        ]
+      },
+      {
+        "name": "Ronde Saint Rita",
+        "leader": "Lynn Saad",
+        "assistant": "Jessica Tabet",
+        "members": [
+          "Sarah",
+          "Tala",
+          "Rania",
+          "Carla"
+        ]
+      }
+    ],
+    "chief": {
+      "_ref": "flowers-lead",
+      "_type": "reference"
+    },
+    "assistants": [
+      {
+        "_ref": "flowers-assistant",
+        "_type": "reference"
+      }
+    ]
+  },
+  {
+    "_id": "scouts",
+    "_type": "section",
+    "title": "Scouts",
+    "slug": {
+      "_type": "slug",
+      "current": "scouts"
+    },
+    "ageRange": "Ages 12 – 14",
+    "motto": "Be prepared",
+    "meeting": "Saturday · 4:30 PM · Field",
+    "description": "Scouts dive into pioneering, backcountry skills, and weekend camps that stretch courage and leadership.",
+    "focusAreas": [
+      "Pioneering",
+      "Navigation",
+      "Service projects"
+    ],
+    "heroImageUrl": "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
+    "patrols": [
+      {
+        "name": "Troop Saint Joseph",
+        "leader": "Georges Nassar",
+        "assistant": "Elie Abi Hayla",
+        "members": [
+          "Karim",
+          "Michel",
+          "Roy",
+          "Charbel"
+        ]
+      },
+      {
+        "name": "Troop Cedars",
+        "leader": "Ralph Youssef",
+        "assistant": "Walid Farhat",
+        "members": [
+          "Ziad",
+          "Nabil",
+          "Adrian",
+          "Tony"
+        ]
+      }
+    ],
+    "chief": {
+      "_ref": "guides-lead",
+      "_type": "reference"
+    },
+    "assistants": [
+      {
+        "_ref": "guides-assistant",
+        "_type": "reference"
+      }
+    ]
+  },
+  {
+    "_id": "guides",
+    "_type": "section",
+    "title": "Guides",
+    "slug": {
+      "_type": "slug",
+      "current": "guides"
+    },
+    "ageRange": "Ages 12 – 14",
+    "motto": "Forward together",
+    "meeting": "Saturday · 4:30 PM · Upper hall",
+    "description": "Guides mix formation weekends, liturgy service, and nature treks to build sisterhood rooted in faith.",
+    "focusAreas": [
+      "Leadership",
+      "Faith sharing",
+      "Backpacking"
+    ],
+    "heroImageUrl": "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=1200&q=80",
+    "patrols": [
+      {
+        "name": "Compagnie Sainte Rafqa",
+        "leader": "Christy Azar",
+        "assistant": "Joelle Massoud",
+        "members": [
+          "Maya",
+          "Sandra",
+          "Christina",
+          "Helena"
+        ]
+      },
+      {
+        "name": "Compagnie Notre Dame",
+        "leader": "Rita Sleiman",
+        "assistant": "Elsa Daher",
+        "members": [
+          "Nour",
+          "Mira",
+          "Paula",
+          "Racha"
+        ]
+      }
+    ],
+    "chief": {
+      "_ref": "guides-lead",
+      "_type": "reference"
+    },
+    "assistants": [
+      {
+        "_ref": "guides-assistant",
+        "_type": "reference"
+      }
+    ]
+  },
+  {
+    "_id": "routiers",
+    "_type": "section",
+    "title": "Routiers",
+    "slug": {
+      "_type": "slug",
+      "current": "routiers"
+    },
+    "ageRange": "Ages 15 – 17",
+    "motto": "Serve and lead",
+    "meeting": "Friday · 7:00 PM · Community house",
+    "description": "Routiers embrace longer expeditions, mentoring younger patrols, and discernment retreats.",
+    "focusAreas": [
+      "Expeditions",
+      "Mentorship",
+      "Vocational discernment"
+    ],
+    "heroImageUrl": "https://images.unsplash.com/photo-1460400355176-3680d9ab85fa?auto=format&fit=crop&w=1200&q=80",
+    "patrols": [
+      {
+        "name": "Clan Saint Georges",
+        "leader": "Philippe Khoury",
+        "assistant": "Joseph Azzi",
+        "members": [
+          "Fadi",
+          "Bishara",
+          "Charbel",
+          "Sami"
+        ]
+      },
+      {
+        "name": "Clan Saint Paul",
+        "leader": "Malek Chalhoub",
+        "assistant": "Ziad Antoun",
+        "members": [
+          "Amin",
+          "Hassan",
+          "Elias",
+          "Hadi"
+        ]
+      }
+    ],
+    "chief": {
+      "_ref": "rovers-lead",
+      "_type": "reference"
+    },
+    "assistants": [
+      {
+        "_ref": "rovers-assistant",
+        "_type": "reference"
+      }
+    ]
+  },
+  {
+    "_id": "caravelles",
+    "_type": "section",
+    "title": "Caravelles",
+    "slug": {
+      "_type": "slug",
+      "current": "caravelles"
+    },
+    "ageRange": "Ages 15 – 17",
+    "motto": "Bold hope",
+    "meeting": "Friday · 7:00 PM · Rooftop studio",
+    "description": "Caravelles lead international service, parish missions, and creative labs that prepare them for adult life.",
+    "focusAreas": [
+      "Global service",
+      "Liturgy support",
+      "Project management"
+    ],
+    "heroImageUrl": "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1600&q=80",
+    "patrols": [
+      {
+        "name": "Hearth Saint Rita",
+        "leader": "Christelle Karam",
+        "assistant": "Yasmina Sfeir",
+        "members": [
+          "Layal",
+          "Sabine",
+          "Gabrielle",
+          "Maria"
+        ]
+      },
+      {
+        "name": "Hearth Saint Clare",
+        "leader": "Rana Fakhry",
+        "assistant": "Lina Daher",
+        "members": [
+          "Perla",
+          "Nadine",
+          "Celine",
+          "Vicky"
+        ]
+      },
+      {
+        "name": "Hearth Saint Bernadette",
+        "leader": "Sara Bou Ghosn",
+        "assistant": "Joanna Rahme",
+        "members": [
+          "Farah",
+          "Elissa",
+          "Aline",
+          "Pamela"
+        ]
+      }
+    ],
+    "chief": {
+      "_ref": "pioneers-lead",
+      "_type": "reference"
+    },
+    "assistants": [
+      {
+        "_ref": "pioneers-assistant-1",
+        "_type": "reference"
+      },
+      {
+        "_ref": "pioneers-assistant-2",
+        "_type": "reference"
+      }
+    ]
+  }
+]

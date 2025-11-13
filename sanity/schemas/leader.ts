@@ -11,6 +11,7 @@ export default defineType({
     defineField({ name: "section", type: "string", title: "Section / Responsibility" }),
     defineField({ name: "bio", type: "text", title: "Bio" }),
     defineField({ name: "photo", type: "image", title: "Photo", options: { hotspot: true } }),
+    defineField({ name: "photoUrl", type: "url", title: "Photo URL" }),
     defineField({ name: "contactEmail", type: "string", title: "Contact Email" }),
     defineField({
       name: "assistantFor",

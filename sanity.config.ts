@@ -6,12 +6,12 @@ import { sanityConfig } from "./sanity/env";
 import { schemaTypes } from "./sanity/schemas";
 
 export default defineConfig({
-  name: "default",
-  title: "SDC Saint Jean Marc",
-  projectId: sanityConfig.projectId || "yourProjectId",
-  dataset: sanityConfig.dataset,
-  plugins: [structureTool(), visionTool()],
-  schema: {
-    types: schemaTypes,
-  },
+	name: "default",
+	title: "SDC Saint Jean Marc",
+	projectId: sanityConfig.projectId || "v8ae7gbm",
+	dataset: sanityConfig.dataset,
+	plugins: [structureTool(), visionTool()],
+	schema: {
+		types: schemaTypes,
+	},
 });

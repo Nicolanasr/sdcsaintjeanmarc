@@ -11,6 +11,7 @@ export default defineType({
     defineField({ name: "motto", type: "string", title: "Motto" }),
     defineField({ name: "meeting", type: "string", title: "Meeting Details" }),
     defineField({ name: "heroImage", type: "image", title: "Hero Image", options: { hotspot: true } }),
+    defineField({ name: "heroImageUrl", type: "url", title: "Hero Image URL" }),
     defineField({ name: "description", type: "text", title: "Description" }),
     defineField({
       name: "focusAreas",

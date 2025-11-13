@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "sanity:export": "tsx sanity/scripts/exportContent.ts",
     "start": "next start",
     "lint": "eslint"
   },
@@ -20,7 +21,9 @@
     "react-dom": "19.2.0",
     "react-icons": "^5.5.0",
     "sanity": "^4.15.0",
+    "styled-components": "^6.1.19",
     "swiper": "^12.0.3",
+    "ts-node": "^10.9.2",
     "yet-another-react-lightbox": "^3.25.0"
   },
   "devDependencies": {
@@ -32,6 +35,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }
