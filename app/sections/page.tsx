@@ -174,7 +174,7 @@ export default function SectionsPage() {
                             })}
                         </div>
                     </div>
-                    <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm grid-cols-2 md:grid-cols-3">
+                    <div className=" grid gap-4 rounded-3xl md:border md:border-slate-200 md:bg-white md:p-6 md:shadow-sm grid-cols-1 md:grid-cols-3">
                         {content.sections.map((section) => (
                             <div key={section.id} className="flex items-center gap-4 rounded-2xl border border-slate-100/80 bg-slate-50/80 p-4">
                                 <div className="relative h-16 w-16 overflow-hidden rounded-2xl">
@@ -198,7 +198,7 @@ export default function SectionsPage() {
             </ContentSection>
 
 
-            <ContentSection id="sections-grid" className="space-y-6">
+            <ContentSection id="sections-grid" className="space-y-6" maxWidthClass="max-w-none md:max-w-6xl">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-3xl font-semibold text-slate-900">
@@ -211,7 +211,7 @@ export default function SectionsPage() {
                         </p>
                     </div>
                 </div>
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-6 lg:grid-cols-2 -mx-8 md:mx-0">
                     {content.sections.map((section, index) => (
                         <SectionCard
                             key={section.id}
@@ -327,7 +327,7 @@ function SectionCard({
                 : "Toggle to view patrol roster";
 
     return (
-        <article className={`flex flex-col gap-5 rounded-3xl border border-slate-200 bg-gradient-to-br ${accent} p-6 shadow-sm`}>
+        <article className={` flex flex-col gap-5 md:rounded-3xl border border-slate-200 bg-gradient-to-br ${accent} p-6 shadow-sm`}>
             <div className="flex flex-col gap-3">
                 <p className="text-xs uppercase tracking-[0.35em] text-emerald-600">{section.ageRange}</p>
                 <div className="flex items-center justify-between gap-2">
@@ -358,11 +358,11 @@ function SectionCard({
                     );
                 })}
             </div>
-            <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white/90 p-4 sm:grid-cols-2">
+            <div className="grid gap-3 -mx-4 md:mx-0 md:rounded-2xl border border-slate-200 bg-white/90 p-4 sm:grid-cols-2">
                 <InfoRow icon={FiClock} label={isRtl ? "موعد اللقاء" : "Meeting time"} value={section.meeting} />
                 <InfoRow icon={FiMapPin} label={isRtl ? "المكان" : "Location"} value={inferredLocation} />
             </div>
-            <div className="rounded-2xl border border-emerald-100 bg-white/90 p-4">
+            <div className="-mx-4 md:mx-0 md:rounded-2xl border border-emerald-100 bg-white/90 p-4">
                 <p className="text-xs uppercase tracking-[0.35em] text-emerald-600">
                     {isRtl ? "فريق القيادة" : "Leadership team"}
                 </p>
@@ -382,7 +382,7 @@ function SectionCard({
                     ))}
                 </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+            <div className="-mx-4 md:mx-0 md:rounded-2xl border border-slate-200 bg-white/90 p-4">
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <p className="text-xs uppercase tracking-[0.35em] text-emerald-600">
@@ -465,7 +465,7 @@ function PatrolSummary({ patrol, isRtl }: { patrol: PatrolContent; isRtl: boolea
         : `${patrol.members.length} ${patrol.members.length === 1 ? "member" : "members"}`;
 
     return (
-        <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+        <div className="-mx-4 md:mx-0 md:rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
             <button
                 type="button"
                 onClick={() => setIsOpen((prev) => !prev)}
