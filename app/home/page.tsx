@@ -22,11 +22,12 @@ import "swiper/css/pagination";
 
 import { CTAButton } from "@/components/cta-button";
 import { useLanguage } from "@/components/language-provider";
+import { usePageContent } from "@/hooks/use-page-content";
 import { translations } from "@/lib/translations";
 
 export default function Home() {
     const { language } = useLanguage();
-    const content = translations[language].home;
+    const content = usePageContent("home");
     const {
         hero,
         whoWeAre,

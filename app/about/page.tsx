@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import {
     GiCampfire,
@@ -13,10 +13,14 @@ import {
     GiVibratingShield,
 } from "react-icons/gi";
 import { FaHandsHelping } from "react-icons/fa";
-import { FiCalendar, FiChevronDown, FiClock, FiMapPin } from "react-icons/fi";
+import { FiCalendar, FiClock, FiMapPin } from "react-icons/fi";
 
 import { CTAButton } from "@/components/cta-button";
+import { ContentSection } from "@/components/content-section";
+import { FaqAccordion } from "@/components/faq-accordion";
+import { PageHero } from "@/components/page-hero";
 import { useLanguage } from "@/components/language-provider";
+import { usePageContent } from "@/hooks/use-page-content";
 import { translations } from "@/lib/translations";
 
 const timelineIcons = [GiCampfire, GiThreeFriends, GiMountains, GiVibratingShield];
@@ -26,17 +30,16 @@ const rhythmImage =
 
 export default function AboutPage() {
     const { language } = useLanguage();
-    const content = translations[language].about;
+    const content = usePageContent("about");
     const { hero, history, pillars, leadership, rhythm, impact, faq, callToAction } = content;
-    const homeSections = translations[language].home.sections;
-    const sectionsPreview = translations[language].sectionsPage.sections.slice(0, 4);
+    const homeSections = usePageContent("home").sections;
+    const sectionsPreview = usePageContent("sectionsPage").sections.slice(0, 4);
     const sectionAccents = [
         "from-emerald-50 via-white to-white",
         "from-lime-50 via-white to-white",
         "from-cyan-50 via-white to-white",
         "from-amber-50 via-white to-white",
     ];
-    const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
     const leaderMap = useMemo(() => {
         const map: Record<string, (typeof leadership.items)[number]> = {};
         leadership.items.forEach((item) => {
@@ -64,39 +67,27 @@ export default function AboutPage() {
 
     return (
         <div className="space-y-16 pb-20 ">
-            <section className="-mx-6 md:-mx-12 overflow-hidden border border-slate-900/20 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 text-white shadow-xl md:px-12">
-                <div className="mx-auto grid w-full max-w-6xl gap-12 md:grid-cols-2 md:items-center">
-                    <div className="space-y-6">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100">
-                            {hero.badge}
-                        </span>
-                        <h1 className="text-4xl font-bold leading-tight md:text-5xl">{hero.title}</h1>
-                        <p className="text-lg text-emerald-50/90">{hero.description}</p>
-                        <div className="flex gap-3 flex-wrap">
-                            <CTAButton href="/join" variant="light" className="whitespace-nowrap">
-                                {language === "ar" ? "انضموا إلينا" : "Join the movement"}
-                            </CTAButton>
-                            <CTAButton href="#history" variant="ghost" className="whitespace-nowrap">
-                                {language === "ar" ? "تعرّفوا على تاريخنا" : "Explore our history"}
-                            </CTAButton>
-                        </div>
+            <PageHero
+                badge={hero.badge}
+                title={hero.title}
+                description={hero.description}
+                image={hero.image}
+                imagePriority
+                actions={
+                    <div className="flex flex-wrap gap-3">
+                        <CTAButton href="/join" variant="light" className="whitespace-nowrap">
+                            {language === "ar" ? "انضموا إلينا" : "Join the movement"}
+                        </CTAButton>
+                        <CTAButton href="#history" variant="ghost" className="whitespace-nowrap">
+                            {language === "ar" ? "تعرّفوا على تاريخنا" : "Explore our history"}
+                        </CTAButton>
                     </div>
-                    <div className="relative h-80 w-full overflow-hidden rounded-[32px] border border-white/10 bg-white/10 shadow-2xl">
-                        <Image
-                            src={hero.image}
-                            alt={hero.title}
-                            fill
-                            sizes="(max-width: 768px) 100vw, 50vw"
-                            className="object-cover"
-                            priority
-                        />
-                    </div>
-                </div>
-            </section>
+                }
+            />
 
             <SectionDivider />
 
-            <section id="history" className="mx-auto w-full max-w-6xl space-y-6 md:rounded-3xl md:border md:border-slate-200 md:bg-white md:p-8 md:shadow-sm">
+            <ContentSection id="history" bordered padded>
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{history.title}</h2>
                 </div>
@@ -121,9 +112,9 @@ export default function AboutPage() {
                         );
                     })}
                 </div>
-            </section>
+            </ContentSection>
 
-            <section className="mx-auto w-full max-w-6xl space-y-6">
+            <ContentSection className="space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{pillars.title}</h2>
                 </div>
@@ -146,11 +137,11 @@ export default function AboutPage() {
                         );
                     })}
                 </div>
-            </section>
+            </ContentSection>
 
             <SectionDivider />
 
-            <section className="mx-auto w-full max-w-6xl space-y-10">
+            <ContentSection className="space-y-10">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{leadership.title}</h2>
                 </div>
@@ -179,7 +170,7 @@ export default function AboutPage() {
                         </article>
                     ))}
                 </div> */}
-                <div className="space-y-6 rmd:ounded-3xl md:border border-emerald-100 md:bg-emerald-50/40 md:p-6">
+                <div className="space-y-6 rounded-3xl border border-emerald-100 bg-emerald-50/40 p-6">
                     {orgRows.map((row, rowIndex) => (
                         <div key={rowIndex} className="space-y-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600 text-center">
@@ -204,11 +195,11 @@ export default function AboutPage() {
                         </div>
                     ))}
                 </div>
-            </section>
+            </ContentSection>
 
             <SectionDivider />
 
-            <section className="mx-auto w-full max-w-6xl space-y-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm">
+            <ContentSection bordered padded className="bg-white/90 space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-3xl font-semibold text-slate-900">
@@ -270,11 +261,11 @@ export default function AboutPage() {
                         </article>
                     ))}
                 </div>
-            </section>
+            </ContentSection>
 
             <SectionDivider />
 
-            <section className="mx-auto w-full max-w-6xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <ContentSection bordered padded className="bg-white">
                 <div className="grid gap-8 lg:grid-cols-[minmax(0,0.85fr),minmax(0,1.15fr)]">
                     <div className="space-y-4">
                         <h2 className="text-3xl font-semibold text-slate-900">{rhythm.title}</h2>
@@ -322,9 +313,9 @@ export default function AboutPage() {
                         </div>
                     </div>
                 </div>
-            </section>
+            </ContentSection>
 
-            <section className="mx-auto w-full max-w-6xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <ContentSection bordered padded className="bg-white">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{impact.title}</h2>
                 </div>
@@ -336,39 +327,12 @@ export default function AboutPage() {
                         </div>
                     ))}
                 </div>
-            </section>
+            </ContentSection>
 
-            <section className="mx-auto w-full max-w-6xl space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <ContentSection bordered padded className="bg-white space-y-6">
                 <h2 className="text-3xl font-semibold text-slate-900">{faq.title}</h2>
-                <div className="space-y-4">
-                    {faq.items.map((item, index) => {
-                        const isOpen = openFaqIndex === index;
-                        return (
-                            <article key={item.question} className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50/70">
-                                <button
-                                    type="button"
-                                    className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
-                                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                                    aria-expanded={isOpen}
-                                >
-                                    <span className="text-lg font-semibold text-slate-900">{item.question}</span>
-                                    <FiChevronDown
-                                        className={`h-5 w-5 text-emerald-600 transition ${isOpen ? "rotate-180" : "rotate-0"}`}
-                                    />
-                                </button>
-                                <div
-                                    className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                                        }`}
-                                >
-                                    <div className="overflow-hidden px-5 pb-4">
-                                        <p className="text-sm text-slate-600">{item.answer}</p>
-                                    </div>
-                                </div>
-                            </article>
-                        );
-                    })}
-                </div>
-            </section>
+                <FaqAccordion items={faq.items} initialOpen={0} />
+            </ContentSection>
 
             <section className="mx-auto w-full max-w-6xl rounded-3xl bg-emerald-600 px-6 py-12 text-center text-white shadow-lg">
                 <h2 className="text-3xl font-semibold md:text-4xl">{callToAction.title}</h2>

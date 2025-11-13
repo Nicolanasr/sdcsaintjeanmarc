@@ -2,95 +2,46 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
 import { FiArrowRight, FiChevronDown, FiFilter, FiImage, FiMapPin, FiSliders, FiTag } from "react-icons/fi";
 
+import { FilterChip, TagChip } from "@/components/filter-chip";
 import { useLanguage } from "@/components/language-provider";
-import { translations } from "@/lib/translations";
-
-type GalleryAlbum = (typeof translations)["en"]["galleryPage"]["albums"][number];
+import { PageHero } from "@/components/page-hero";
+import { useAlbumFilters } from "@/hooks/use-album-filters";
+import { usePageContent } from "@/hooks/use-page-content";
+import type { GalleryAlbum } from "@/lib/translations";
 
 export default function GalleryPage() {
     const { language } = useLanguage();
-    const content = translations[language].galleryPage;
-	const [sectionFilters, setSectionFilters] = useState<string[]>([]);
-	const [tagFilters, setTagFilters] = useState<string[]>([]);
-	const [sortOption, setSortOption] = useState(content.filters.sortOptions[0].value);
-	const [showFilters, setShowFilters] = useState(false);
-
-    const sectionOptions = useMemo(
-        () => Array.from(new Set(content.albums.map((album) => album.section))),
-        [content.albums],
-    );
-
-    const tagOptions = useMemo(
-        () => Array.from(new Set(content.albums.flatMap((album) => album.tags))),
-        [content.albums],
-    );
-
-    const filteredAlbums = useMemo(() => {
-        let list = [...content.albums];
-
-        if (sectionFilters.length > 0) {
-            list = list.filter((album) => sectionFilters.includes(album.section));
-        }
-        if (tagFilters.length > 0) {
-            list = list.filter((album) => tagFilters.every((tag) => album.tags.includes(tag)));
-        }
-
-        switch (sortOption) {
-            case "oldest":
-                list.sort((a, b) => new Date(a.sortDate).getTime() - new Date(b.sortDate).getTime());
-                break;
-            case "section":
-                list.sort((a, b) => a.section.localeCompare(b.section));
-                break;
-            case "location":
-                list.sort((a, b) => a.location.localeCompare(b.location));
-                break;
-            case "newest":
-            default:
-                list.sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
-                break;
-        }
-
-        return list;
-    }, [content.albums, sectionFilters, tagFilters, sortOption]);
-
-    const hasFilters = sectionFilters.length > 0 || tagFilters.length > 0;
-    const activeFilterCount = sectionFilters.length + tagFilters.length;
-
-    const toggleValue = (value: string, selected: string[], setter: (next: string[]) => void) => {
-        setter(
-            selected.includes(value)
-                ? selected.filter((item) => item !== value)
-                : [...selected, value],
-        );
-    };
+    const content = usePageContent("galleryPage");
+	const {
+		sectionFilters,
+		tagFilters,
+		sortOption,
+		showFilters,
+		setShowFilters,
+		setSectionFilters,
+		setTagFilters,
+		setSortOption,
+		sectionOptions,
+		tagOptions,
+		filteredAlbums,
+		hasFilters,
+		activeFilterCount,
+		toggleSection,
+		toggleTag,
+	} = useAlbumFilters(content.albums, content.filters.sortOptions[0].value);
 
     return (
         <div className="space-y-16 pb-20">
-            <section className="-mx-6 md:-mx-12 overflow-hidden border border-slate-900/20 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 text-white shadow-xl md:px-12">
-                <div className="mx-auto grid w-full max-w-6xl gap-12 md:grid-cols-2 md:items-center">
-                    <div className="space-y-6">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100">
-                            {content.hero.badge}
-                        </span>
-                        <h1 className="text-4xl font-bold leading-tight md:text-5xl">{content.hero.title}</h1>
-                        <p className="text-lg text-emerald-50/90">{content.hero.description}</p>
-                    </div>
-                    <div className="relative h-80 w-full overflow-hidden rounded-[32px] border border-white/10 bg-white/10 shadow-2xl">
-                        <Image
-                            src={content.hero.image}
-                            alt={content.hero.title}
-                            fill
-                            sizes="(max-width: 1024px) 100vw, 40vw"
-                            className="object-cover"
-                            priority
-                        />
-                    </div>
-                </div>
-            </section>
+            <PageHero
+                badge={content.hero.badge}
+                title={content.hero.title}
+                description={content.hero.description}
+                image={content.hero.image}
+                stats={content.hero.stats}
+                imagePriority
+            />
 
             <section className="mx-auto w-full max-w-6xl space-y-3">
 				<button
@@ -114,32 +65,32 @@ export default function GalleryPage() {
 								<FiSliders className="h-4 w-4 text-emerald-600" />
 								{content.filters.sectionLabel}
 							</p>
-							<div className="flex flex-wrap gap-2">
-								{sectionOptions.map((section) => (
-									<FilterChip
-										key={section}
-										label={section}
-										active={sectionFilters.includes(section)}
-										onClick={() => toggleValue(section, sectionFilters, setSectionFilters)}
-									/>
-								))}
-							</div>
+                            <div className="flex flex-wrap gap-2">
+                                {sectionOptions.map((section) => (
+                                    <FilterChip
+                                        key={section}
+                                        label={section}
+                                        active={sectionFilters.includes(section)}
+                                        onClick={() => toggleSection(section)}
+                                    />
+                                ))}
+                            </div>
 						</div>
 						<div className="space-y-2">
 							<p className="text-xs uppercase tracking-[0.35em] text-slate-500 flex items-center gap-2">
 								<FiTag className="h-4 w-4 text-emerald-600" />
 								{content.filters.tagLabel}
 							</p>
-							<div className="flex flex-wrap gap-2">
-								{tagOptions.map((tag) => (
-									<TagChip
-										key={tag}
-										label={tag}
-										active={tagFilters.includes(tag)}
-										onClick={() => toggleValue(tag, tagFilters, setTagFilters)}
-									/>
-								))}
-							</div>
+                            <div className="flex flex-wrap gap-2">
+                                {tagOptions.map((tag) => (
+                                    <TagChip
+                                        key={tag}
+                                        label={tag}
+                                        active={tagFilters.includes(tag)}
+                                        onClick={() => toggleTag(tag)}
+                                    />
+                                ))}
+                            </div>
 						</div>
 						<div className="flex flex-wrap items-center justify-between gap-3">
 							<button
@@ -207,52 +158,6 @@ export default function GalleryPage() {
     );
 }
 
-
-function FilterChip({
-    label,
-    active,
-    onClick,
-}: {
-    label: string;
-    active: boolean;
-    onClick: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${active
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-slate-200 text-slate-600 hover:border-emerald-200"
-                }`}
-        >
-            {label}
-        </button>
-    );
-}
-
-function TagChip({
-    label,
-    active,
-    onClick,
-}: {
-    label: string;
-    active: boolean;
-    onClick: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${active
-                ? "bg-emerald-600 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
-                }`}
-        >
-            #{label}
-        </button>
-    );
-}
 
 function AlbumCard({ album, language }: { album: GalleryAlbum; language: string }) {
     return (

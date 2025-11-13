@@ -11,7 +11,9 @@ import { enUS } from "date-fns/locale/en-US";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import { CTAButton } from "@/components/cta-button";
+import { ContentSection } from "@/components/content-section";
 import { useLanguage } from "@/components/language-provider";
+import { usePageContent } from "@/hooks/use-page-content";
 import { translations } from "@/lib/translations";
 
 type CalendarEvent = {
@@ -67,7 +69,8 @@ export default function ActivitiesPage() {
     const { language } = useLanguage();
     const router = useRouter();
     const englishActivities = translations.en.home.activities.items;
-    const { activities, callToAction } = translations[language].home;
+    const homeContent = usePageContent("home");
+    const { activities, callToAction } = homeContent;
 
     const heroText =
         language === "ar"
@@ -316,10 +319,7 @@ export default function ActivitiesPage() {
                 </div>
             </section>
 
-            <section
-                id="featured"
-                className="mx-auto w-full max-w-6xl space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"
-            >
+            <ContentSection id="featured" bordered padded backgroundClass="bg-white" className="space-y-6">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
@@ -372,15 +372,17 @@ export default function ActivitiesPage() {
                         );
                     })}
                 </div>
-            </section>
+            </ContentSection>
 
-            <section className="mx-auto w-full max-w-4xl text-center">
+            <ContentSection className="text-center" maxWidthClass="max-w-4xl">
                 <p className="text-lg text-slate-600 md:text-xl">{introParagraph}</p>
-            </section>
+            </ContentSection>
 
-            <section
+            <ContentSection
                 id="calendar"
-                className="mx-auto w-full max-w-6xl space-y-8 rounded-3xl border border-slate-200 bg-white p-10 shadow-sm"
+                bordered
+                backgroundClass="bg-white"
+                className="space-y-8 p-6 md:p-10"
             >
                 <div className="flex flex-col gap-2 text-left md:flex-row md:items-end md:justify-between">
                     <div>
@@ -462,9 +464,9 @@ export default function ActivitiesPage() {
                         </p>
                     )}
                 </div>
-            </section>
+            </ContentSection>
 
-            <section className="mx-auto w-full max-w-6xl space-y-8">
+            <ContentSection className="space-y-8">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
@@ -517,10 +519,10 @@ export default function ActivitiesPage() {
                         </article>
                     ))}
                 </div>
-            </section>
+            </ContentSection>
 
 
-            <section className="mx-auto w-full max-w-6xl space-y-6">
+            <ContentSection className="space-y-6">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
@@ -557,7 +559,7 @@ export default function ActivitiesPage() {
                         </div>
                     ))}
                 </div>
-            </section>
+            </ContentSection>
 
             <section className="mx-auto w-full max-w-6xl rounded-3xl bg-emerald-600 px-6 py-12 text-center text-white shadow-lg">
                 <h2 className="text-3xl font-semibold md:text-4xl">

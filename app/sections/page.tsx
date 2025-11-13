@@ -18,7 +18,11 @@ import {
 import { GiCampfire, GiCompass, GiPathDistance } from "react-icons/gi";
 
 import { CTAButton } from "@/components/cta-button";
+import { ContentSection } from "@/components/content-section";
+import { FaqAccordion } from "@/components/faq-accordion";
 import { useLanguage } from "@/components/language-provider";
+import { PageHero } from "@/components/page-hero";
+import { usePageContent } from "@/hooks/use-page-content";
 import { translations } from "@/lib/translations";
 
 const accentGradients = [
@@ -32,8 +36,7 @@ const accentGradients = [
 
 export default function SectionsPage() {
     const { language } = useLanguage();
-    const content = translations[language].sectionsPage;
-    const [openFaqIndex, setOpenFaqIndex] = useState(0);
+    const content = usePageContent("sectionsPage");
 
     const heroHighlights =
         language === "ar"
@@ -107,46 +110,34 @@ export default function SectionsPage() {
 
     return (
         <div className="space-y-16 pb-20">
-            <section className="-mx-6 md:-mx-12 overflow-hidden border border-slate-900/20 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 text-white shadow-xl md:px-12">
-                <div className="mx-auto grid w-full max-w-6xl gap-12 md:grid-cols-2 md:items-center">
-                    <div className="space-y-6">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100">
-                            {content.hero.badge}
-                        </span>
-                        <h1 className="text-4xl font-bold leading-tight md:text-5xl">{content.hero.title}</h1>
-                        <p className="text-lg text-emerald-50/90">{content.hero.description}</p>
-                        <div className="flex flex-wrap gap-3">
-                            <CTAButton href="#sections-grid" variant="light">
-                                {content.hero.cta}
-                            </CTAButton>
-                            <CTAButton href="/about" variant="ghost">
-                                {language === "ar" ? "تعرّفوا على قادتنا" : "Meet the leadership"}
-                            </CTAButton>
-                        </div>
-                        <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.3em] text-emerald-100/80">
-                            {heroHighlights.map((item) => (
-                                <span key={item} className="rounded-full border border-white/20 px-3 py-1">
-                                    {item}
-                                </span>
-                            ))}
-                        </div>
+            <PageHero
+                badge={content.hero.badge}
+                title={content.hero.title}
+                description={content.hero.description}
+                image={content.hero.image}
+                imagePriority
+                actions={
+                    <div className="flex flex-wrap gap-3">
+                        <CTAButton href="#sections-grid" variant="light">
+                            {content.hero.cta}
+                        </CTAButton>
+                        <CTAButton href="/about" variant="ghost">
+                            {language === "ar" ? "تعرّفوا على قادتنا" : "Meet the leadership"}
+                        </CTAButton>
                     </div>
-                    <div className="space-y-6">
-                        <div className="relative h-80 w-full overflow-hidden rounded-[32px] border border-white/10 bg-white/10 shadow-2xl">
-                            <Image
-                                src={content.hero.image}
-                                alt={content.hero.title}
-                                fill
-                                sizes="(max-width: 1024px) 100vw, 45vw"
-                                className="object-cover"
-                                priority
-                            />
-                        </div>
+                }
+                footer={
+                    <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.3em] text-emerald-100/80">
+                        {heroHighlights.map((item) => (
+                            <span key={item} className="rounded-full border border-white/20 px-3 py-1">
+                                {item}
+                            </span>
+                        ))}
                     </div>
-                </div>
-            </section>
+                }
+            />
 
-            <section className="mx-auto w-full max-w-6xl md:rounded-3xl md:border md:border-emerald-100 md:bg-white md:p-8 md:shadow-sm">
+            <ContentSection bordered padded>
                 <div className="grid gap-8 md:grid-cols-[1.15fr,0.85fr] md:items-start">
                     <div className="space-y-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">
@@ -193,9 +184,9 @@ export default function SectionsPage() {
                         ))}
                     </div>
                 </div>
-            </section>
+            </ContentSection>
 
-            <section className="mx-auto w-full max-w-6xl space-y-6">
+            <ContentSection className="mx-auto w-full max-w-6xl space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600">
@@ -208,7 +199,7 @@ export default function SectionsPage() {
                 </div>
                 <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
                     <div className="flex flex-col gap-6 md:flex-row md:items-stretch md:justify-between">
-						{timelineSteps.map((step) => (
+                        {timelineSteps.map((step) => (
                             <div
                                 key={step.title}
                                 className="flex flex-1 flex-col gap-3 border-l-0 border-t border-slate-100 pt-4 md:border-t-0 md:border-l md:pl-6 md:pt-0 first:border-none"
@@ -220,9 +211,9 @@ export default function SectionsPage() {
                         ))}
                     </div>
                 </div>
-            </section>
+            </ContentSection>
 
-            <section id="sections-grid" className="mx-auto w-full max-w-6xl space-y-6">
+            <ContentSection id="sections-grid" className="mx-auto w-full max-w-6xl space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-3xl font-semibold text-slate-900">
@@ -245,9 +236,9 @@ export default function SectionsPage() {
                         />
                     ))}
                 </div>
-            </section>
+            </ContentSection>
 
-            <section className="mx-auto w-full max-w-6xl space-y-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm">
+            <ContentSection bordered padded className="bg-white/95 space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600">
@@ -279,10 +270,10 @@ export default function SectionsPage() {
                         );
                     })}
                 </div>
-            </section>
+            </ContentSection>
 
-            <section className="mx-auto w-full max-w-5xl space-y-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm">
-                <div className="text-center space-y-2">
+            <ContentSection bordered padded className="bg-white/95 space-y-6 text-center" maxWidthClass="max-w-5xl">
+                <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600">
                         {language === "ar" ? "الأسئلة المتكررة" : "Frequently asked"}
                     </p>
@@ -290,36 +281,8 @@ export default function SectionsPage() {
                         {language === "ar" ? "تفاصيل تنظيم الفروع" : "Details about sections"}
                     </h2>
                 </div>
-                <div className="space-y-4">
-                    {content.faq.map((item, index) => {
-                        const isOpen = openFaqIndex === index;
-                        return (
-                            <button
-                                type="button"
-                                key={item.question}
-                                className="w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-emerald-200"
-                                onClick={() => setOpenFaqIndex(isOpen ? -1 : index)}
-                            >
-                                <div className="flex items-center justify-between gap-4">
-                                    <p className="text-base font-semibold text-slate-900">{item.question}</p>
-                                    <span
-                                        className={`rounded-full border border-slate-200 p-2 text-slate-500 transition ${isOpen ? "bg-emerald-50 text-emerald-600" : ""
-                                            }`}
-                                    >
-                                        <FiChevronDown className={`h-4 w-4 transition ${isOpen ? "rotate-180" : ""}`} />
-                                    </span>
-                                </div>
-                                <div
-                                    className={`grid overflow-hidden text-sm text-slate-600 transition-all ${isOpen ? "grid-rows-[1fr] pt-4" : "grid-rows-[0fr]"
-                                        }`}
-                                >
-                                    <p className="overflow-hidden">{item.answer}</p>
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </section>
+                <FaqAccordion items={content.faq} initialOpen={0} />
+            </ContentSection>
 
             <section className="-mx-6 md:-mx-12 overflow-hidden border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-6 py-16 md:px-12">
                 <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 text-center">

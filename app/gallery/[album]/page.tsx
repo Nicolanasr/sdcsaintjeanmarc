@@ -11,13 +11,15 @@ import "yet-another-react-lightbox/styles.css";
 import "yet-another-react-lightbox/plugins/captions.css";
 
 import { CTAButton } from "@/components/cta-button";
+import { TagChip } from "@/components/filter-chip";
 import { useLanguage } from "@/components/language-provider";
-import { translations } from "@/lib/translations";
+import { usePageContent } from "@/hooks/use-page-content";
+import type { GalleryAlbum } from "@/lib/translations";
 
 export default function GalleryAlbumPage() {
 	const params = useParams<{ album: string }>();
 	const { language } = useLanguage();
-	const content = translations[language].galleryPage;
+	const content = usePageContent("galleryPage");
 	const album = useMemo(
 		() => content.albums.find((item) => item.id === params.album),
 		[content.albums, params.album],
@@ -36,12 +38,11 @@ export default function GalleryAlbumPage() {
 		);
 	}
 
-	return <AlbumView albumId={album.id} />;
+	return <AlbumView album={album} />;
 }
 
-function AlbumView({ albumId }: { albumId: string }) {
+function AlbumView({ album }: { album: GalleryAlbum }) {
 	const { language } = useLanguage();
-	const album = translations[language].galleryPage.albums.find((item) => item.id === albumId)!;
 
 	const [activeTags, setActiveTags] = useState<string[]>([]);
 	const [lightboxIndex, setLightboxIndex] = useState<number>(-1);
@@ -112,18 +113,7 @@ function AlbumView({ albumId }: { albumId: string }) {
 				</div>
 				<div className="flex flex-wrap gap-2">
 					{tagOptions.map((tag) => (
-						<button
-							type="button"
-							key={tag}
-							onClick={() => toggleTag(tag)}
-							className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-								activeTags.includes(tag)
-									? "bg-emerald-600 text-white"
-									: "bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
-							}`}
-						>
-							#{tag}
-						</button>
+						<TagChip key={tag} label={tag} active={activeTags.includes(tag)} onClick={() => toggleTag(tag)} />
 					))}
 				</div>
 			</section>
