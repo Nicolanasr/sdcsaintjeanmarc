@@ -506,10 +506,12 @@ function SectionBlock({
 
 function SectionDivider() {
     return (
-        <div className="mx-auto my-12 w-full max-w-6xl">
-            <div className="relative h-12 overflow-hidden rounded-3xl border border-emerald-50 bg-gradient-to-r from-emerald-50 via-white to-emerald-50">
-                <div className="absolute inset-0 opacity-30 [background-image:url('/forest-silhouette.svg')] [background-position:bottom] [background-repeat:repeat-x]" />
-            </div>
-        </div>
+        <>
+        </>
+        // <div className="mx-auto my-12 w-full max-w-6xl">
+        //     <div className="relative h-12 overflow-hidden rounded-3xl border border-emerald-50 bg-gradient-to-r from-emerald-50 via-white to-emerald-50">
+        //         <div className="absolute inset-0 opacity-30 [background-image:url('/forest-silhouette.svg')] [background-position:bottom] [background-repeat:repeat-x]" />
+        //     </div>
+        // </div>
     );
 }

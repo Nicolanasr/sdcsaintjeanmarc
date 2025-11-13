@@ -13,7 +13,7 @@ import {
     GiVibratingShield,
 } from "react-icons/gi";
 import { FaHandsHelping } from "react-icons/fa";
-import { FiCalendar, FiChevronDown } from "react-icons/fi";
+import { FiCalendar, FiChevronDown, FiClock, FiMapPin } from "react-icons/fi";
 
 import { CTAButton } from "@/components/cta-button";
 import { useLanguage } from "@/components/language-provider";
@@ -28,6 +28,14 @@ export default function AboutPage() {
     const { language } = useLanguage();
     const content = translations[language].about;
     const { hero, history, pillars, leadership, rhythm, impact, faq, callToAction } = content;
+    const homeSections = translations[language].home.sections;
+    const sectionsPreview = translations[language].sectionsPage.sections.slice(0, 4);
+    const sectionAccents = [
+        "from-emerald-50 via-white to-white",
+        "from-lime-50 via-white to-white",
+        "from-cyan-50 via-white to-white",
+        "from-amber-50 via-white to-white",
+    ];
     const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
     const leaderMap = useMemo(() => {
         const map: Record<string, (typeof leadership.items)[number]> = {};
@@ -55,8 +63,8 @@ export default function AboutPage() {
         .filter((row) => row.nodes.length > 0);
 
     return (
-        <div className="space-y-16 pb-20">
-            <section className="overflow-hidden rounded-3xl border border-slate-900/20 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 text-white shadow-xl md:px-12">
+        <div className="space-y-16 pb-20 ">
+            <section className="-mx-6 md:-mx-12 overflow-hidden border border-slate-900/20 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 text-white shadow-xl md:px-12">
                 <div className="mx-auto grid w-full max-w-6xl gap-12 md:grid-cols-2 md:items-center">
                     <div className="space-y-6">
                         <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100">
@@ -64,11 +72,11 @@ export default function AboutPage() {
                         </span>
                         <h1 className="text-4xl font-bold leading-tight md:text-5xl">{hero.title}</h1>
                         <p className="text-lg text-emerald-50/90">{hero.description}</p>
-                        <div className="flex gap-3">
-                            <CTAButton href="/join" variant="light">
+                        <div className="flex gap-3 flex-wrap">
+                            <CTAButton href="/join" variant="light" className="whitespace-nowrap">
                                 {language === "ar" ? "انضموا إلينا" : "Join the movement"}
                             </CTAButton>
-                            <CTAButton href="#history" variant="ghost">
+                            <CTAButton href="#history" variant="ghost" className="whitespace-nowrap">
                                 {language === "ar" ? "تعرّفوا على تاريخنا" : "Explore our history"}
                             </CTAButton>
                         </div>
@@ -88,7 +96,7 @@ export default function AboutPage() {
 
             <SectionDivider />
 
-            <section id="history" className="mx-auto w-full max-w-6xl space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <section id="history" className="mx-auto w-full max-w-6xl space-y-6 md:rounded-3xl md:border md:border-slate-200 md:bg-white md:p-8 md:shadow-sm">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{history.title}</h2>
                 </div>
@@ -146,7 +154,7 @@ export default function AboutPage() {
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{leadership.title}</h2>
                 </div>
-                <div className="grid gap-6 md:grid-cols-2">
+                {/* <div className="grid gap-6 md:grid-cols-2">
                     {leadership.items.map((leader) => (
                         <article
                             key={leader.name}
@@ -170,17 +178,14 @@ export default function AboutPage() {
                             <p className="text-sm text-slate-600">{leader.bio}</p>
                         </article>
                     ))}
-                </div>
-                <div className="space-y-6 rounded-3xl border border-emerald-100 bg-emerald-50/40 p-6">
-                    <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                        {language === "ar" ? "الهيكل التنظيمي" : "Organizational chart"}
-                    </p>
+                </div> */}
+                <div className="space-y-6 rmd:ounded-3xl md:border border-emerald-100 md:bg-emerald-50/40 md:p-6">
                     {orgRows.map((row, rowIndex) => (
                         <div key={rowIndex} className="space-y-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600">
+                            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600 text-center">
                                 {row.label}
                             </p>
-                            <div className={`flex flex-wrap justify-center ${row.compact ? "gap-4" : "gap-6"}`}>
+                            <div className={`flex flex-wrap justify-center ${row.compact ? "gap-6" : "gap-6"}`}>
                                 {row.nodes.map((node) => (
                                     <OrgNode
                                         key={node.leader.id}
@@ -197,6 +202,72 @@ export default function AboutPage() {
                                 </div>
                             ) : null}
                         </div>
+                    ))}
+                </div>
+            </section>
+
+            <SectionDivider />
+
+            <section className="mx-auto w-full max-w-6xl space-y-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm">
+                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <h2 className="text-3xl font-semibold text-slate-900">
+                            {language === "ar" ? "فروعنا في لمحة" : "Our sections at a glance"}
+                        </h2>
+                        <p className="text-sm text-slate-600">
+                            {language === "ar"
+                                ? "من القنادس إلى المنجدات، يتدرّج البرنامج مع نمو الأولاد ويقدّم لهم مغامرات تناسب عمرهم."
+                                : "From Castors to Pionniers, every age group follows a tailored path of service and adventure."}
+                        </p>
+                    </div>
+                    <CTAButton href="/sections" variant="outline">
+                        {homeSections.cta}
+                    </CTAButton>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2">
+                    {sectionsPreview.map((section, index) => (
+                        <article
+                            key={section.id}
+                            className={`flex flex-col gap-4 rounded-3xl border border-slate-200 bg-gradient-to-br ${sectionAccents[index % sectionAccents.length]} p-6 shadow-sm`}
+                        >
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <p className="text-lg font-semibold text-slate-900">{section.name}</p>
+                                    <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
+                                        {section.ageRange}
+                                    </p>
+                                </div>
+                                <span className="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                    {section.motto}
+
+                                </span>
+                            </div>
+                            <p className="text-sm text-slate-600">{section.motto}</p>
+                            <div className="flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 p-4 text-sm text-slate-600">
+                                <div className="flex items-center gap-2">
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                        <FiClock className="h-4 w-4" />
+                                    </span>
+                                    <div>
+                                        <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
+                                            {language === "ar" ? "موعد اللقاء" : "Meeting time"}
+                                        </p>
+                                        <p>{section.meeting}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                        <FiMapPin className="h-4 w-4" />
+                                    </span>
+                                    <div>
+                                        <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
+                                            {language === "ar" ? "الطلائع" : "Patrols"}
+                                        </p>
+                                        <p>{section.leadership.patrols.slice(0, 2).map((patrol) => patrol.name).join(" · ")}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
                     ))}
                 </div>
             </section>
@@ -326,10 +397,10 @@ function OrgNode({
     highlight?: boolean;
     compact?: boolean;
 }) {
-    const widthClass = compact ? "w-48" : "w-56";
+    const widthClass = compact ? "w-36 md:w-56" : "w-36 md:w-56";
     return (
         <div
-            className={`flex ${widthClass} flex-col items-center gap-4 rounded-3xl border ${highlight ? "border-emerald-300 bg-white" : "border-white/60 bg-white/80"
+            className={`flex  ${widthClass} flex-col items-center gap-4 rounded-3xl border ${highlight ? "border-emerald-300 bg-white" : "border-white/60 bg-white/80"
                 } p-4 text-center shadow`}
         >
             <LeaderCardLink member={leader} size="lg" />
@@ -372,10 +443,11 @@ function LeaderCardLink({ member, size = "lg" }: { member: LeaderItem; size?: "l
 
 function SectionDivider() {
     return (
-        <div className="mx-auto my-12 w-full max-w-6xl">
-            <div className="relative h-12 overflow-hidden rounded-3xl border border-emerald-50 bg-gradient-to-r from-emerald-50 via-white to-emerald-50">
-                <div className="absolute inset-0 opacity-30 [background-image:url('/forest-silhouette.svg')] [background-position:bottom] [background-repeat:repeat-x]" />
-            </div>
-        </div>
+        <></>
+        // <div className="mx-auto my-12 w-full max-w-6xl">
+        //     <div className="relative h-12 overflow-hidden rounded-3xl border border-emerald-50 bg-gradient-to-r from-emerald-50 via-white to-emerald-50">
+        //         <div className="absolute inset-0 opacity-30 [background-image:url('/forest-silhouette.svg')] [background-position:bottom] [background-repeat:repeat-x]" />
+        //     </div>
+        // </div>
     );
 }
