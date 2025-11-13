@@ -36,7 +36,7 @@ export default function AboutPage() {
     const content = usePageContent("about");
     const { hero, history, pillars, leadership, rhythm, impact, faq, callToAction } = content;
     const homeSections = usePageContent("home").sections;
-    const sectionsPreview = usePageContent("sectionsPage").sections.slice(0, 4);
+    const sectionsPreview = usePageContent("sectionsPage").sections.slice(0, 6);
     const sectionAccents = [
         "from-emerald-50 via-white to-white",
         "from-lime-50 via-white to-white",
@@ -196,7 +196,7 @@ export default function AboutPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection className="  md:bg-white/90 space-y-6 ">
+            <ContentSection className="  space-y-6 ">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-3xl font-semibold text-slate-900">
@@ -212,7 +212,7 @@ export default function AboutPage() {
                         {homeSections.cta}
                     </CTAButton>
                 </div>
-                <div className="grid gap-6 sm:grid-cols-2">
+                <div className="grid gap-6 sm:grid-cols-3">
                     {sectionsPreview.map((section, index) => (
                         <article
                             key={section.id}

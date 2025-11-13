@@ -186,7 +186,7 @@ export const leadershipDefinition: LeadershipDefinition = {
 		{
 			id: "scouts-assistant",
 			name: { en: "William Noun", ar: "كلارا عبود" },
-			role: { en: "scouts assistant", ar: "مساعدة المرشدات" },
+			role: { en: "scouts unit leader", ar: "مساعدة المرشدات" },
 			bio: {
 				en: "Leads prayer circles and reflection moments around the campfire.",
 				ar: "تقود حلقات الصلاة والتأمل حول نار المخيم.",
