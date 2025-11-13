@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { Calendar, dateFnsLocalizer } from "react-big-calendar";
 import { addHours, format, getDay, parse, startOfMonth, startOfWeek } from "date-fns";
-import arSA from "date-fns/locale/ar-SA";
-import enUS from "date-fns/locale/en-US";
+import { arSA } from "date-fns/locale/ar-SA";
+import { enUS } from "date-fns/locale/en-US";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import { CTAButton } from "@/components/cta-button";

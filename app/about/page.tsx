@@ -169,7 +169,7 @@ export default function AboutPage() {
                         </article>
                     ))}
                 </div> */}
-                <div className="space-y-6 rounded-3xl border border-emerald-100 bg-emerald-50/40 p-6">
+                <div className="space-y-6 rounded-3xl border border-emerald-100 bg-emerald-50/40 md:p-6">
                     {orgRows.map((row, rowIndex) => (
                         <div key={rowIndex} className="space-y-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600 text-center">

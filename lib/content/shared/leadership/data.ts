@@ -29,7 +29,7 @@ export const leadershipDefinition: LeadershipDefinition = {
 	items: [
 		{
 			id: "chef-group",
-			name: { en: "Ghinwa Ounaissy", ar: "ماري الخوري" },
+			name: { en: "Ghinwa Ounaissy", ar: "Ghinwa Ounaissy" },
 			role: { en: "Chef de groupe", ar: "قائدة الفوج" },
 			bio: {
 				en: "Guides the entire troop, mentors leaders, and ensures every program stays true to our mission.",
@@ -39,7 +39,7 @@ export const leadershipDefinition: LeadershipDefinition = {
 		},
 		{
 			id: "assistant-chef",
-			name: { en: "Nicolas Nasr", ar: "جوزيف فرح" },
+			name: { en: "Nicolas Nasr", ar: "Nicolas Nasr" },
 			role: {
 				en: "Assistant chef de groupe",
 				ar: "مساعد قائد الفوج",
