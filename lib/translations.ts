@@ -1,5 +1,7 @@
 import { aboutAr } from "./content/about/ar";
 import { aboutEn } from "./content/about/en";
+import { activitiesPageAr } from "./content/activities/ar";
+import { activitiesPageEn } from "./content/activities/en";
 import { galleryPageAr } from "./content/gallery/ar";
 import { galleryPageEn } from "./content/gallery/en";
 import { homeAr } from "./content/home/ar";
@@ -84,6 +86,32 @@ export type GalleryPageContent = {
 	};
 };
 
+export type LeadershipProfile = {
+	id: string;
+	name: string;
+	role: string;
+	bio: string;
+	photo: string;
+};
+
+export type LeadershipRow = {
+	label: string;
+	highlight?: boolean;
+	compact?: boolean;
+	nodes: { leader: string; assistants: string[] }[];
+};
+
+export type LeadershipContent = {
+	title: string;
+	items: LeadershipProfile[];
+	orgChart: {
+		rows: LeadershipRow[];
+	};
+};
+
+export type TimelineIconKey = "campfire" | "friends" | "mountains" | "shield";
+export type StatIconKey = "campfire" | "community" | "calendar";
+
 export type AboutContent = {
 	hero: {
 		badge: string;
@@ -93,36 +121,24 @@ export type AboutContent = {
 	};
 	history: {
 		title: string;
-		timeline: { year: string; title: string; description: string }[];
+		timeline: { year: string; title: string; description: string; icon: TimelineIconKey }[];
 	};
 	pillars: {
 		title: string;
 		items: { title: string; description: string }[];
 	};
-	leadership: {
-		title: string;
-		items: {
-			id: string;
-			name: string;
-			role: string;
-			bio: string;
-			photo: string;
-		}[];
-		orgChart: {
-			rows: {
-				label: string;
-				highlight?: boolean;
-				compact?: boolean;
-				nodes: { leader: string; assistants: string[] }[];
-			}[];
-		};
-	};
+	leadership: LeadershipContent;
 	rhythm: {
 		title: string;
 		schedule: { day: string; description: string }[];
 		participation: {
 			title: string;
 			steps: string[];
+		};
+		featureImage: {
+			src: string;
+			label: string;
+			caption: string;
 		};
 	};
 	impact: {
@@ -198,6 +214,49 @@ export type HomeContent = {
 	};
 };
 
+export type ActivitiesPageContent = {
+	hero: {
+		badge: string;
+		title: string;
+		description: string;
+		image: string;
+		highlights: string[];
+		primaryCta: { label: string; href: string };
+		secondaryCta: { label: string; href: string };
+	};
+	intro: string;
+	featured: {
+		title: string;
+		subtitle: string;
+	};
+	calendar: {
+		title: string;
+		subtitle: string;
+		badgePrefix: string;
+		badgeSuffix: string;
+		ctaLabel: string;
+		ctaHref: string;
+	};
+	spotlights: {
+		badge: string;
+		title: string;
+		description: string;
+		image: string;
+		statValue: string;
+		statLabel: string;
+	}[];
+	spotlightsIntro: {
+		title: string;
+		subtitle: string;
+	};
+	galleryPreview: {
+		title: string;
+		subtitle: string;
+		ctaLabel: string;
+		images: { src: string; alt: string; title: string }[];
+	};
+};
+
 export type SectionsPageContent = {
 	hero: {
 		badge: string;
@@ -205,10 +264,11 @@ export type SectionsPageContent = {
 		description: string;
 		image: string;
 		cta: string;
+		ctaLink?: string;
 	};
 	overview: {
 		text: string;
-		stats: { value: string; label: string }[];
+		stats: { value: string; label: string; icon?: StatIconKey }[];
 	};
 	sections: {
 		id: string;
@@ -221,7 +281,7 @@ export type SectionsPageContent = {
 		focus: string[];
 		leadership: {
 			chief: { name: string; avatar: string };
-			assistant: { name: string; avatar: string };
+			assistants: { name: string; avatar: string }[];
 			patrols: { name: string; leader: string; assistant: string; members: string[] }[];
 		};
 	}[];
@@ -260,6 +320,7 @@ export type Translations = {
 	layout: LayoutContent;
 	home: HomeContent;
 	about: AboutContent;
+	activitiesPage: ActivitiesPageContent;
 	sectionsPage: SectionsPageContent;
 	galleryPage: GalleryPageContent;
 };
@@ -269,6 +330,7 @@ export const translations: Record<string, Translations> = {
 		layout: layoutEn,
 		home: homeEn,
 		about: aboutEn,
+		activitiesPage: activitiesPageEn,
 		sectionsPage: sectionsPageEn,
 		galleryPage: galleryPageEn,
 	},
@@ -276,6 +338,7 @@ export const translations: Record<string, Translations> = {
 		layout: layoutAr,
 		home: homeAr,
 		about: aboutAr,
+		activitiesPage: activitiesPageAr,
 		sectionsPage: sectionsPageAr,
 		galleryPage: galleryPageAr,
 	},

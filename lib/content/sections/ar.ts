@@ -1,4 +1,20 @@
+import { leadershipAr } from "@/lib/content/shared/leadership/ar";
 import type { SectionsPageContent } from "@/lib/translations";
+
+const leaderProfiles = leadershipAr.items.reduce<Record<string, { name: string; avatar: string }>>((acc, leader) => {
+	acc[leader.id] = { name: leader.name, avatar: leader.photo };
+	return acc;
+}, {});
+
+const pickLeader = (id: string) => {
+	const profile = leaderProfiles[id];
+	return {
+		name: profile?.name ?? id,
+		avatar:
+			profile?.avatar ??
+			"https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80",
+	};
+};
 
 export const sectionsPageAr: SectionsPageContent = {
 	hero: {
@@ -7,13 +23,14 @@ export const sectionsPageAr: SectionsPageContent = {
 		description: "من الجرميز إلى المنجدات، كل فرع يساعد أبناءنا على النمو عبر تحديات وخدمة ومغامرة تناسب عمرهم.",
 		image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1600&q=80",
 		cta: "حمّلوا دليل البرنامج",
+		ctaLink: "/docs/program-guide.pdf",
 	},
 	overview: {
 		text: "ستة فروع تشكّل عائلة واحدة. اكتشفوا كيف ننظم كل فرع وتعرّفوا على القادة الذين يرافقون أولادكم أسبوعياً.",
 		stats: [
-			{ value: "6", label: "فروع نشطة" },
-			{ value: "24", label: "قائد فرعي" },
-			{ value: "80+", label: "كشاف مشارك" },
+			{ value: "6", label: "فروع نشطة", icon: "campfire" },
+			{ value: "24", label: "قائد فرعي", icon: "community" },
+			{ value: "80+", label: "كشاف مشارك", icon: "calendar" },
 		],
 	},
 	sections: [
@@ -26,15 +43,9 @@ export const sectionsPageAr: SectionsPageContent = {
 			meeting: "السبت · 2:00 بعد الظهر · قاعة الرعية",
 			image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
 			focus: ["حياة الطليعة", "لحظات صلاة", "أشغال يدوية"],
-			leadership: {
-				chief: {
-					name: "أنطوني رزق",
-					avatar: "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=200&q=80",
-				},
-				assistant: {
-					name: "يارا صعب",
-					avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
-				},
+		leadership: {
+			chief: pickLeader("louveteaux-lead"),
+			assistants: [pickLeader("louveteaux-assistant")],
 				patrols: [
 					{
 						name: "مجموعة سان جان",
@@ -67,14 +78,8 @@ export const sectionsPageAr: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
 			focus: ["أشغال فنية", "خدمة اجتماعية", "أناشيد"],
 			leadership: {
-				chief: {
-					name: "ميا طنوس",
-					avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80",
-				},
-				assistant: {
-					name: "جولي نصر",
-					avatar: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=200&q=80",
-				},
+				chief: pickLeader("flowers-lead"),
+				assistants: [pickLeader("flowers-assistant")],
 				patrols: [
 					{
 						name: "فرقة سيدة العجائب",
@@ -101,14 +106,8 @@ export const sectionsPageAr: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
 			focus: ["بناء كشفي", "ملاحة", "مشاريع خدمة"],
 			leadership: {
-				chief: {
-					name: "عمر خوري",
-					avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
-				},
-				assistant: {
-					name: "سامي أبو خليل",
-					avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=200&q=80",
-				},
+				chief: pickLeader("rovers-lead"),
+				assistants: [pickLeader("rovers-assistant")],
 				patrols: [
 					{
 						name: "طلائع سان جوزف",
@@ -135,14 +134,8 @@ export const sectionsPageAr: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=1200&q=80",
 			focus: ["قيادة", "مشاركة روحية", "رحلات"],
 			leadership: {
-				chief: {
-					name: "ليا ضاهر",
-					avatar: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=200&q=80",
-				},
-				assistant: {
-					name: "كلارا عبّود",
-					avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
-				},
+				chief: pickLeader("guides-lead"),
+				assistants: [pickLeader("guides-assistant")],
 				patrols: [
 					{
 						name: "فرقة القديسة رفقا",
@@ -169,14 +162,8 @@ export const sectionsPageAr: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1460400355176-3680d9ab85fa?auto=format&fit=crop&w=1200&q=80",
 			focus: ["رحلات", "مرافقة", "تمييز دعوي"],
 			leadership: {
-				chief: {
-					name: "عمر خوري",
-					avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
-				},
-				assistant: {
-					name: "سامي أبو خليل",
-					avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=200&q=80",
-				},
+				chief: pickLeader("rovers-lead"),
+				assistants: [pickLeader("rovers-assistant")],
 				patrols: [
 					{
 						name: "عشيرة سان جورج",
@@ -203,14 +190,8 @@ export const sectionsPageAr: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1600&q=80",
 			focus: ["خدمة دولية", "خدمة ليتورجية", "إدارة مشاريع"],
 			leadership: {
-				chief: {
-					name: "كريستيل نصر",
-					avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=200&q=80",
-				},
-				assistant: {
-					name: "هبة جرجس",
-					avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
-				},
+				chief: pickLeader("pioneers-lead"),
+				assistants: [pickLeader("pioneers-assistant-1"), pickLeader("pioneers-assistant-2")],
 				patrols: [
 					{
 						name: "موقد القديسة ريتا",

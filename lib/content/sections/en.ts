@@ -1,4 +1,20 @@
+import { leadershipEn } from "@/lib/content/shared/leadership/en";
 import type { SectionsPageContent } from "@/lib/translations";
+
+const leaderProfiles = leadershipEn.items.reduce<Record<string, { name: string; avatar: string }>>((acc, leader) => {
+	acc[leader.id] = { name: leader.name, avatar: leader.photo };
+	return acc;
+}, {});
+
+const pickLeader = (id: string) => {
+	const profile = leaderProfiles[id];
+	return {
+		name: profile?.name ?? id,
+		avatar:
+			profile?.avatar ??
+			"https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80",
+	};
+};
 
 export const sectionsPageEn: SectionsPageContent = {
 	hero: {
@@ -8,13 +24,14 @@ export const sectionsPageEn: SectionsPageContent = {
 			"From Louveteaux to Caravelles, every branch helps scouts grow through age-appropriate challenges, service, and leadership.",
 		image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1600&q=80",
 		cta: "Download program guide",
+		ctaLink: "/docs/program-guide.pdf",
 	},
 	overview: {
 		text: "Six branches form one family. Explore how each section is organized and meet the chiefs guiding your children each week.",
 		stats: [
-			{ value: "6", label: "Active sections" },
-			{ value: "24", label: "Section leaders" },
-			{ value: "80+", label: "Youth enrolled" },
+			{ value: "6", label: "Active sections", icon: "campfire" },
+			{ value: "24", label: "Section leaders", icon: "community" },
+			{ value: "80+", label: "Youth enrolled", icon: "calendar" },
 		],
 	},
 	sections: [
@@ -28,14 +45,8 @@ export const sectionsPageEn: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
 			focus: ["Patrol life", "Faith moments", "Crafts"],
 		leadership: {
-			chief: {
-				name: "Anthony Rizk",
-				avatar: "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=200&q=80",
-			},
-			assistant: {
-				name: "Yara Saab",
-				avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
-			},
+			chief: pickLeader("louveteaux-lead"),
+			assistants: [pickLeader("louveteaux-assistant")],
 			patrols: [
 				{
 					name: "Meute Saint Jean",
@@ -68,14 +79,8 @@ export const sectionsPageEn: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
 			focus: ["Creative ateliers", "Outreach", "Songs"],
 		leadership: {
-			chief: {
-				name: "Maya Tannous",
-				avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80",
-			},
-			assistant: {
-				name: "Julie Nasr",
-				avatar: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=200&q=80",
-			},
+			chief: pickLeader("flowers-lead"),
+			assistants: [pickLeader("flowers-assistant")],
 			patrols: [
 				{
 					name: "Ronde Notre Dame",
@@ -102,14 +107,8 @@ export const sectionsPageEn: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
 			focus: ["Pioneering", "Navigation", "Service projects"],
 		leadership: {
-			chief: {
-				name: "Omar Khoury",
-				avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
-			},
-			assistant: {
-				name: "Sami Abou Khalil",
-				avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=200&q=80",
-			},
+			chief: pickLeader("rovers-lead"),
+			assistants: [pickLeader("rovers-assistant")],
 			patrols: [
 				{
 					name: "Troop Saint Joseph",
@@ -136,14 +135,8 @@ export const sectionsPageEn: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=1200&q=80",
 			focus: ["Leadership", "Faith sharing", "Backpacking"],
 		leadership: {
-			chief: {
-				name: "Lea Daher",
-				avatar: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=200&q=80",
-			},
-			assistant: {
-				name: "Clara Abboud",
-				avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
-			},
+			chief: pickLeader("guides-lead"),
+			assistants: [pickLeader("guides-assistant")],
 			patrols: [
 				{
 					name: "Compagnie Sainte Rafqa",
@@ -170,14 +163,8 @@ export const sectionsPageEn: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1460400355176-3680d9ab85fa?auto=format&fit=crop&w=1200&q=80",
 			focus: ["Expeditions", "Mentorship", "Vocational discernment"],
 		leadership: {
-			chief: {
-				name: "Omar Khoury",
-				avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
-			},
-			assistant: {
-				name: "Sami Abou Khalil",
-				avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=200&q=80",
-			},
+			chief: pickLeader("rovers-lead"),
+			assistants: [pickLeader("rovers-assistant")],
 			patrols: [
 				{
 					name: "Clan Saint Georges",
@@ -204,14 +191,8 @@ export const sectionsPageEn: SectionsPageContent = {
 			image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1600&q=80",
 			focus: ["Global service", "Liturgy support", "Project management"],
 		leadership: {
-			chief: {
-				name: "Christelle Nassar",
-				avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=200&q=80",
-			},
-			assistant: {
-				name: "Hiba Gerges",
-				avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
-			},
+			chief: pickLeader("pioneers-lead"),
+			assistants: [pickLeader("pioneers-assistant-1"), pickLeader("pioneers-assistant-2")],
 			patrols: [
 				{
 					name: "Hearth Saint Rita",

@@ -12,6 +12,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import { CTAButton } from "@/components/cta-button";
 import { ContentSection } from "@/components/content-section";
+import { PageHero } from "@/components/page-hero";
 import { useLanguage } from "@/components/language-provider";
 import { usePageContent } from "@/hooks/use-page-content";
 import { translations } from "@/lib/translations";
@@ -42,58 +43,17 @@ const localizer = dateFnsLocalizer({
     locales,
 });
 
-const galleryImages = [
-    {
-        src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
-        alt: "Camp campfire",
-        title: "Campfire night",
-    },
-    {
-        src: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80",
-        alt: "Team hike",
-        title: "Trail hike",
-    },
-    {
-        src: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
-        alt: "River activity",
-        title: "River challenge",
-    },
-    {
-        src: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=1200&q=80",
-        alt: "Service project",
-        title: "Service day",
-    },
-];
-
 export default function ActivitiesPage() {
     const { language } = useLanguage();
     const router = useRouter();
     const englishActivities = translations.en.home.activities.items;
     const homeContent = usePageContent("home");
+    const activitiesContent = usePageContent("activitiesPage");
     const { activities, callToAction } = homeContent;
-
-    const heroText =
-        language === "ar"
-            ? {
-                badge: "تقويم النشاطات",
-                title: "مغامراتنا القادمة",
-                description:
-                    "يبقى فوج سان جان مارك نشطاً طوال العام عبر مخيمات، طلعات، وخدمة مجتمعية لكل الفئات. إليكم لمحة عن ما ينتظر عائلاتكم.",
-            }
-            : {
-                badge: "Activities Calendar",
-                title: "Upcoming adventures & gatherings",
-                description:
-                    "The SDC Saint Jean Marc program keeps scouts moving with camps, service, and leadership opportunities. Explore what’s coming this month.",
-            };
-
-    const introParagraph =
-        language === "ar"
-            ? "نحرص على تقديم مزيج متوازن من المغامرة، الخدمة، والتكوين الروحي. يشارك الكشافون في نشاطات أسبوعية ودورات خاصة تبقى راسخة في ذاكرتهم."
-            : "We weave together adventure, service, and faith-forming moments. Every section discovers experiences that grow character and leave lasting memories.";
+    const { hero, intro, featured, calendar, spotlights, spotlightsIntro, galleryPreview } = activitiesContent;
 
     const localizedActivities = activities.items;
-    const featured = localizedActivities;
+    const featuredActivities = localizedActivities;
     const calendarCulture = language === "ar" ? "ar-SA" : "en-US";
     const locale = language === "ar" ? "ar-LB" : "en-US";
     const [currentDate, setCurrentDate] = useState(() => {
@@ -197,76 +157,7 @@ export default function ActivitiesPage() {
         },
         [dayFormatter, timeFormatter],
     );
-
-    const spotlights = useMemo(
-        () =>
-            language === "ar"
-                ? [
-                    {
-                        badge: "رحلات مهارية",
-                        title: "نتعلم في قلب الطبيعة",
-                        description:
-                            "فرق صغيرة يقودها قادتنا تتدرّب على إشعال النار، قراءة الخرائط، والسلامة الليلية من خلال سيناريوهات حقيقية تشجع الجرأة.",
-                        image:
-                            "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80",
-                        statValue: "6",
-                        statLabel: "مخيّمات ليلية سنوياً",
-                    },
-                    {
-                        badge: "خدمة ورسالة",
-                        title: "نخدم مجتمعنا",
-                        description:
-                            "من حملات التنظيف إلى زيارة المسنين، يعيش الكشافون الخدمة شهرياً ويكتشفون معنى القيادة المتواضعة.",
-                        image:
-                            "https://images.unsplash.com/photo-1460400355176-3680d9ab85fa?auto=format&fit=crop&w=1200&q=80",
-                        statValue: "12",
-                        statLabel: "مبادرة تطوعية",
-                    },
-                    {
-                        badge: "لحظات إيمان",
-                        title: "سهرات حول النار",
-                        description:
-                            "تتخلل كل طلعة لحظات صلاة وتأمل جماعي تشعل في القلوب روح الامتنان وتعزز الروابط بين الكشافين.",
-                        image:
-                            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
-                        statValue: "1",
-                        statLabel: "وقفة روحية أسبوعية",
-                    },
-                ]
-                : [
-                    {
-                        badge: "Adventure Labs",
-                        title: "Skills in the Wild",
-                        description:
-                            "Small teams led by our scouters practice fire building, navigation, and overnight safety through real-life scenarios that fuel courage.",
-                        image:
-                            "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80",
-                        statValue: "6",
-                        statLabel: "overnight camps / year",
-                    },
-                    {
-                        badge: "Service Impact",
-                        title: "Community First",
-                        description:
-                            "From riverbank cleanups to visiting seniors, scouts live out service every month and discover what humble leadership looks like.",
-                        image:
-                            "https://images.unsplash.com/photo-1460400355176-3680d9ab85fa?auto=format&fit=crop&w=1200&q=80",
-                        statValue: "12",
-                        statLabel: "service projects",
-                    },
-                    {
-                        badge: "Faith Moments",
-                        title: "Campfire Reflections",
-                        description:
-                            "Evening reflections and chapel moments invite scouts to root their adventures in gratitude, friendship, and prayerful silence.",
-                        image:
-                            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
-                        statValue: "1",
-                        statLabel: "weekly faith pause",
-                    },
-                ],
-        [language],
-    );
+    const calendarBadge = `${calendar.badgePrefix}${monthLabel}${calendar.badgeSuffix}`;
 
     const handleNavigate = useCallback((date: Date) => {
         setCurrentDate(startOfMonth(date));
@@ -292,48 +183,43 @@ export default function ActivitiesPage() {
     }, []);
 
     return (
-        <div className="space-y-16 pb-20 -my-10 -mx-6 md:-mx-12">
-            <section className="overflow-hidden rounded-b border border-slate-900/40 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 shadow-xl md:px-12">
-                <div className="mx-auto grid w-full max-w-6xl gap-12 md:grid-cols-[minmax(0,1.05fr),minmax(0,1fr)] md:items-center">
-                    <div className="space-y-7 text-left text-white md:pr-8">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100 shadow-sm">
-                            {heroText.badge}
-                        </span>
-                        <div className="space-y-5">
-                            <h1 className="text-balance text-4xl font-bold leading-tight md:text-5xl">
-                                {heroText.title}
-                            </h1>
-                            <p className="max-w-xl text-lg leading-relaxed text-emerald-50/90 md:text-xl">
-                                {heroText.description}
-                            </p>
-                        </div>
-                        <div className="flex flex-col gap-3 sm:flex-row">
-                            <CTAButton href="#calendar" variant="light">
-                                {language === "ar" ? "اكتشف التقويم" : "View calendar"}
-                            </CTAButton>
-                            <CTAButton href="#featured" variant="ghost">
-                                {language === "ar" ? "نشاطات بارزة" : "Highlighted events"}
-                            </CTAButton>
-                        </div>
+        <div className="space-y-16 pb-20">
+            <PageHero
+                badge={hero.badge}
+                title={hero.title}
+                description={hero.description}
+                image={hero.image}
+                imagePriority
+                actions={
+                    <div className="flex flex-wrap gap-3">
+                        <CTAButton href={hero.primaryCta.href} variant="light">
+                            {hero.primaryCta.label}
+                        </CTAButton>
+                        <CTAButton href={hero.secondaryCta.href} variant="ghost">
+                            {hero.secondaryCta.label}
+                        </CTAButton>
                     </div>
-                </div>
-            </section>
+                }
+                footer={
+                    <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.3em] text-emerald-100/80">
+                        {hero.highlights.map((item) => (
+                            <span key={item} className="rounded-full border border-white/20 px-3 py-1">
+                                {item}
+                            </span>
+                        ))}
+                    </div>
+                }
+            />
 
             <ContentSection id="featured" bordered padded backgroundClass="bg-white" className="space-y-6">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
-                        <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
-                            {language === "ar" ? "نشاطات مميزة" : "Highlighted activities"}
-                        </h2>
-                        <p className="text-sm text-slate-500 md:text-base">
-                            {language === "ar"
-                                ? "خطة مختارة للأحداث التي لا تُفوّت في الشهر القادم."
-                                : "A curated look at the standout events you won’t want to miss this month."}
-                        </p>
+                        <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">{featured.title}</h2>
+                        <p className="text-sm text-slate-500 md:text-base">{featured.subtitle}</p>
                     </div>
                 </div>
                 <div className="flex snap-x gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible">
-                    {featured.map((activity) => {
+                    {featuredActivities.map((activity) => {
                         const start = new Date(activity.datetime);
                         const end = activity.endTime ? new Date(activity.endTime) : addHours(start, 2);
                         const timeRange = formatTimeRange(start, end);
@@ -375,7 +261,7 @@ export default function ActivitiesPage() {
             </ContentSection>
 
             <ContentSection className="text-center" maxWidthClass="max-w-4xl">
-                <p className="text-lg text-slate-600 md:text-xl">{introParagraph}</p>
+                <p className="text-lg text-slate-600 md:text-xl">{intro}</p>
             </ContentSection>
 
             <ContentSection
@@ -386,22 +272,16 @@ export default function ActivitiesPage() {
             >
                 <div className="flex flex-col gap-2 text-left md:flex-row md:items-end md:justify-between">
                     <div>
-                        <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
-                            {language === "ar" ? "تقويم شهر واحد" : "This month at a glance"}
-                        </h2>
-                        <p className="text-sm text-slate-500 md:text-base">
-                            {language === "ar"
-                                ? "نُحدّث هذا التقويم أسبوعياً لمتابعة النشاطات والعائلات المشاركة."
-                                : "Check back each week for updates and registration notes for families."}
-                        </p>
+                        <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">{calendar.title}</h2>
+                        <p className="text-sm text-slate-500 md:text-base">{calendar.subtitle}</p>
                     </div>
-                    <CTAButton href="/contact" variant="outline">
-                        {language === "ar" ? "اسأل عن نشاط" : "Ask about an activity"}
+                    <CTAButton href={calendar.ctaHref} variant="outline">
+                        {calendar.ctaLabel}
                     </CTAButton>
                 </div>
                 <div className="space-y-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600">
-                        {language === "ar" ? `شهر ${monthLabel}` : `${monthLabel} calendar`}
+                        {calendarBadge}
                     </p>
                     <div className="overflow-hidden rounded-3xl border border-emerald-100 bg-emerald-50/40 p-4 shadow-sm">
                         <Calendar
@@ -469,16 +349,8 @@ export default function ActivitiesPage() {
             <ContentSection className="space-y-8">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
-                        <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
-                            {language === "ar"
-                                ? "لماذا يعشق الكشافون برنامجنا"
-                                : "Why scouts love our program"}
-                        </h2>
-                        <p className="text-sm text-slate-500 md:text-base">
-                            {language === "ar"
-                                ? "لقطات مصورة من مغامراتنا، خدمتنا، ولحظات الإيمان التي تصنع ذكريات مدى الحياة."
-                                : "Visual snapshots of the adventures, service, and faith moments that shape lifelong memories."}
-                        </p>
+                        <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">{spotlightsIntro.title}</h2>
+                        <p className="text-sm text-slate-500 md:text-base">{spotlightsIntro.subtitle}</p>
                     </div>
                     <CTAButton href="/join" variant="outline">
                         {language === "ar" ? "انضموا إلينا" : "Join the adventure"}
@@ -525,21 +397,15 @@ export default function ActivitiesPage() {
             <ContentSection className="space-y-6">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
-                        <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
-                            {language === "ar" ? "لمحات مصورة" : "Gallery preview"}
-                        </h2>
-                        <p className="text-sm text-slate-500 md:text-base">
-                            {language === "ar"
-                                ? "صور سريعة من مخيماتنا وورشاتنا الأخيرة."
-                                : "A peek at recent camps, workshops, and service projects."}
-                        </p>
+                        <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">{galleryPreview.title}</h2>
+                        <p className="text-sm text-slate-500 md:text-base">{galleryPreview.subtitle}</p>
                     </div>
                     <CTAButton href="/gallery" variant="outline">
-                        {language === "ar" ? "شاهد المعرض" : "See full gallery"}
+                        {galleryPreview.ctaLabel}
                     </CTAButton>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-                    {galleryImages.map((item) => (
+                    {galleryPreview.images.map((item) => (
                         <div
                             key={item.alt}
                             className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
@@ -561,13 +427,16 @@ export default function ActivitiesPage() {
                 </div>
             </ContentSection>
 
-            <section className="mx-auto w-full max-w-6xl rounded-3xl bg-emerald-600 px-6 py-12 text-center text-white shadow-lg">
-                <h2 className="text-3xl font-semibold md:text-4xl">
-                    {callToAction.title}
-                </h2>
-                <p className="mx-auto mt-4 max-w-2xl text-lg text-emerald-50/90">
-                    {callToAction.description}
-                </p>
+            <ContentSection
+                bordered
+                padded
+                backgroundClass="bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600"
+                borderClassName="border-emerald-500/60"
+                className="text-center text-white"
+                maxWidthClass="max-w-5xl"
+            >
+                <h2 className="text-3xl font-semibold md:text-4xl">{callToAction.title}</h2>
+                <p className="mx-auto mt-4 max-w-2xl text-lg text-emerald-50/90">{callToAction.description}</p>
                 <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
                     <CTAButton href="/join" variant="light">
                         {callToAction.primaryCta}
@@ -576,7 +445,7 @@ export default function ActivitiesPage() {
                         {callToAction.secondaryCta}
                     </CTAButton>
                 </div>
-            </section>
+            </ContentSection>
         </div>
     );
 }

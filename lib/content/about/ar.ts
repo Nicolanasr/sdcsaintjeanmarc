@@ -1,3 +1,4 @@
+import { leadershipAr } from "@/lib/content/shared/leadership/ar";
 import type { AboutContent } from "@/lib/translations";
 
 export const aboutAr: AboutContent = {
@@ -14,21 +15,25 @@ export const aboutAr: AboutContent = {
 				year: "1957",
 				title: "التأسيس",
 				description: "أطلق قادة الرعية الفوج ليقدّموا مساحة آمنة للشباب.",
+				icon: "campfire",
 			},
 			{
 				year: "1975",
 				title: "أول مخيم دولي",
 				description: "سافرت الطلائع إلى فرنسا ونسجت صداقات كشفية عابرة للحدود.",
+				icon: "mountains",
 			},
 			{
 				year: "2003",
 				title: "توسّع الخدمة",
 				description: "تضاعفت الشراكات الاجتماعية وأضفنا مشاريع شهرية لكل الفروع.",
+				icon: "friends",
 			},
 			{
 				year: "اليوم",
 				title: "أربعة فروع مزدهرة",
 				description: "من القنادس إلى الروّاد يجتمع أكثر من 20 قائد متطوع أسبوعياً.",
+				icon: "shield",
 			},
 		],
 	},
@@ -53,174 +58,7 @@ export const aboutAr: AboutContent = {
 			},
 		],
 	},
-	leadership: {
-		title: "تعرفوا على فريق القيادة",
-		items: [
-			{
-				id: "chef-group",
-				name: "ماري الخوري",
-				role: "قائدة الفوج",
-				bio: "تقود العمل التربوي وترافق القادة لضمان انسجام البرامج مع رسالتنا.",
-				photo: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "assistant-chef",
-				name: "جوزيف فرح",
-				role: "مساعد قائد الفوج",
-				bio: "يهتم بالمخيمات واللوجستيات ويضمن جودة المغامرات الهادفة.",
-				photo: "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "secretary",
-				name: "لينا سعادة",
-				role: "أمين سر",
-				bio: "تعتني بالتواصل مع الأهل وتوثيق نشاطات الفوج.",
-				photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "treasurer",
-				name: "كريم بعلبكي",
-				role: "أمين صندوق",
-				bio: "يدير الميزانيات والحملات الداعمة لضمان مشاركة الجميع.",
-				photo: "https://images.unsplash.com/photo-1502767089025-6572583495b4?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "quartermaster",
-				name: "إيلي مطر",
-				role: "أمين تجهيزات",
-				bio: "يشرف على العتاد والسلامة والنقل لكل الطلعات.",
-				photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "operations-lead",
-				name: "نور شديد",
-				role: "قائد إداري",
-				bio: "ينسّق الجداول، الاستمارات، ودورات التكوين للقادة.",
-				photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "castors-lead",
-				name: "رامي شبط",
-				role: "قائد فرقة الكشفة",
-				bio: "يعرف الصغار على المغامرة البسيطة والصلاة المرحة.",
-				photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "castors-assistant",
-				name: "نادين فخري",
-				role: "مساعدة فرقة الكشفة",
-				bio: "تحضر الأشغال اليدوية والأناشيد التي تفتح خيال الأطفال.",
-				photo: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "louveteaux-lead",
-				name: "أنطوني رزق",
-				role: "قائد فرقة الجرميز",
-				bio: "يرافق الجرميز في ألعاب الطليعة وأول مخيم ليلي.",
-				photo: "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "louveteaux-assistant",
-				name: "يارا صعب",
-				role: "مساعدة الجرميز",
-				bio: "تهتم بالأناشيد والشارات وبناء روح الفريق.",
-				photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "guides-lead",
-				name: "ليا ضاهر",
-				role: "قائدة المرشدات",
-				bio: "ترافق المرشدات في المخيمات التكوينية وتأملات المساء.",
-				photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "guides-assistant",
-				name: "كلارا عبود",
-				role: "مساعدة المرشدات",
-				bio: "تحضر حلقات المشاركة والصلوات حول النار.",
-				photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "flowers-lead",
-				name: "ميا طنوس",
-				role: "قائدة الزهرات",
-				bio: "تزرع حب الخدمة عبر الفن والرقص والطبيعة.",
-				photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "flowers-assistant",
-				name: "جولي نصر",
-				role: "مساعدة الزهرات",
-				bio: "تنظم الاحتفالات وتتابع الشارات مع العائلات.",
-				photo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "rovers-lead",
-				name: "عمر خوري",
-				role: "قائد الجوالة",
-				bio: "يدرّب الجوالة على قيادة الرحلات والمشاريع.",
-				photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "rovers-assistant",
-				name: "سامي أبو خليل",
-				role: "مساعد الجوالة",
-				bio: "يهتم بالتجهيزات والتدريب الطارئ في طلعات الجوالة.",
-				photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "pioneers-lead",
-				name: "كريستيل نصر",
-				role: "قائدة المنجدات",
-				bio: "ترافق المنجدات في مسيرة الرسالة والخدمة الدولية.",
-				photo: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "pioneers-assistant-1",
-				name: "هبة جرجس",
-				role: "مساعدة المنجدات",
-				bio: "تنسّق لقاءات التكوين وخدمة المجتمع مع الشابات.",
-				photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80",
-			},
-			{
-				id: "pioneers-assistant-2",
-				name: "رنيا فاضل",
-				role: "مساعدة المنجدات",
-				bio: "تواكب التحضيرات للمخيمات الطويلة والزيارات الخارجية.",
-				photo: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80",
-			},
-		],
-		orgChart: {
-			rows: [
-				{
-					label: "قيادة الفوج",
-					highlight: true,
-					nodes: [{ leader: "chef-group", assistants: ["assistant-chef"] }],
-				},
-				{
-					label: "الفريق الإداري",
-					nodes: [
-						{ leader: "secretary", assistants: [] },
-						{ leader: "treasurer", assistants: [] },
-						{ leader: "quartermaster", assistants: [] },
-						{ leader: "operations-lead", assistants: [] },
-					],
-				},
-				{
-					label: "قادة الفروع",
-					compact: true,
-					nodes: [
-						{ leader: "castors-lead", assistants: ["castors-assistant"] },
-						{ leader: "louveteaux-lead", assistants: ["louveteaux-assistant"] },
-						{ leader: "guides-lead", assistants: ["guides-assistant"] },
-						{ leader: "flowers-lead", assistants: ["flowers-assistant"] },
-						{ leader: "rovers-lead", assistants: ["rovers-assistant"] },
-						{ leader: "pioneers-lead", assistants: ["pioneers-assistant-1", "pioneers-assistant-2"] },
-					],
-				},
-			],
-		},
-	},
+	leadership: leadershipAr,
 	rhythm: {
 		title: "إيقاع الأسبوع وكيفية المشاركة",
 		schedule: [
@@ -235,6 +73,11 @@ export const aboutAr: AboutContent = {
 				"شاركوا في لقاء الأهل للتعرف على برنامج السنة.",
 				"سجلوا أولادكم أو تطوعوا ضمن فريق الدعم.",
 			],
+		},
+		featureImage: {
+			src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80",
+			label: "كل سبت",
+			caption: "فوج سان جان مارك",
 		},
 	},
 	impact: {

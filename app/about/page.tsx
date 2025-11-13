@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
-
+import type { IconType } from "react-icons";
 import {
     GiCampfire,
     GiCompass,
@@ -23,10 +23,13 @@ import { useLanguage } from "@/components/language-provider";
 import { usePageContent } from "@/hooks/use-page-content";
 import { translations } from "@/lib/translations";
 
-const timelineIcons = [GiCampfire, GiThreeFriends, GiMountains, GiVibratingShield];
+const timelineIconMap: Record<string, IconType> = {
+    campfire: GiCampfire,
+    friends: GiThreeFriends,
+    mountains: GiMountains,
+    shield: GiVibratingShield,
+};
 const pillarIcons = [GiCampfire, FaHandsHelping, GiCompass, GiStumpRegrowth];
-const rhythmImage =
-    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80";
 
 export default function AboutPage() {
     const { language } = useLanguage();
@@ -85,15 +88,13 @@ export default function AboutPage() {
                 }
             />
 
-            <SectionDivider />
-
             <ContentSection id="history" bordered padded>
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{history.title}</h2>
                 </div>
                 <div className="grid gap-6 md:grid-cols-2">
-                    {history.timeline.map((item, index) => {
-                        const Icon = timelineIcons[index % timelineIcons.length];
+                    {history.timeline.map((item) => {
+                        const Icon = timelineIconMap[item.icon] ?? GiCampfire;
                         return (
                             <article key={item.year} className="rounded-3xl border border-emerald-100 bg-emerald-50/30 p-5">
                                 <div className="flex items-center gap-3">
@@ -138,8 +139,6 @@ export default function AboutPage() {
                     })}
                 </div>
             </ContentSection>
-
-            <SectionDivider />
 
             <ContentSection className="space-y-10">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -197,8 +196,6 @@ export default function AboutPage() {
                 </div>
             </ContentSection>
 
-            <SectionDivider />
-
             <ContentSection bordered padded className="bg-white/90 space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
@@ -254,7 +251,16 @@ export default function AboutPage() {
                                         <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
                                             {language === "ar" ? "الطلائع" : "Patrols"}
                                         </p>
-                                        <p>{section.leadership.patrols.slice(0, 2).map((patrol) => patrol.name).join(" · ")}</p>
+                                        <p>
+                                            {(() => {
+                                                const previewPatrols = section.leadership.patrols.slice(0, 2);
+                                                if (previewPatrols.length === 0) {
+                                                    return language === "ar" ? "تفاصيل الطلائع داخل الصفحة" : "See patrol details inside";
+                                                }
+                                                const separator = language === "ar" ? " • " : " · ";
+                                                return previewPatrols.map((patrol) => patrol.name).join(separator);
+                                            })()}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -262,8 +268,6 @@ export default function AboutPage() {
                     ))}
                 </div>
             </ContentSection>
-
-            <SectionDivider />
 
             <ContentSection bordered padded className="bg-white">
                 <div className="grid gap-8 lg:grid-cols-[minmax(0,0.85fr),minmax(0,1.15fr)]">
@@ -299,16 +303,16 @@ export default function AboutPage() {
                         </div>
                         <div className="relative min-h-[220px] overflow-hidden rounded-3xl">
                             <Image
-                                src={rhythmImage}
-                                alt="Weekly gatherings"
+                                src={rhythm.featureImage.src}
+                                alt={rhythm.featureImage.caption}
                                 fill
                                 sizes="(max-width: 1024px) 100vw, 400px"
                                 className="object-cover"
                             />
                             <div className="absolute inset-0 bg-gradient-to-br from-black/50 to-transparent" />
                             <div className="absolute bottom-4 left-4 text-white">
-                                <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">{language === "ar" ? "كل سبت" : "Every Saturday"}</p>
-                                <p className="text-xl font-semibold">SDC Saint Jean Marc</p>
+                                <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">{rhythm.featureImage.label}</p>
+                                <p className="text-xl font-semibold">{rhythm.featureImage.caption}</p>
                             </div>
                         </div>
                     </div>
@@ -402,16 +406,5 @@ function LeaderCardLink({ member, size = "lg" }: { member: LeaderItem; size?: "l
             <p className={`${nameClass} font-semibold text-slate-900`}>{member.name}</p>
             <p className={`${roleClass} uppercase tracking-[0.3em] text-emerald-600`}>{member.role}</p>
         </Link>
-    );
-}
-
-function SectionDivider() {
-    return (
-        <></>
-        // <div className="mx-auto my-12 w-full max-w-6xl">
-        //     <div className="relative h-12 overflow-hidden rounded-3xl border border-emerald-50 bg-gradient-to-r from-emerald-50 via-white to-emerald-50">
-        //         <div className="absolute inset-0 opacity-30 [background-image:url('/forest-silhouette.svg')] [background-position:bottom] [background-repeat:repeat-x]" />
-        //     </div>
-        // </div>
     );
 }

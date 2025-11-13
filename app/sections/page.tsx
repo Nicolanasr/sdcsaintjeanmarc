@@ -34,9 +34,17 @@ const accentGradients = [
     "from-rose-300/20 via-white to-white",
 ];
 
+const statIconMap: Record<string, IconType> = {
+    campfire: GiCampfire,
+    community: FiUsers,
+    calendar: FiCalendar,
+};
+const fallbackStatsIcons: IconType[] = [GiCampfire, FiUsers, FiCalendar];
+
 export default function SectionsPage() {
     const { language } = useLanguage();
     const content = usePageContent("sectionsPage");
+    const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
     const heroHighlights =
         language === "ar"
@@ -118,7 +126,7 @@ export default function SectionsPage() {
                 imagePriority
                 actions={
                     <div className="flex flex-wrap gap-3">
-                        <CTAButton href="#sections-grid" variant="light">
+                        <CTAButton href={content.hero.ctaLink ?? "#sections-grid"} variant="light">
                             {content.hero.cta}
                         </CTAButton>
                         <CTAButton href="/about" variant="ghost">
@@ -147,7 +155,9 @@ export default function SectionsPage() {
                         <p className="text-base text-slate-600">{content.overview.text}</p>
                         <div className="grid gap-4 sm:grid-cols-3">
                             {content.overview.stats.map((stat, index) => {
-                                const Icon = [GiCampfire, FiUsers, FiCalendar][index % 3];
+                                const Icon =
+                                    (stat.icon ? statIconMap[stat.icon] : undefined) ??
+                                    fallbackStatsIcons[index % fallbackStatsIcons.length];
                                 return (
                                     <div
                                         key={stat.label}
@@ -186,7 +196,7 @@ export default function SectionsPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection className="mx-auto w-full max-w-6xl space-y-6">
+            <ContentSection className="space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600">
@@ -213,7 +223,7 @@ export default function SectionsPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection id="sections-grid" className="mx-auto w-full max-w-6xl space-y-6">
+            <ContentSection id="sections-grid" className="space-y-6">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-3xl font-semibold text-slate-900">
@@ -233,6 +243,8 @@ export default function SectionsPage() {
                             section={section}
                             accent={accentGradients[index % accentGradients.length]}
                             isRtl={language === "ar"}
+                            expanded={expandedSection === section.id}
+                            onToggle={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
                         />
                     ))}
                 </div>
@@ -284,23 +296,30 @@ export default function SectionsPage() {
                 <FaqAccordion items={content.faq} initialOpen={0} />
             </ContentSection>
 
-            <section className="-mx-6 md:-mx-12 overflow-hidden border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-6 py-16 md:px-12">
-                <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 text-center">
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600">
+            <ContentSection
+                bordered
+                padded
+                backgroundClass="bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600"
+                borderClassName="border-emerald-500/60"
+                className="text-center text-white"
+                maxWidthClass="max-w-5xl"
+            >
+                <div className="mx-auto flex max-w-4xl flex-col items-center gap-6">
+                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-100/90">
                         {language === "ar" ? "الخطوة التالية" : "Next step"}
                     </p>
-                    <h2 className="text-3xl font-semibold text-slate-900">{content.cta.title}</h2>
-                    <p className="text-base text-slate-600">{content.cta.description}</p>
+                    <h2 className="text-3xl font-semibold">{content.cta.title}</h2>
+                    <p className="text-base text-emerald-50/90">{content.cta.description}</p>
                     <div className="flex flex-wrap justify-center gap-3">
-                        <CTAButton href="/join" variant="solid">
+                        <CTAButton href="/join" variant="light">
                             {content.cta.primary}
                         </CTAButton>
-                        <CTAButton href="/contact" variant="outline">
+                        <CTAButton href="/contact" variant="ghost">
                             {content.cta.secondary}
                         </CTAButton>
                     </div>
                 </div>
-            </section>
+            </ContentSection>
         </div>
     );
 }
@@ -311,20 +330,26 @@ function SectionCard({
     section,
     accent,
     isRtl,
+    expanded,
+    onToggle,
 }: {
     section: SectionContent;
     accent: string;
     isRtl: boolean;
+    expanded: boolean;
+    onToggle: () => void;
 }) {
     const chips = [GiCompass, GiPathDistance, GiCampfire];
-    const [showPatrols, setShowPatrols] = useState(false);
     const meetingParts = section.meeting.split("·");
     const inferredLocation =
         meetingParts.length > 1 ? meetingParts[meetingParts.length - 1].trim() : section.meeting;
-    const patrolSummary = section.leadership.patrols
-        .slice(0, 2)
-        .map((patrol) => patrol.name)
-        .join(isRtl ? " • " : " • ");
+    const previewPatrols = section.leadership.patrols.slice(0, 2);
+    const patrolSummary =
+        previewPatrols.length > 0
+            ? previewPatrols.map((patrol) => patrol.name).join(isRtl ? " • " : " · ")
+            : isRtl
+                ? "اضغطوا لعرض الطلائع"
+                : "Toggle to view patrol roster";
 
     return (
         <article className={`flex flex-col gap-5 rounded-3xl border border-slate-200 bg-gradient-to-br ${accent} p-6 shadow-sm`}>
@@ -366,9 +391,20 @@ function SectionCard({
                 <p className="text-xs uppercase tracking-[0.35em] text-emerald-600">
                     {isRtl ? "فريق القيادة" : "Leadership team"}
                 </p>
-                <div className="mt-4 flex flex-col gap-4 sm:flex-row">
+                <div className="mt-4 flex flex-wrap gap-4">
                     <LeaderBadge label={isRtl ? "القائد" : "Chief"} person={section.leadership.chief} />
-                    <LeaderBadge label={isRtl ? "المعاون" : "Assistant"} person={section.leadership.assistant} />
+                    {section.leadership.assistants.map((assistant, index) => (
+                        <LeaderBadge
+                            key={`${assistant.name}-${index}`}
+                            label={
+                                section.leadership.assistants.length > 1
+                                    ? `${isRtl ? "المعاون" : "Assistant"} ${index + 1}`
+                                    : isRtl ? "المعاون" : "Assistant"
+                            }
+                            person={assistant}
+                            size="sm"
+                        />
+                    ))}
                 </div>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
@@ -381,14 +417,14 @@ function SectionCard({
                     </div>
                     <button
                         type="button"
-                        onClick={() => setShowPatrols((prev) => !prev)}
+                        onClick={onToggle}
                         className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-200 hover:bg-emerald-50"
                     >
-                        {showPatrols ? (isRtl ? "إخفاء التفاصيل" : "Hide details") : isRtl ? "عرض التفاصيل" : "View details"}
+                        {expanded ? (isRtl ? "إخفاء التفاصيل" : "Hide details") : isRtl ? "عرض التفاصيل" : "View details"}
                     </button>
                 </div>
                 <div
-                    className={`grid overflow-hidden transition-all ${showPatrols ? "grid-rows-[1fr] pt-4" : "grid-rows-[0fr]"} `}
+                    className={`grid overflow-hidden transition-all ${expanded ? "grid-rows-[1fr] pt-4" : "grid-rows-[0fr]"} `}
                 >
                     <div className="space-y-3 overflow-hidden">
                         {section.leadership.patrols.map((patrol) => (
@@ -404,18 +440,24 @@ function SectionCard({
 function LeaderBadge({
     label,
     person,
+    size = "lg",
 }: {
     label: string;
     person: SectionContent["leadership"]["chief"];
+    size?: "lg" | "sm";
 }) {
+    const avatarSize = size === "lg" ? "h-16 w-16" : "h-12 w-12";
+    const avatarSizesAttr = size === "lg" ? "64px" : "48px";
+    const containerSizeClass = size === "lg" ? "flex-1" : "flex-none";
+    const nameClass = size === "lg" ? "text-sm" : "text-xs";
     return (
-        <div className="flex flex-1 items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
-            <div className="relative h-16 w-16 overflow-hidden rounded-full border border-emerald-100">
-                <Image src={person.avatar} alt={person.name} fill sizes="64px" className="object-cover" />
+        <div className={`flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3 ${containerSizeClass}`}>
+            <div className={`relative ${avatarSize} overflow-hidden rounded-full border border-emerald-100`}>
+                <Image src={person.avatar} alt={person.name} fill sizes={avatarSizesAttr} className="object-cover" />
             </div>
             <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-emerald-600">{label}</p>
-                <p className="text-sm font-semibold text-slate-900">{person.name}</p>
+                <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-600">{label}</p>
+                <p className={`${nameClass} font-semibold text-slate-900`}>{person.name}</p>
             </div>
         </div>
     );
