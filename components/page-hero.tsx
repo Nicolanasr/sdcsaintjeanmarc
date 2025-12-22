@@ -19,7 +19,7 @@ type PageHeroProps = {
 
 export function PageHero({ badge, title, description, image, actions, footer, stats, imagePriority = false }: PageHeroProps) {
     return (
-        <section className="-mx-6 md:-mx-12 overflow-hidden border border-slate-900/20 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 text-white shadow-xl md:px-12">
+        <section className="overflow-hidden border border-slate-900/20 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 text-white shadow-xl md:px-12">
             <div className="mx-auto grid w-full max-w-6xl gap-12 md:grid-cols-2 lg:items-center">
                 <div className="space-y-6">
                     <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100">

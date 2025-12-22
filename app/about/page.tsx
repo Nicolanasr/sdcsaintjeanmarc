@@ -89,7 +89,7 @@ export default function AboutPage() {
             />
 
             <ContentSection id="history" bordered padded paddingClassName="p-4 md:p-8">
-                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between pb-6">
                     <h2 className="text-3xl font-semibold text-slate-900">{history.title}</h2>
                 </div>
                 <div className="grid gap-6 sm:grid-cols-2">
@@ -115,8 +115,8 @@ export default function AboutPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection className="space-y-6">
-                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <ContentSection className="space-y-6  p-4 md:p-8">
+                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between ">
                     <h2 className="text-3xl font-semibold text-slate-900">{pillars.title}</h2>
                 </div>
                 <div className="grid gap-6 md:grid-cols-2">
@@ -140,7 +140,7 @@ export default function AboutPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection className="space-y-10">
+            <ContentSection className="space-y-10 p-4 md:p-8">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-3xl font-semibold text-slate-900">{leadership.title}</h2>
                 </div>
@@ -169,7 +169,7 @@ export default function AboutPage() {
                         </article>
                     ))}
                 </div> */}
-                <div className="space-y-6 rounded-3xl border border-emerald-100 bg-emerald-50/40 p-0 md:p-6">
+                <div className="space-y-6 rounded-3xl border border-emerald-100 bg-emerald-50/40 p-0 md:p-6 py-6">
                     {orgRows.map((row, rowIndex) => (
                         <div key={rowIndex} className="space-y-4">
                             <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600 md:tracking-[0.35em]">
@@ -196,7 +196,7 @@ export default function AboutPage() {
                 </div>
             </ContentSection>
 
-            <ContentSection className="  space-y-6 ">
+            <ContentSection className="  space-y-6 p-4 md:p-8">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="text-3xl font-semibold text-slate-900">
@@ -214,56 +214,61 @@ export default function AboutPage() {
                 </div>
                 <div className="grid gap-6 sm:grid-cols-3">
                     {sectionsPreview.map((section, index) => (
-                        <article
+                        <Link
                             key={section.id}
-                            className={`flex flex-col gap-4 rounded-3xl border border-slate-200 bg-gradient-to-br ${sectionAccents[index % sectionAccents.length]} p-6 shadow-sm`}
+                            href={`/sections#${section.id}`}
+                            className="group block"
                         >
-                            <div className="flex items-center justify-between gap-4">
-                                <div>
-                                    <p className="text-lg font-semibold text-slate-900">{section.name}</p>
-                                    <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
-                                        {section.ageRange}
-                                    </p>
-                                </div>
-                                <span className="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
-                                    {section.motto}
-                                </span>
-                            </div>
-                            <p className="text-sm text-slate-600">{section.motto}</p>
-                            <div className="flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 p-4 text-sm text-slate-600">
-                                <div className="flex items-center gap-2">
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                                        <FiClock className="h-4 w-4" />
-                                    </span>
+                            <article
+                                className={`flex h-full flex-col gap-4 rounded-3xl border border-slate-200 bg-gradient-to-br ${sectionAccents[index % sectionAccents.length]} p-6 shadow-sm transition group-hover:-translate-y-1 group-hover:shadow-md`}
+                            >
+                                <div className="flex items-center justify-between gap-4">
                                     <div>
+                                        <p className="text-lg font-semibold text-slate-900">{section.name}</p>
                                         <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
-                                            {language === "ar" ? "موعد اللقاء" : "Meeting time"}
-                                        </p>
-                                        <p>{section.meeting}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                                        <FiMapPin className="h-4 w-4" />
-                                    </span>
-                                    <div>
-                                        <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
-                                            {language === "ar" ? "الطلائع" : "Patrols"}
-                                        </p>
-                                        <p>
-                                            {(() => {
-                                                const previewPatrols = section.leadership.patrols.slice(0, 2);
-                                                if (previewPatrols.length === 0) {
-                                                    return language === "ar" ? "تفاصيل الطلائع داخل الصفحة" : "See patrol details inside";
-                                                }
-                                                const separator = language === "ar" ? " • " : " · ";
-                                                return previewPatrols.map((patrol) => patrol.name).join(separator);
-                                            })()}
+                                            {section.ageRange}
                                         </p>
                                     </div>
+                                    <span className="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                        {section.motto}
+                                    </span>
                                 </div>
-                            </div>
-                        </article>
+                                <p className="text-sm text-slate-600">{section.motto}</p>
+                                <div className="flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 p-4 text-sm text-slate-600">
+                                    <div className="flex items-center gap-2">
+                                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                            <FiClock className="h-4 w-4" />
+                                        </span>
+                                        <div>
+                                            <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
+                                                {language === "ar" ? "موعد اللقاء" : "Meeting time"}
+                                            </p>
+                                            <p>{section.meeting}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                            <FiMapPin className="h-4 w-4" />
+                                        </span>
+                                        <div>
+                                            <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
+                                                {language === "ar" ? "الطلائع" : "Patrols"}
+                                            </p>
+                                            <p>
+                                                {(() => {
+                                                    const previewPatrols = section.leadership.patrols.slice(0, 2);
+                                                    if (previewPatrols.length === 0) {
+                                                        return language === "ar" ? "تفاصيل الطلائع داخل الصفحة" : "See patrol details inside";
+                                                    }
+                                                    const separator = language === "ar" ? " • " : " · ";
+                                                    return previewPatrols.map((patrol) => patrol.name).join(separator);
+                                                })()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </article>
+                        </Link>
                     ))}
                 </div>
             </ContentSection>
