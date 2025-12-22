@@ -12,6 +12,7 @@ import { sectionsPageAr } from "./content/sections/ar";
 import { sectionsPageEn } from "./content/sections/en";
 
 export type SectionContent = {
+	id: string;
 	name: string;
 	ageRange: string;
 	description: string;

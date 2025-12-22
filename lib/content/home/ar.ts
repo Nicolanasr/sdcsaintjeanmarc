@@ -10,6 +10,7 @@ const sectionPalette = [
 ];
 
 const homeSectionsAr = buildSectionsContent("ar").map((section, index) => ({
+	id: section.id,
 	name: section.name,
 	ageRange: section.ageRange,
 	description: section.description,

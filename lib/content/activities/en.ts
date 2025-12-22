@@ -11,10 +11,9 @@ export const activitiesPageEn: ActivitiesPageContent = {
 		primaryCta: { label: "View calendar", href: "#calendar" },
 		secondaryCta: { label: "Highlighted events", href: "#featured" },
 	},
-	intro:
-		"We weave together adventure, service, and faith-forming moments. Every section discovers experiences that grow character and leave lasting memories.",
+	intro: "We weave together adventure, service, and faith-forming moments. Every section discovers experiences that grow character and leave lasting memories.",
 	featured: {
-		title: "Highlighted activities",
+		title: "Upcoming activities",
 		subtitle: "A curated look at the standout events you won’t want to miss this month.",
 	},
 	calendar: {

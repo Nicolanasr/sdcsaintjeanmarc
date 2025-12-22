@@ -219,7 +219,9 @@ export default function ActivitiesPage() {
                         const end = activity.endTime ? new Date(activity.endTime) : addHours(start, 2);
                         const timeRange = formatTimeRange(start, end);
 
+                        console.log(end > new Date())
                         return (
+                            end > new Date() &&
                             <article
                                 key={activity.slug}
                                 className="snap-center rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md md:snap-align-none"

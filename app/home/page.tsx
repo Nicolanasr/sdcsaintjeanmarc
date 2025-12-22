@@ -267,45 +267,48 @@ export default function Home() {
                             const visual = sectionVisuals[index % sectionVisuals.length];
                             const SectionIcon = visual.icon;
                             return (
-                                <article
+                                <Link
                                     key={section.name}
-                                    className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                                    href={`/sections#${section.id}`}
+                                    className="block"
                                 >
-                                    <div className="relative h-44 w-full overflow-hidden">
-                                        <Image
-                                            src={visual.image}
-                                            alt={section.name}
-                                            fill
-                                            sizes="(max-width: 768px) 100vw, 50vw"
-                                            className="object-cover transition duration-500 group-hover:scale-105"
-                                        />
-                                        <div className={`absolute inset-0 bg-gradient-to-br ${section.color} opacity-60`} />
-                                        <div className="absolute inset-0 flex items-end justify-between px-5 pb-4">
-                                            <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                                                {visual.label}
-                                            </span>
-                                            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-emerald-600 shadow">
-                                                <SectionIcon className="h-6 w-6" />
-                                            </span>
+                                    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                                        <div className="relative h-44 w-full overflow-hidden">
+                                            <Image
+                                                src={visual.image}
+                                                alt={section.name}
+                                                fill
+                                                sizes="(max-width: 768px) 100vw, 50vw"
+                                                className="object-cover transition duration-500 group-hover:scale-105"
+                                            />
+                                            <div className={`absolute inset-0 bg-gradient-to-br ${section.color} opacity-60`} />
+                                            <div className="absolute inset-0 flex items-end justify-between px-5 pb-4">
+                                                <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                                                    {visual.label}
+                                                </span>
+                                                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-emerald-600 shadow">
+                                                    <SectionIcon className="h-6 w-6" />
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex flex-1 flex-col gap-4 p-6">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <h3 className="text-xl font-semibold text-slate-900">
-                                                {section.name}
-                                            </h3>
-                                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                                                {section.ageRange}
-                                            </span>
+                                        <div className="flex flex-1 flex-col gap-4 p-6">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <h3 className="text-xl font-semibold text-slate-900">
+                                                    {section.name}
+                                                </h3>
+                                                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                                                    {section.ageRange}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm leading-relaxed text-slate-600">
+                                                {section.description}
+                                            </p>
+                                            <div className="mt-auto text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">
+                                                {language === "ar" ? "تعرّف على البرنامج" : "Discover the track"}
+                                            </div>
                                         </div>
-                                        <p className="text-sm leading-relaxed text-slate-600">
-                                            {section.description}
-                                        </p>
-                                        <div className="mt-auto text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">
-                                            {language === "ar" ? "تعرّف على البرنامج" : "Discover the track"}
-                                        </div>
-                                    </div>
-                                </article>
+                                    </article>
+                                </Link>
                             );
                         })}
                     </div>
@@ -322,40 +325,43 @@ export default function Home() {
                 >
                     <div className="grid gap-6 md:grid-cols-3">
                         {activities.items.filter((activity) => activity.datetime > new Date().toISOString()).slice(0, 3).map((activity) => (
-                            <article
+                            <Link
                                 key={activity.title}
-                                className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                                href={`/activities/${activity.slug}`}
+                                className="block"
                             >
-                                <div className="relative h-40 w-full overflow-hidden">
-                                    <Image
-                                        src={activity.image}
-                                        alt={activity.title}
-                                        fill
-                                        sizes="(max-width: 768px) 100vw, 33vw"
-                                        className="object-cover transition duration-500 hover:scale-105"
-                                    />
-                                    <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                                        {activity.location}
-                                    </span>
-                                </div>
-                                <div className="flex flex-1 flex-col justify-between p-6">
-                                    <div className="space-y-3">
-                                        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-                                            {activity.date}
-                                        </p>
-                                        <h3 className="text-xl font-semibold text-slate-900">
-                                            {activity.title}
-                                        </h3>
-                                        <p className="text-sm leading-relaxed text-slate-600">
-                                            {activity.description}
-                                        </p>
+                                <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                                    <div className="relative h-40 w-full overflow-hidden">
+                                        <Image
+                                            src={activity.image}
+                                            alt={activity.title}
+                                            fill
+                                            sizes="(max-width: 768px) 100vw, 33vw"
+                                            className="object-cover transition duration-500 group-hover:scale-105"
+                                        />
+                                        <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                                            {activity.location}
+                                        </span>
                                     </div>
-                                    <div className="mt-4 flex items-center justify-between text-sm font-semibold text-slate-500">
-                                        <span>📍 {activity.location}</span>
-                                        <span>→</span>
+                                    <div className="flex flex-1 flex-col justify-between p-6">
+                                        <div className="space-y-3">
+                                            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
+                                                {activity.date}
+                                            </p>
+                                            <h3 className="text-xl font-semibold text-slate-900">
+                                                {activity.title}
+                                            </h3>
+                                            <p className="text-sm leading-relaxed text-slate-600">
+                                                {activity.description}
+                                            </p>
+                                        </div>
+                                        <div className="mt-4 flex items-center justify-between text-sm font-semibold text-slate-500">
+                                            <span>📍 {activity.location}</span>
+                                            <span>→</span>
+                                        </div>
                                     </div>
-                                </div>
-                            </article>
+                                </article>
+                            </Link>
                         ))}
                     </div>
                 </SectionBlock>
@@ -370,27 +376,26 @@ export default function Home() {
                 >
                     <div className="grid gap-6 sm:grid-cols-2">
                         {gallery.items.map((item, index) => (
-                            <article
-                                key={item.title}
-                                className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-                            >
-                                <div className="relative h-48 w-full overflow-hidden">
-                                    <Image
-                                        src={galleryVisuals[index % galleryVisuals.length]}
-                                        alt={item.title}
-                                        fill
-                                        sizes="(max-width: 768px) 100vw, 50vw"
-                                        className="object-cover transition duration-500 group-hover:scale-105"
-                                    />
-                                    <div className={`absolute inset-0 ${item.background} opacity-70`} />
-                                    <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent p-6">
-                                        <h3 className="text-lg font-semibold text-white">
-                                            {item.title}
-                                        </h3>
-                                        <p className="text-sm text-emerald-100">{item.description}</p>
+                            <Link key={item.title} href="/gallery" className="block">
+                                <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                                    <div className="relative h-48 w-full overflow-hidden">
+                                        <Image
+                                            src={galleryVisuals[index % galleryVisuals.length]}
+                                            alt={item.title}
+                                            fill
+                                            sizes="(max-width: 768px) 100vw, 50vw"
+                                            className="object-cover transition duration-500 group-hover:scale-105"
+                                        />
+                                        <div className={`absolute inset-0 ${item.background} opacity-70`} />
+                                        <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent p-6">
+                                            <h3 className="text-lg font-semibold text-white">
+                                                {item.title}
+                                            </h3>
+                                            <p className="text-sm text-emerald-100">{item.description}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            </article>
+                                </article>
+                            </Link>
                         ))}
                     </div>
                 </SectionBlock>

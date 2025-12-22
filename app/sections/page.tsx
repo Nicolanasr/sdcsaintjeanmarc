@@ -211,7 +211,7 @@ export default function SectionsPage() {
                         </p>
                     </div>
                 </div>
-                <div className="grid gap-6 lg:grid-cols-2 -mx-8 md:mx-0">
+                <div className="grid gap-6 lg:grid-cols-1 -mx-8 md:mx-0">
                     {content.sections.map((section, index) => (
                         <SectionCard
                             key={section.id}
