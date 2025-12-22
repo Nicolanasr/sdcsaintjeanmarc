@@ -16,8 +16,9 @@ import { FaHandsHelping, FaQuoteLeft, FaSeedling } from "react-icons/fa";
 import { FiCalendar, FiUsers } from "react-icons/fi";
 
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Pagination } from "swiper/modules";
+import { Autoplay, Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
+import "swiper/css/navigation";
 import "swiper/css/pagination";
 
 import { CTAButton } from "@/components/cta-button";
@@ -144,8 +145,8 @@ export default function Home() {
 
     return (
         <div className="space-y-16 pb-20">
-            <div className="-mx-6 md:-mx-12 lg:-mx-16">
-                <section className="overflow-hidden md:rounded-3xl border border-slate-900/40 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 shadow-xl md:px-12">
+            <div className="">
+                <section className="overflow-hidden border border-slate-900/40 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 px-6 py-16 shadow-xl md:px-12">
                     <div className="flex flex-col gap-12 md:flex-row md:items-center max-w-6xl mx-auto">
                         <div className="space-y-7 text-left text-white md:flex-1">
                             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100 shadow-sm">
@@ -198,250 +199,266 @@ export default function Home() {
                     </div>
                 </section>
             </div>
-            <section className="mx-auto w-full max-w-6xl overflow-hidden md:rounded-3xl md:border md:border-slate-200 md:bg-white md:shadow-sm">
-                <div className="grid gap-0 md:grid-cols-[1.1fr,0.9fr]">
-                    <div className="space-y-6 md:bg-emerald-50/60 md:p-10">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.45em] text-emerald-700">
-                            {language === "ar" ? "من نحن" : "Who We Are"}
-                        </span>
-                        <div className="space-y-4">
-                            <h2 className="text-3xl font-semibold text-slate-900 md:text-4xl">
-                                {whoWeAre.title}
-                            </h2>
-                            {whoWeAre.paragraphs.map((paragraph, index) => (
-                                <p key={index} className="text-base leading-relaxed text-slate-600 md:text-lg">
-                                    {paragraph}
+            <div className="px-6 md:px-12">
+                <section className="mx-auto w-full max-w-6xl overflow-hidden md:rounded-3xl md:border md:border-slate-200 md:bg-white md:shadow-sm">
+                    <div className="grid gap-0 md:grid-cols-[1.1fr,0.9fr]">
+                        <div className="space-y-6 md:bg-emerald-50/60 md:p-10">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.45em] text-emerald-700">
+                                {language === "ar" ? "من نحن" : "Who We Are"}
+                            </span>
+                            <div className="space-y-4">
+                                <h2 className="text-3xl font-semibold text-slate-900 md:text-4xl">
+                                    {whoWeAre.title}
+                                </h2>
+                                {whoWeAre.paragraphs.map((paragraph, index) => (
+                                    <p key={index} className="text-base leading-relaxed text-slate-600 md:text-lg">
+                                        {paragraph}
+                                    </p>
+                                ))}
+                            </div>
+                            <div className="grid gap-3 text-sm text-slate-600">
+                                <p className="flex items-center gap-3">
+                                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                    {language === "ar"
+                                        ? "برامج تربوية متوازنة من مرحلة إلى أخرى"
+                                        : "Balanced programs that grow with each age section."}
                                 </p>
+                                <p className="flex items-center gap-3">
+                                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                    {language === "ar"
+                                        ? "رحلات وخدمة تعزز روح الفريق"
+                                        : "Adventures and service projects that build teamwork."}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4 md:bg-white mt-4 md:mt-0 md:p-8">
+                            {whoHighlights.map(({ icon: Icon, title, description }) => (
+                                <div
+                                    key={title}
+                                    className="flex md:flex-row flex-col items-start gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/40 px-5 py-4 shadow-sm"
+                                >
+                                    <span className="flex w-full md:w-fit md:h-full md:aspect-square items-center justify-center rounded-2xl bg-white text-emerald-600 shadow">
+                                        <Icon className="h-1/2 w-1/2" />
+                                    </span>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+                                            {title}
+                                        </p>
+                                        <p className="text-sm text-slate-600">{description}</p>
+                                    </div>
+                                </div>
                             ))}
                         </div>
-                        <div className="grid gap-3 text-sm text-slate-600">
-                            <p className="flex items-center gap-3">
-                                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                                {language === "ar"
-                                    ? "برامج تربوية متوازنة من مرحلة إلى أخرى"
-                                    : "Balanced programs that grow with each age section."}
-                            </p>
-                            <p className="flex items-center gap-3">
-                                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                                {language === "ar"
-                                    ? "رحلات وخدمة تعزز روح الفريق"
-                                    : "Adventures and service projects that build teamwork."}
-                            </p>
-                        </div>
                     </div>
-                    <div className="grid md:grid-cols-2 gap-4 md:bg-white mt-4 md:mt-0 md:p-8">
-                        {whoHighlights.map(({ icon: Icon, title, description }) => (
-                            <div
-                                key={title}
-                                className="flex items-start gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/40 px-5 py-4 shadow-sm"
-                            >
-                                <span className="flex  md:h-full md:aspect-square items-center justify-center rounded-2xl bg-white text-emerald-600 shadow">
-                                    <Icon className="h-1/2 w-1/2" />
-                                </span>
-                                <div className="space-y-1">
-                                    <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-                                        {title}
-                                    </p>
-                                    <p className="text-sm text-slate-600">{description}</p>
-                                </div>
-                            </div>
-                        ))}
+                </section>
+            </div>
+            <div className="px-6 md:px-12">
+                <SectionDivider />
+            </div>
+            <div className="md:px-12">
+                <SectionBlock
+                    title={sections.title}
+                    subtitle={sections.subtitle}
+                    ctaLabel={sections.cta}
+                    ctaHref="/sections"
+                >
+                    <div className="grid gap-6 sm:grid-cols-2">
+                        {sections.items.map((section, index) => {
+                            const visual = sectionVisuals[index % sectionVisuals.length];
+                            const SectionIcon = visual.icon;
+                            return (
+                                <article
+                                    key={section.name}
+                                    className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                                >
+                                    <div className="relative h-44 w-full overflow-hidden">
+                                        <Image
+                                            src={visual.image}
+                                            alt={section.name}
+                                            fill
+                                            sizes="(max-width: 768px) 100vw, 50vw"
+                                            className="object-cover transition duration-500 group-hover:scale-105"
+                                        />
+                                        <div className={`absolute inset-0 bg-gradient-to-br ${section.color} opacity-60`} />
+                                        <div className="absolute inset-0 flex items-end justify-between px-5 pb-4">
+                                            <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                                                {visual.label}
+                                            </span>
+                                            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-emerald-600 shadow">
+                                                <SectionIcon className="h-6 w-6" />
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-1 flex-col gap-4 p-6">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <h3 className="text-xl font-semibold text-slate-900">
+                                                {section.name}
+                                            </h3>
+                                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                                                {section.ageRange}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm leading-relaxed text-slate-600">
+                                            {section.description}
+                                        </p>
+                                        <div className="mt-auto text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">
+                                            {language === "ar" ? "تعرّف على البرنامج" : "Discover the track"}
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })}
                     </div>
-                </div>
-            </section>
+                </SectionBlock>
+            </div>
 
 
-
-            <SectionDivider />
-            <SectionBlock
-                title={sections.title}
-                subtitle={sections.subtitle}
-                ctaLabel={sections.cta}
-                ctaHref="/sections"
-            >
-                <div className="grid gap-6 sm:grid-cols-2">
-                    {sections.items.map((section, index) => {
-                        const visual = sectionVisuals[index % sectionVisuals.length];
-                        const SectionIcon = visual.icon;
-                        return (
+            <div className="md:px-12">
+                <SectionBlock
+                    title={activities.title}
+                    subtitle={activities.subtitle}
+                    ctaLabel={activities.cta}
+                    ctaHref="/activities"
+                >
+                    <div className="grid gap-6 md:grid-cols-3">
+                        {activities.items.filter((activity) => activity.datetime > new Date().toISOString()).slice(0, 3).map((activity) => (
                             <article
-                                key={section.name}
+                                key={activity.title}
                                 className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                             >
-                                <div className="relative h-44 w-full overflow-hidden">
+                                <div className="relative h-40 w-full overflow-hidden">
                                     <Image
-                                        src={visual.image}
-                                        alt={section.name}
+                                        src={activity.image}
+                                        alt={activity.title}
+                                        fill
+                                        sizes="(max-width: 768px) 100vw, 33vw"
+                                        className="object-cover transition duration-500 hover:scale-105"
+                                    />
+                                    <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                                        {activity.location}
+                                    </span>
+                                </div>
+                                <div className="flex flex-1 flex-col justify-between p-6">
+                                    <div className="space-y-3">
+                                        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
+                                            {activity.date}
+                                        </p>
+                                        <h3 className="text-xl font-semibold text-slate-900">
+                                            {activity.title}
+                                        </h3>
+                                        <p className="text-sm leading-relaxed text-slate-600">
+                                            {activity.description}
+                                        </p>
+                                    </div>
+                                    <div className="mt-4 flex items-center justify-between text-sm font-semibold text-slate-500">
+                                        <span>📍 {activity.location}</span>
+                                        <span>→</span>
+                                    </div>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                </SectionBlock>
+            </div>
+
+            <div className="md:px-12">
+                <SectionBlock
+                    title={gallery.title}
+                    subtitle={gallery.subtitle}
+                    ctaLabel={gallery.cta}
+                    ctaHref="/gallery"
+                >
+                    <div className="grid gap-6 sm:grid-cols-2">
+                        {gallery.items.map((item, index) => (
+                            <article
+                                key={item.title}
+                                className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                            >
+                                <div className="relative h-48 w-full overflow-hidden">
+                                    <Image
+                                        src={galleryVisuals[index % galleryVisuals.length]}
+                                        alt={item.title}
                                         fill
                                         sizes="(max-width: 768px) 100vw, 50vw"
                                         className="object-cover transition duration-500 group-hover:scale-105"
                                     />
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${section.color} opacity-60`} />
-                                    <div className="absolute inset-0 flex items-end justify-between px-5 pb-4">
-                                        <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                                            {visual.label}
-                                        </span>
-                                        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-emerald-600 shadow">
-                                            <SectionIcon className="h-6 w-6" />
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-1 flex-col gap-4 p-6">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <h3 className="text-xl font-semibold text-slate-900">
-                                            {section.name}
+                                    <div className={`absolute inset-0 ${item.background} opacity-70`} />
+                                    <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent p-6">
+                                        <h3 className="text-lg font-semibold text-white">
+                                            {item.title}
                                         </h3>
-                                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                                            {section.ageRange}
-                                        </span>
-                                    </div>
-                                    <p className="text-sm leading-relaxed text-slate-600">
-                                        {section.description}
-                                    </p>
-                                    <div className="mt-auto text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">
-                                        {language === "ar" ? "تعرّف على البرنامج" : "Discover the track"}
+                                        <p className="text-sm text-emerald-100">{item.description}</p>
                                     </div>
                                 </div>
                             </article>
-                        );
-                    })}
-                </div>
-            </SectionBlock>
-
-
-            <SectionBlock
-                title={activities.title}
-                subtitle={activities.subtitle}
-                ctaLabel={activities.cta}
-                ctaHref="/activities"
-            >
-                <div className="grid gap-6 md:grid-cols-3">
-                    {activities.items.filter((activity) => activity.datetime > new Date().toISOString()).slice(0, 3).map((activity) => (
-                        <article
-                            key={activity.title}
-                            className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-                        >
-                            <div className="relative h-40 w-full overflow-hidden">
-                                <Image
-                                    src={activity.image}
-                                    alt={activity.title}
-                                    fill
-                                    sizes="(max-width: 768px) 100vw, 33vw"
-                                    className="object-cover transition duration-500 hover:scale-105"
-                                />
-                                <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                                    {activity.location}
-                                </span>
-                            </div>
-                            <div className="flex flex-1 flex-col justify-between p-6">
-                                <div className="space-y-3">
-                                    <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-                                        {activity.date}
-                                    </p>
-                                    <h3 className="text-xl font-semibold text-slate-900">
-                                        {activity.title}
-                                    </h3>
-                                    <p className="text-sm leading-relaxed text-slate-600">
-                                        {activity.description}
-                                    </p>
-                                </div>
-                                <div className="mt-4 flex items-center justify-between text-sm font-semibold text-slate-500">
-                                    <span>📍 {activity.location}</span>
-                                    <span>→</span>
-                                </div>
-                            </div>
-                        </article>
-                    ))}
-                </div>
-            </SectionBlock>
-
-            <SectionBlock
-                title={gallery.title}
-                subtitle={gallery.subtitle}
-                ctaLabel={gallery.cta}
-                ctaHref="/gallery"
-            >
-                <div className="grid gap-6 sm:grid-cols-2">
-                    {gallery.items.map((item, index) => (
-                        <article
-                            key={item.title}
-                            className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-                        >
-                            <div className="relative h-48 w-full overflow-hidden">
-                                <Image
-                                    src={galleryVisuals[index % galleryVisuals.length]}
-                                    alt={item.title}
-                                    fill
-                                    sizes="(max-width: 768px) 100vw, 50vw"
-                                    className="object-cover transition duration-500 group-hover:scale-105"
-                                />
-                                <div className={`absolute inset-0 ${item.background} opacity-70`} />
-                                <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent p-6">
-                                    <h3 className="text-lg font-semibold text-white">
-                                        {item.title}
-                                    </h3>
-                                    <p className="text-sm text-emerald-100">{item.description}</p>
-                                </div>
-                            </div>
-                        </article>
-                    ))}
-                </div>
-            </SectionBlock>
-
-            <section className="mx-auto w-full max-w-6xl rounded-[32px] border border-emerald-100 bg-gradient-to-br from-white to-emerald-50/40 p-8 shadow-lg">
-                <div className="flex flex-col gap-4 text-left">
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600">
-                        {testimonial.title}
-                    </p>
-                    <Swiper
-                        modules={[Autoplay, Pagination]}
-                        slidesPerView={2}
-                        spaceBetween={24}
-                        autoplay={{ delay: 6000, disableOnInteraction: false }}
-                        pagination={{ clickable: true }}
-                        breakpoints={{
-                            768: {
-                                slidesPerView: 2,
-                            },
-                        }}
-                        className="w-full"
-                    >
-                        {testimonial.items.map((item) => (
-                            <SwiperSlide key={`${item.author}-${item.role}`}>
-                                <article className="flex h-full flex-col justify-between rounded-3xl border border-emerald-100 bg-white/90 p-6 shadow-inner">
-                                    <FaQuoteLeft className="h-7 w-7 text-emerald-400" />
-                                    <p className="mt-4 text-base italic text-slate-700">
-                                        {item.quote}
-                                    </p>
-                                    <div className="mt-6">
-                                        <p className="text-base font-semibold text-slate-900">
-                                            {item.author}
-                                        </p>
-                                        <p className="text-sm text-slate-500">{item.role}</p>
-                                    </div>
-                                </article>
-                            </SwiperSlide>
                         ))}
-                    </Swiper>
-                </div>
-            </section>
+                    </div>
+                </SectionBlock>
+            </div>
 
-            <section className="mx-auto w-full max-w-6xl rounded-3xl bg-emerald-600 px-6 py-12 text-center text-white shadow-lg">
-                <h2 className="text-3xl font-semibold md:text-4xl">
-                    {callToAction.title}
-                </h2>
-                <p className="mx-auto mt-4 max-w-2xl text-lg text-emerald-50/90">
-                    {callToAction.description}
-                </p>
-                <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                    <CTAButton href="/join" variant="light">
-                        {callToAction.primaryCta}
-                    </CTAButton>
-                    <CTAButton href="/contact" variant="ghost">
-                        {callToAction.secondaryCta}
-                    </CTAButton>
-                </div>
-            </section>
+            <div className="md:px-12">
+                <section className="mx-auto w-full max-w-6xl md:rounded-[32px] border border-emerald-100 bg-gradient-to-br from-white to-emerald-50/40 md:p-8 shadow-lg">
+                    <div className="flex flex-col gap-4 text-left">
+                        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600 mt-8 px-8 md:p-0">
+                            {testimonial.title}
+                        </p>
+                        <Swiper
+                            modules={[Autoplay, Pagination, Navigation]}
+                            slidesPerView={2}
+                            spaceBetween={24}
+                            autoplay={{ delay: 6000, disableOnInteraction: false }}
+                            navigation
+                            pagination={{ clickable: true }}
+                            breakpoints={{
+                                0: {
+
+                                    slidesPerView: 1,
+                                },
+                                768: {
+                                    slidesPerView: 2,
+                                },
+                            }}
+                            className="w-full"
+                        >
+                            {testimonial.items.map((item) => (
+                                <SwiperSlide key={`${item.author}-${item.role}`}>
+                                    <article className="flex h-full flex-col justify-between md:rounded-3xl border border-emerald-100 bg-white/90 p-6 shadow-inner">
+                                        <FaQuoteLeft className="h-7 w-7 text-emerald-400" />
+                                        <p className="mt-4 text-base italic text-slate-700">
+                                            {item.quote}
+                                        </p>
+                                        <div className="mt-6">
+                                            <p className="text-base font-semibold text-slate-900">
+                                                {item.author}
+                                            </p>
+                                            <p className="text-sm text-slate-500">{item.role}</p>
+                                        </div>
+                                    </article>
+                                </SwiperSlide>
+                            ))}
+                        </Swiper>
+                    </div>
+                </section>
+            </div>
+
+            <div className="md:px-12">
+                <section className="mx-auto w-full max-w-6xl md:rounded-3xl bg-emerald-600 px-6 py-12 text-center text-white shadow-lg">
+                    <h2 className="text-3xl font-semibold md:text-4xl">
+                        {callToAction.title}
+                    </h2>
+                    <p className="mx-auto mt-4 max-w-2xl text-lg text-emerald-50/90">
+                        {callToAction.description}
+                    </p>
+                    <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                        <CTAButton href="/join" variant="light">
+                            {callToAction.primaryCta}
+                        </CTAButton>
+                        <CTAButton href="/contact" variant="ghost">
+                            {callToAction.secondaryCta}
+                        </CTAButton>
+                    </div>
+                </section>
+            </div>
         </div>
     );
 }

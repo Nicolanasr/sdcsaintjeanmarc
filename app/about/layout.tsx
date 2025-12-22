@@ -7,7 +7,7 @@ export default function AboutLayout({ children }: { children: ReactNode }) {
     return (
         <div className="flex min-h-screen w-full flex-col bg-neutral-100 text-slate-900">
             <SiteHeader />
-            <main className="flex-1 px-6 md:px-12">
+            <main className="flex-1 mt-24">
                 {children}
             </main>
             <SiteFooter />

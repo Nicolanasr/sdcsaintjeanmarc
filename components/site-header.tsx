@@ -31,7 +31,7 @@ export function SiteHeader() {
     const handleNavigate = () => setMenuOpen(false);
 
     return (
-        <header className="border-b border-emerald-100/60 bg-white/90 shadow-sm backdrop-blur ">
+        <header className="fixed top-0 left-0 right-0 z-50 border-b border-emerald-100/60 bg-white/90 shadow-sm backdrop-blur ">
             <nav className="mx-auto w-full max-w-6xl px-6 py-4">
                 <div className="flex items-center justify-between md:gap-6">
                     <Link href="/home" className="flex items-center gap-2">

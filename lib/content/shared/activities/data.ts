@@ -146,6 +146,31 @@ const activityDefinitions: ActivityDefinition[] = [
 		],
 		contact: text("Leader Antoine · +961 356 9911", "القائد أنطوان · ‎+961 356 9911"),
 	},
+	{
+		slug: "christmass-camp-2025",
+		title: text("Christmass camp 2025", "مسير القيادة الشتوي"),
+		date: text("December 26, 2025", "7 كانون الأول 2025"),
+		description: text(
+			"Senior scouts tackle a ridge hike focused on leadership rotations and winter prep skills.",
+			"الكشافة المتقدمون يخوضون مسيراً جبلياً للتركيز على القيادة والتجهيز لموسم الشتاء."
+		),
+		location: text("Deir al kettara", "محمية أرز الشوف"),
+		datetime: "2025-12-26T08:00:00+02:00",
+		endTime: "2025-12-28T17:00:00+02:00",
+		image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1600&q=80",
+		section: text("All", "الرواد"),
+		highlights: [
+			text("Rotating leadership checkpoints with mentor feedback", "محطات قيادة بالتناوب مع تقييم من القادة"),
+			text("Workshops on shelter building and stove safety", "ورش بناء مأوى شتوي واستعمال مواقد الغاز"),
+			text("Solo reflection moments overlooking cedar valleys", "لحظات تأمل فردية مطلّة على وديان الأرز"),
+		],
+		gear: [
+			text("Layered hiking pack", "حقيبة ظهر مع ملابس طبقات"),
+			text("Trekking poles", "عصي مشي"),
+			text("Thermos with hot drink", "ترمس مع مشروب ساخن"),
+		],
+		contact: text("Leader Antoine · +961 356 9911", "القائد أنطوان · ‎+961 356 9911"),
+	},
 ];
 
 const mapLocalizedList = (list: LocalizedString[], locale: Locale) => list.map((item) => pickLocalized(item, locale));

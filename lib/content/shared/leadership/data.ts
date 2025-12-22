@@ -115,7 +115,7 @@ export const leadershipDefinition: LeadershipDefinition = {
 		},
 		{
 			id: "louveteaux-lead",
-			name: { en: "Francois", ar: "أنطوني رزق" },
+			name: { en: "Francois Abi Char", ar: "أنطوني رزق" },
 			role: { en: "Louveteaux unit leader", ar: "قائد فرقة الجرميز" },
 			bio: {
 				en: "Builds teamwork through patrol games and first overnight experiences.",
