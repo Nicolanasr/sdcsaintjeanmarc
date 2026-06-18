@@ -1,0 +1,37 @@
+[
+  {
+    "id": "faq-1",
+    "questionEn": "What is the minimum age to join the Saint Jean Marc scout group?",
+    "questionAr": "ما هو الحد الأدنى للسن للانضمام إلى فوج سان جان مارك؟",
+    "answerEn": "We welcome children starting from age 4. They join our Louveteaux & Jeannettes (Jaramiz & Zaharat) section, which caters to ages 4 to 11. Our sections span up to age 18 and beyond for leaders.",
+    "answerAr": "نستقبل الأطفال ابتداءً من عمر ٤ سنوات، حيث ينضمون إلى قسم الجراميز والزهرات (من سن ٤ إلى ١١ سنة). تغطي أقسامنا الفئات العمرية حتى ١٨ سنة فما فوق للقيادة الكشفية."
+  },
+  {
+    "id": "faq-2",
+    "questionEn": "When and where do weekly meetings take place?",
+    "questionAr": "متى وأين تقام الاجتماعات الأسبوعية؟",
+    "answerEn": "Our meetings are held every Saturday from 3:30 PM to 6:00 PM in the courtyard and parish facilities of the St. John Mark Cathedral in Byblos (Jbeil). Any changes are communicated by section leaders in advance.",
+    "answerAr": "تقام اجتماعاتنا كل يوم سبت من الساعة ٣:٣٠ بعد الظهر وحتى ٦:٠٠ مساءً في باحة ومرافق كاتدرائية مار يوحنا مرقس في جبيل. أي تعديل في المواعيد يُبلغ به القادة مسبقاً."
+  },
+  {
+    "id": "faq-3",
+    "questionEn": "What are the registration fees, and what do they cover?",
+    "questionAr": "ما هي رسوم الاشتراك وما الذي تغطيه؟",
+    "answerEn": "We charge a nominal annual registration fee that covers scout insurance, administrative costs, and basic meeting materials. Campings and specialized gear may require separate contributions, but we make sure fees remain affordable for all families.",
+    "answerAr": "نفرض رسم اشتراك سنوي رمزي يغطي التأمين الكشفي، المصاريف الإدارية، ومواد الأنشطة الأساسية. قد تتطلب المخيمات والأنشطة الخاصة مساهمات منفصلة، لكننا نحرص على بقاء الرسوم ميسرة لجميع العائلات."
+  },
+  {
+    "id": "faq-4",
+    "questionEn": "How do you ensure children's safety during outdoor camps?",
+    "questionAr": "كيف تضمنون سلامة الأطفال خلال المخيمات الخارجية؟",
+    "answerEn": "Safety is our absolute priority. All our Chefs & Cheftaines (Leaders) go through certified training by the Scouts des Cèdres association. We maintain strict youth-to-leader ratios, have dedicated first-aid responders, and collaborate closely with local rescue services.",
+    "answerAr": "السلامة هي أولويتنا القصوى. يخضع جميع القادة والقائدات لدورات تدريبية معتمدة من جمعية كشافة الأرز. نحافظ على نسبة إشراف صارمة، ويوفر الفوج مسعفين مخصصين، فضلاً عن التنسيق الدائم مع جهات الإنقاذ المحلية."
+  },
+  {
+    "id": "faq-5",
+    "questionEn": "Is scouting only for Christians since the group is affiliated with the cathedral?",
+    "questionAr": "هل النشاط الكشفي للمسيحيين فقط كون الفوج مرتبطاً بالكاتدرائية؟",
+    "answerEn": "While our group is based at the St. John Mark Cathedral and cherishes its Christian values, scouting is universal. We welcome children of all backgrounds and faiths who wish to learn values, build their character, and serve the Lebanese community.",
+    "answerAr": "على الرغم من أن فوجنا يتخذ من كاتدرائية مار يوحنا مرقس مقراً له ويقدر قيمه المسيحية، فإن الحركة الكشفية عالمية. نرحب بالأولاد من جميع الخلفيات والطوائف ممن يرغبون في تعلم القيم، بناء شخصيتهم، وخدمة المجتمع اللبناني."
+  }
+]

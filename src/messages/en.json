@@ -1,0 +1,255 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "Why Scout",
+    "sections": "Our Sections",
+    "agenda": "Calendar",
+    "gallery": "Gallery",
+    "faq": "FAQs",
+    "join": "Join Us",
+    "contact": "Contact Us",
+    "leadership": "Leadership"
+  },
+  "hero": {
+    "title": "Scouts des Cèdres",
+    "subtitle": "Saint Jean Marc Group - Byblos",
+    "motto": "“Just as our ancestors spread the alphabet, we will spread the scout movement.”",
+    "cta": "Join Our Group",
+    "explore": "Explore Our World"
+  },
+  "about": {
+    "title": "Why Scouting?",
+    "tagline": "Building the Leaders of Tomorrow, Today",
+    "general": {
+      "title": "What is Scouting?",
+      "text1": "Scouting is a voluntary, non-political educational movement for young people, open to all without distinction. It offers youth the opportunity to develop their full physical, intellectual, emotional, social, and spiritual potentials as individuals and responsible citizens.",
+      "text2": "Through outdoor activities, group collaboration, and community service, scouts learn life-saving skills, independence, and the value of helping others."
+    },
+    "history": {
+      "title": "Saint Jean Marc Group",
+      "text1": "Based in the historic city of Byblos (Jbeil), Lebanon, the Saint Jean Marc Group (فوج سان جان مارك) has been guiding young minds under the umbrella of the 'Scouts des Cèdres' association. Connected to the historic St. John Mark Cathedral, we teach youngsters to cherish their heritage while sailing toward a bright future.",
+      "text2": "Our group is shaped by the ancient Phoenician maritime spirit: adventurous, resilient, and dedicated to bridging cultures."
+    },
+    "values": {
+      "title": "Our Core Values",
+      "god": "God & Faith",
+      "honor": "Honor & Integrity",
+      "homeland": "Homeland & Service",
+      "truth": "Truthfulness",
+      "loyalty": "Loyalty",
+      "purity": "Purity"
+    }
+  },
+  "sections": {
+    "title": "Our Scout Sections",
+    "subtitle": "Tailored programs matching every age group's growth and development.",
+    "louveteaux": {
+      "title": "Louveteaux",
+      "arabicName": "الجراميز",
+      "ages": "Ages 8 - 11 (Boys)",
+      "colorName": "Yellow Section (Boys)",
+      "motto": "Motto: Do Our Best",
+      "description": "Through playful outdoor exploration, stories, and cooperative games, young boy scouts build confidence, learn group sharing, and explore the outdoors safely."
+    },
+    "jeannettes": {
+      "title": "Jeannettes",
+      "arabicName": "الزهرات",
+      "ages": "Ages 8 - 11 (Girls)",
+      "colorName": "Yellow Section (Girls)",
+      "motto": "Motto: Do Our Best",
+      "description": "Focused on encouraging young girls to develop self-reliance, physical fitness, and outdoor survival skills through guided, creative play."
+    },
+    "eclaireurs": {
+      "title": "Boy Scouts",
+      "arabicName": "الكشافة",
+      "ages": "Ages 11 - 15 (Boys)",
+      "colorName": "Green Section (Boys)",
+      "motto": "Motto: Be Prepared",
+      "description": "Focused on campcraft, hiking, teamwork, and patrol structures. Scouts take on responsibilities, master pioneering skills, and lead their first mini-expeditions."
+    },
+    "guides": {
+      "title": "Guides",
+      "arabicName": "المرشدات",
+      "ages": "Ages 11 - 15 (Girls)",
+      "colorName": "Green Section (Girls)",
+      "motto": "Motto: Be Prepared",
+      "description": "Developing independence, outdoor skills, and leadership for young girls through teamwork and patrol systems."
+    },
+    "routiers": {
+      "title": "Routiers",
+      "arabicName": "الجوالة",
+      "ages": "Ages 16 - 18+ (Boys)",
+      "colorName": "Red Section (Boys)",
+      "motto": "Motto: Serve",
+      "description": "Empowering young men to design community service projects, undertake major wilderness treks, and develop personal philosophies focused on active citizenship."
+    },
+    "caravelles": {
+      "title": "Caravelles",
+      "arabicName": "المنجدات",
+      "ages": "Ages 16 - 18+ (Girls)",
+      "colorName": "Red Section (Girls)",
+      "motto": "Motto: Serve",
+      "description": "Fostering active citizenship, leadership, and social responsibility for young women through community service and adventure planning."
+    },
+    "chefs": {
+      "title": "Chefs & Cheftaines",
+      "arabicName": "القادة والقائدات",
+      "ages": "Ages 18+",
+      "colorName": "Orange & Navy Blue",
+      "motto": "Motto: Lead by Example",
+      "description": "Dedicated volunteers who coordinate activities, ensure safety, and guide younger scouts, carrying the group's Phoenician heritage forward."
+    }
+  },
+  "agenda": {
+    "title": "Upcoming Activities",
+    "subtitle": "Follow our path: meetings, campings, and community actions.",
+    "viewMore": "View Details",
+    "noEvents": "No upcoming events scheduled.",
+    "categories": {
+      "all": "All",
+      "meeting": "Weekly Meeting",
+      "camp": "Camp / Outing",
+      "event": "Special Event"
+    }
+  },
+  "gallery": {
+    "title": "Moments in Action",
+    "subtitle": "A glimpse into our campfires, hikes, and gatherings in Jbeil.",
+    "filterAll": "All Photos",
+    "categories": {
+      "camps": "Camps",
+      "meetings": "Meetings",
+      "outings": "Outings",
+      "community": "Community"
+    }
+  },
+  "testimonials": {
+    "title": "What They Say About Us",
+    "subtitle": "Voices from our parents, alumni, and community leaders.",
+    "items": [
+      {
+        "quote": "Scouting at St. Jean Marc has transformed my son. He went from being shy to leading his own patrol, learning responsibility and respect for nature.",
+        "author": "Marcelle A.",
+        "role": "Parent of a Boy Scout"
+      },
+      {
+        "quote": "The friendship, discipline, and Lebanese heritage I learned in this group stay with me daily. The Phoenicican ship motto is not just a slogan; it defines our character.",
+        "author": "Elio G.",
+        "role": "Alumnus & Scout Leader"
+      },
+      {
+        "quote": "A safe, positive environment where children learn values that are hard to find elsewhere. Highly recommended for every family in Byblos.",
+        "author": "Rita K.",
+        "role": "Parent of a Jeannette"
+      }
+    ]
+  },
+  "faqs": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Got questions about fees, schedules, or safety? We have answers."
+  },
+  "join": {
+    "title": "Join the Adventure",
+    "subtitle": "Ready to write your chapter? Sign up below and we will contact you!",
+    "form": {
+      "name": "Full Name",
+      "namePlaceholder": "John Doe",
+      "age": "Age",
+      "agePlaceholder": "e.g. 12",
+      "phone": "Parent Phone Number",
+      "phonePlaceholder": "e.g. +961 03 123 456",
+      "email": "Email Address",
+      "emailPlaceholder": "john@example.com",
+      "section": "Interested Section",
+      "sectionSelect": "Select a section",
+      "message": "Message / Additional Notes",
+      "messagePlaceholder": "Tell us a bit about yourself...",
+      "submit": "Submit Application",
+      "sending": "Submitting...",
+      "success": "Success! Your application has been sent. We will get in touch shortly.",
+      "error": "Failed to submit. Please try again or contact us directly."
+    },
+    "info": {
+      "title": "Contact Information",
+      "subtitle": "Feel free to reach out directly through any of these channels.",
+      "address": "St. John Mark Cathedral Courtyard, Byblos, Lebanon",
+      "phone1": "+961 09 540 123",
+      "phone2": "+961 70 987 654",
+      "email": "info@sdcsaintjeanmarc.org",
+      "schedule": "Meetings: Every Saturday from 3:30 PM to 6:00 PM"
+    }
+  },
+  "aboutPage": {
+    "historyVideoTitle": "Our Legacy in Motion",
+    "historyVideoSubtitle": "Watch our journey of building leaders and serving the Jbeil community since our foundation.",
+    "playVideo": "Play Video",
+    "milestonesTitle": "Historical Milestones",
+    "milestone1Year": "2015",
+    "milestone1Title": "First Scout Assembly",
+    "milestone2Year": "2018",
+    "milestone2Title": "First Annual Summer Camp",
+    "milestone3Year": "2022",
+    "milestone3Title": "St. John Mark Cathedral Partnership",
+    "milestone4Year": "Today",
+    "milestone4Title": "Leading Byblos Youth Development"
+  },
+  "sectionsPage": {
+    "title": "Our Scout Sections",
+    "subtitle": "Explore our age-based scout programs, structured to foster growth, character, and service.",
+    "allSections": "All Sections",
+    "membersCount": "Active Members",
+    "troopsList": "Troops & Units",
+    "leader": "Section Leadership",
+    "schedule": "Meeting Schedule",
+    "backLink": "Back to Sections",
+    "joinSection": "Join This Section",
+    "photosTitle": "Photos Tagged with This Section",
+    "emptyPhotos": "No photos tagged with this section yet."
+  },
+  "activitiesPage": {
+    "title": "Activity Calendar",
+    "subtitle": "Follow our path: meetings, campings, community actions, and special events.",
+    "calendarTitle": "Interactive Event Calendar",
+    "viewDetails": "View Full Details",
+    "noEvents": "No events on this day.",
+    "requiredGear": "Required Gear & Preparations",
+    "involvedSections": "Involved Sections",
+    "location": "Location",
+    "dateTime": "Date & Time",
+    "detailsTitle": "Activity Details",
+    "backLink": "Back to Calendar",
+    "rsvpTitle": "RSVP / Inquire about this Activity",
+    "rsvpSuccess": "Thank you! Your inquiry has been received.",
+    "rsvpSubmit": "Submit RSVP",
+    "gearItem1": "Official Scout Uniform",
+    "gearItem2": "Hiking boots & extra socks",
+    "gearItem3": "Refillable water bottle",
+    "gearItem4": "Backpack & notebooks",
+    "calendarMonths": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    "calendarDays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  },
+  "galleryPage": {
+    "title": "Photo Gallery Archive",
+    "subtitle": "Browse through albums and filter photos by events, sections, or tags.",
+    "tabAlbums": "Albums & Events",
+    "tabAll": "All Photos",
+    "filterTags": "Filter by Tag",
+    "filterSections": "Filter by Section",
+    "filterAlbums": "Filter by Album",
+    "viewAlbum": "View Album",
+    "emptyAlbum": "No photos found in this album.",
+    "photoCount": "{count} Photos",
+    "backGallery": "Back to Gallery"
+  },
+  "contactPage": {
+    "title": "Contact & Location",
+    "subtitle": "Get in touch with SDC Saint Jean Marc or find us in Jbeil.",
+    "mapTitle": "Find Our Parish Center",
+    "hoursTitle": "Parish & Office Hours",
+    "hoursDetails": "Saturdays 3:00 PM - 7:00 PM | Administrative weekdays 9:00 AM - 1:00 PM"
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "madeWith": "Made with Scout pride in Jbeil."
+  }
+}

@@ -1,26 +1,116 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Scout Group Theme Colors */
+  --color-scout-navy: #0c1b33;
+  --color-scout-navy-light: #1a2f4c;
+  --color-scout-navy-dark: #060e1b;
+  --color-scout-green: #132d18;
+  --color-scout-green-light: #1f4728;
+  --color-scout-gold: #c6933a;
+  --color-scout-gold-light: #dfb25c;
+  --color-scout-terracotta: #a33f1f;
+  --color-scout-beige: #fbf9f4;
+  --color-scout-beige-dark: #ebe5d5;
+  --color-scout-charcoal: #1b202e;
+
+  /* Section-specific Colors */
+  --color-sec-yellow: #f5b027;
+  --color-sec-green: #22c55e;
+  --color-sec-red: #ef4444;
+  --color-sec-orange: #f97316;
+
+  /* Fonts overrides */
+  --font-sans: var(--font-outfit), system-ui, sans-serif;
+  --font-display: var(--font-outfit), system-ui, sans-serif;
+  --font-arabic: var(--font-cairo), system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base styles and defaults */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-scout-beige);
+  color: var(--color-scout-charcoal);
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimize font family and line-heights globally for Arabic locale */
+html[lang="ar"] body {
+  font-family: var(--font-arabic);
+  line-height: 1.7;
+}
+
+html[lang="ar"] h1,
+html[lang="ar"] h2,
+html[lang="ar"] h3,
+html[lang="ar"] h4,
+html[lang="ar"] h5,
+html[lang="ar"] h6,
+html[lang="ar"] .font-display {
+  font-family: var(--font-arabic);
+}
+
+/* High-fidelity custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-scout-beige);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-scout-navy-light);
+  border-radius: 5px;
+  border: 2px solid var(--color-scout-beige);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scout-gold);
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.glass-panel-dark {
+  background: rgba(12, 27, 51, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(26, 47, 76, 0.4);
+}
+
+/* Wave overlay effect for Hero */
+.wave-divider {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  line-height: 0;
+  transform: rotate(180deg);
+}
+
+.wave-divider svg {
+  position: relative;
+  display: block;
+  width: calc(150% + 1.3px);
+  height: 60px;
+}
+
+.wave-divider .shape-fill {
+  fill: var(--color-scout-beige);
+}
+
+/* Double-direction (RTL/LTR) animations adjust */
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
 }

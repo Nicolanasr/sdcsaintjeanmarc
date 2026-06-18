@@ -1,0 +1,50 @@
+[
+  {
+    "id": "1",
+    "titleEn": "Weekly Saturday Meeting",
+    "titleAr": "الاجتماع الأسبوعي السبت",
+    "type": "meeting",
+    "date": "Every Saturday | 3:30 PM",
+    "dateAr": "كل سبت | 3:30 بعد الظهر",
+    "locationEn": "St. Jean Marc Cathedral Courtyard",
+    "locationAr": "ساحة كاتدرائية مار يوحنا مرقس",
+    "descriptionEn": "Regular weekly activities, scout law drills, and outdoor games for all sections.",
+    "descriptionAr": "الأنشطة الأسبوعية المعتادة، تدريب على القانون الكشفي، وألعاب خارجية لكافة الأقسام."
+  },
+  {
+    "id": "2",
+    "titleEn": "Summer Camp 2026 Preparation",
+    "titleAr": "التحضير للمخيم الصيفي ٢٠٢٦",
+    "type": "camp",
+    "date": "July 15 - July 22, 2026",
+    "dateAr": "١٥ تموز - ٢٢ تموز ٢٠٢٦",
+    "locationEn": "Laqlouq Heights Camp Ground",
+    "locationAr": "أعالي اللقلوق - أرض المخيم",
+    "descriptionEn": "Annual summer camping session including wilderness survival training and pioneering build-outs.",
+    "descriptionAr": "مخيمنا الصيفي السنوي يشمل التدريب على البقاء في الطبيعة وتشييد مشاريع الريادة الكشفية."
+  },
+  {
+    "id": "3",
+    "titleEn": "Byblos Citadelle Civic Day",
+    "titleAr": "يوم الخدمة المدنية في قلعة جبيل",
+    "type": "event",
+    "date": "September 12, 2026 | 9:00 AM",
+    "dateAr": "١٢ أيلول ٢٠٢٦ | ٩:٠٠ صباحاً",
+    "locationEn": "Byblos Old Souk & Citadel",
+    "locationAr": "سوق جبيل القديم والقلعة",
+    "descriptionEn": "Scouts lead a community cleaning and heritage awareness guide inside old Jbeil.",
+    "descriptionAr": "حملة يقودها الكشافة لتنظيف وتوعية حول التراث الكشفي والأثري في أسواق جبيل القديمة."
+  },
+  {
+    "id": "4",
+    "titleEn": "Opening Season Ceremony",
+    "titleAr": "حفل افتتاح الموسم الكشفي",
+    "type": "event",
+    "date": "October 03, 2026 | 4:30 PM",
+    "dateAr": "٣ تشرين الأول ٢٠٢٦ | ٤:٣٠ بعد الظهر",
+    "locationEn": "Cathedral Parish Hall & Square",
+    "locationAr": "صالون وساحة الكاتدرائية",
+    "descriptionEn": "Official gathering, scout oath renewals, group formations, and welcoming new recruits.",
+    "descriptionAr": "تجمع رسمي، تجديد الوعد الكشفي، تشكيل الفرق الكشفية والترحيب بالأعضاء الجدد."
+  }
+]

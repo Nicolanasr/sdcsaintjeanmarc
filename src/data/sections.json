@@ -1,0 +1,280 @@
+[
+  {
+    "key": "louveteaux",
+    "titleEn": "Louveteaux",
+    "titleAr": "الجراميز",
+    "ages": "Ages 8 - 11 (Boys)",
+    "colorClass": "border-sec-yellow text-sec-yellow bg-sec-yellow/[0.03] hover:border-sec-yellow/60 hover:shadow-sec-yellow/5",
+    "accentColor": "bg-sec-yellow",
+    "textColor": "text-sec-yellow",
+    "mottoEn": "Do Our Best",
+    "mottoAr": "بذل أقصى الجهد",
+    "colorNameEn": "Yellow Section (Boys)",
+    "colorNameAr": "القسم الأصفر (بنين)",
+    "membersCount": 35,
+    "meetingScheduleEn": "Saturdays | 3:30 PM - 5:30 PM",
+    "meetingScheduleAr": "السبت | ٣:٣٠ - ٥:٣٠ بعد الظهر",
+    "coverImage": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80",
+    "leaders": [
+      {
+        "roleEn": "Section Chief",
+        "roleAr": "رئيس القسم",
+        "nameEn": "Elie Khoury",
+        "nameAr": "إيلي الخوري"
+      }
+    ],
+    "troops": [
+      {
+        "nameEn": "First Byblos Pack",
+        "nameAr": "قطيع جبيل الأول",
+        "members": [
+          { "nameEn": "Peter Rahme", "nameAr": "بيتر رحمه", "rankEn": "Sixer (Leader)", "rankAr": "رئيس سداسي" },
+          { "nameEn": "Javier Abi Saab", "nameAr": "خافيير أبي صعب", "rankEn": "Second (Assistant)", "rankAr": "مساعد رئيس سداسي" },
+          { "nameEn": "Anthony Matar", "nameAr": "أنطوني مطر", "rankEn": "Cub Scout", "rankAr": "جرو" },
+          { "nameEn": "George Kallas", "nameAr": "جورج خلاص", "rankEn": "Cub Scout", "rankAr": "جرو" }
+        ]
+      }
+    ],
+    "descriptionEn": "Through playful outdoor exploration, stories, and cooperative games, young boy scouts build confidence, learn group sharing, and explore the outdoors safely.",
+    "descriptionAr": "من خلال الاستكشاف اللعبي في الهواء الطلق والقصص والألعاب التعاونية، يبني الفتية الصغار ثقتهم بأنفسهم، ويتعلمون المشاركة، ويستكشفون الطبيعة بأمان.",
+    "detailsEn": "Our Louveteaux pack serves as the entry point for young boys into the scouting fraternity. We emphasize basic character development, obedience to the pack laws, and the beauty of working together. The children participate in day outings, creative crafts, basic camping setups, and community appreciation visits.",
+    "detailsAr": "يعد قسم الجراميز بمثابة نقطة دخول الفتية الصغار إلى الأخوة الكشفية. نحن نركز على بناء الشخصية الأساسية، والالتزام بقوانين الفرقة، وجمال العمل المشترك. يشارك الأطفال في نزهات نهارية، وأشغال يدوية إبداعية، وتجهيزات تخييم أساسية، وزيارات تقديرية للمجتمع."
+  },
+  {
+    "key": "jeannettes",
+    "titleEn": "Jeannettes",
+    "titleAr": "الزهرات",
+    "ages": "Ages 8 - 11 (Girls)",
+    "colorClass": "border-sec-yellow text-sec-yellow bg-sec-yellow/[0.03] hover:border-sec-yellow/60 hover:shadow-sec-yellow/5",
+    "accentColor": "bg-sec-yellow",
+    "textColor": "text-sec-yellow",
+    "mottoEn": "Do Our Best",
+    "mottoAr": "بذل أقصى الجهد",
+    "colorNameEn": "Yellow Section (Girls)",
+    "colorNameAr": "القسم الأصفر (بنات)",
+    "membersCount": 30,
+    "meetingScheduleEn": "Saturdays | 3:30 PM - 5:30 PM",
+    "meetingScheduleAr": "السبت | ٣:٣٠ - ٥:٣٠ بعد الظهر",
+    "coverImage": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80",
+    "leaders": [
+      {
+        "roleEn": "Section Chief",
+        "roleAr": "رئيسة القسم",
+        "nameEn": "Maria Abi Raad",
+        "nameAr": "ماريا أبي رعد"
+      }
+    ],
+    "troops": [
+      {
+        "nameEn": "St. Jean Marc Jeannette Circle",
+        "nameAr": "حلقة زهرات سان جان مارك",
+        "members": [
+          { "nameEn": "Chantal Eid", "nameAr": "شانتال عيد", "rankEn": "Sixer (Leader)", "rankAr": "رئيسة سداسي" },
+          { "nameEn": "Lynn Sfeir", "nameAr": "لين صفير", "rankEn": "Second (Assistant)", "rankAr": "مساعدة رئيسة سداسي" },
+          { "nameEn": "Chloe Haddad", "nameAr": "كلوي حداد", "rankEn": "Jeannette", "rankAr": "زهرة" },
+          { "nameEn": "Yasmina Khoury", "nameAr": "ياسمينة الخوري", "rankEn": "Jeannette", "rankAr": "زهرة" }
+        ]
+      }
+    ],
+    "descriptionEn": "Focused on encouraging young girls to develop self-reliance, physical fitness, and outdoor survival skills through guided, creative play.",
+    "descriptionAr": "يركز على تشجيع الفتيات الصغيرات على تطوير الاعتماد على النفس واللياقة البدنية ومهارات البقاء في الهواء الطلق من خلال اللعب التوجيهي الإبداعي.",
+    "detailsEn": "The Jeannettes circle offers a nurturing space where young girls learn the value of cooperation and community. Through interactive outdoor activities, scout promise drills, and creative projects, we build resilient young girls ready to take on the world.",
+    "detailsAr": "توفر حلقة الزهرات مساحة راعية حيث تتعلم الفتيات الصغيرات قيمة التعاون والمجتمع. من خلال الأنشطة الخارجية التفاعلية، والتدريب على الوعد الكشفي، والمشاريع الإبداعية، نبني فتيات صغيرات مرنات ومستعدات لمواجهة العالم."
+  },
+  {
+    "key": "eclaireurs",
+    "titleEn": "Boy Scouts",
+    "titleAr": "الكشافة",
+    "ages": "Ages 11 - 15 (Boys)",
+    "colorClass": "border-sec-green text-sec-green bg-sec-green/[0.03] hover:border-sec-green/60 hover:shadow-sec-green/5",
+    "accentColor": "bg-sec-green",
+    "textColor": "text-sec-green",
+    "mottoEn": "Be Prepared",
+    "mottoAr": "كن مستعداً",
+    "colorNameEn": "Green Section (Boys)",
+    "colorNameAr": "القسم الأخضر (بنين)",
+    "membersCount": 45,
+    "meetingScheduleEn": "Saturdays | 3:30 PM - 6:00 PM",
+    "meetingScheduleAr": "السبت | ٣:٣٠ - ٦:٠٠ بعد الظهر",
+    "coverImage": "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=800&q=80",
+    "leaders": [
+      {
+        "roleEn": "Troop Leader",
+        "roleAr": "قائد الفوج",
+        "nameEn": "Jean-Pierre Jbeily",
+        "nameAr": "جان بيار جبيلي"
+      }
+    ],
+    "troops": [
+      {
+        "nameEn": "Phoenician Galley Patrol",
+        "nameAr": "طليعة السفينة الفينيقية",
+        "members": [
+          { "nameEn": "Marc Antoine Eid", "nameAr": "مارك أنطوان عيد", "rankEn": "Patrol Leader", "rankAr": "عريف طليعة" },
+          { "nameEn": "Charbel Sfeir", "nameAr": "شربل صفير", "rankEn": "Assistant Patrol Leader", "rankAr": "مساعد عريف طليعة" },
+          { "nameEn": "Elie Khoury", "nameAr": "إيلي الخوري", "rankEn": "Scout", "rankAr": "كشاف" }
+        ]
+      }
+    ],
+    "descriptionEn": "Focused on campcraft, hiking, teamwork, and patrol structures. Scouts take on responsibilities, master pioneering skills, and lead their first mini-expeditions.",
+    "descriptionAr": "يركز على مهارات التخييم، المسير الجبلي، العمل الجماعي، وبنية الطليعة. يتحمل الكشافة المسؤوليات، ويتقنون مهارات الريادة، ويقودون أولى رحلاتهم الاستكشافية المصغرة.",
+    "detailsEn": "This is where traditional scouting principles are fully actualized. Through the Patrol System, scouts elect their own leaders, plan hikes, cook their own meals over campfires, and master pioneering builds using ropes and wooden spars. Annual summer camps represent the highlight of their year.",
+    "detailsAr": "هنا تتجسد مبادئ الكشافة التقليدية بالكامل. من خلال نظام الطلائع، ينتخب الكشافة قادتهم، ويخططون للمسيرات الجبلية، ويطهون وجباتهم الخاصة على نيران المخيم، ويتقنون بناء الريادة الكشفية باستخدام الحبال والأخشاب. تمثل المخيمات الصيفية السنوية الحدث الأبرز في عامهم الكشفي."
+  },
+  {
+    "key": "guides",
+    "titleEn": "Guides",
+    "titleAr": "المرشدات",
+    "ages": "Ages 11 - 15 (Girls)",
+    "colorClass": "border-sec-green text-sec-green bg-sec-green/[0.03] hover:border-sec-green/60 hover:shadow-sec-green/5",
+    "accentColor": "bg-sec-green",
+    "textColor": "text-sec-green",
+    "mottoEn": "Be Prepared",
+    "mottoAr": "كن مستعداً",
+    "colorNameEn": "Green Section (Girls)",
+    "colorNameAr": "القسم الأخضر (بنات)",
+    "membersCount": 35,
+    "meetingScheduleEn": "Saturdays | 3:30 PM - 6:00 PM",
+    "meetingScheduleAr": "السبت | ٣:٣٠ - ٦:٠٠ بعد الظهر",
+    "coverImage": "https://images.unsplash.com/photo-1501555088652-021faa106b9b?auto=format&fit=crop&w=800&q=80",
+    "leaders": [
+      {
+        "roleEn": "Guides Leader",
+        "roleAr": "قائدة المرشدات",
+        "nameEn": "Celine Haddad",
+        "nameAr": "سيلين حداد"
+      }
+    ],
+    "troops": [
+      {
+        "nameEn": "Cedars of Byblos Guide Troop",
+        "nameAr": "فرقة مرشدات أرز جبيل",
+        "members": [
+          { "nameEn": "Maria Abi Raad", "nameAr": "ماريا أبي رعد", "rankEn": "Patrol Leader", "rankAr": "عريفة طليعة" },
+          { "nameEn": "Lynn Sfeir", "nameAr": "لين صفير", "rankEn": "Assistant Patrol Leader", "rankAr": "مساعدة عريفة طليعة" },
+          { "nameEn": "Chloe Haddad", "nameAr": "كلوي حداد", "rankEn": "Guide", "rankAr": "مرشدة" }
+        ]
+      }
+    ],
+    "descriptionEn": "Developing independence, outdoor skills, and leadership for young girls through teamwork and patrol systems.",
+    "descriptionAr": "تنمية الاستقلالية والمهارات الخارجية والقيادة للفتيات الصغيرات من خلال العمل الجماعي ونظام الطلائع.",
+    "detailsEn": "Guides focus on building confidence, mastering wilderness navigation, first aid, and community involvement. Patrol leaders design custom hikes, manage their camp setup, and collaborate on challenges that foster lasting friendships.",
+    "detailsAr": "تركز المرشدات على بناء الثقة بالذات، وإتقان الملاحة البرية، والإسعافات الأولية، والمشاركة المجتمعية. تصمم عريفات الطلائع مسيرات مخصصة، ويدرن إعداد المخيم الخاص بهن، ويتعاون في مواجهة التحديات التي تعزز الصداقات الدائمة."
+  },
+  {
+    "key": "routiers",
+    "titleEn": "Routiers",
+    "titleAr": "الجوالة",
+    "ages": "Ages 16 - 18+ (Boys)",
+    "colorClass": "border-sec-red text-sec-red bg-sec-red/[0.03] hover:border-sec-red/60 hover:shadow-sec-red/5",
+    "accentColor": "bg-sec-red",
+    "textColor": "text-sec-red",
+    "mottoEn": "Serve",
+    "mottoAr": "الخدمة",
+    "colorNameEn": "Red Section (Boys)",
+    "colorNameAr": "القسم الأحمر (بنين)",
+    "membersCount": 25,
+    "meetingScheduleEn": "Saturdays | 4:00 PM - 7:00 PM",
+    "meetingScheduleAr": "السبت | ٤:٠٠ - ٧:٠٠ مساءً",
+    "coverImage": "https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=800&q=80",
+    "leaders": [
+      {
+        "roleEn": "Rover Leader",
+        "roleAr": "قائد الجوالة",
+        "nameEn": "Charbel Sfeir",
+        "nameAr": "شربل صفير"
+      }
+    ],
+    "troops": [
+      {
+        "nameEn": "St. John Mark Rover Clan",
+        "nameAr": "عشيرة جوالة مار يوحنا مرقس",
+        "members": [
+          { "nameEn": "Elio G.", "nameAr": "إيليو ج.", "rankEn": "Rover Scout Master", "rankAr": "رئيس الجوالة" },
+          { "nameEn": "Marcelle A.", "nameAr": "مارسيل أ.", "rankEn": "Rover Scout", "rankAr": "جوال" }
+        ]
+      }
+    ],
+    "descriptionEn": "Empowering young men to design community service projects, undertake major wilderness treks, and develop personal philosophies focused on active citizenship.",
+    "descriptionAr": "تمكين الشباب من تصميم مشاريع الخدمة المجتمعية، والقيام برحلات خلوية كبرى في البرية، وتطوير فلسفات شخصية تركز على الخدمة والمواطنة الفاعلة.",
+    "detailsEn": "The Routiers section focuses on civic responsibility and service. Rovers organize local charity initiatives, aid in environmental preservation campaigns, and design custom expeditions. It prepares young adults to be active pillars of the Byblos community.",
+    "detailsAr": "يركز قسم الجوالة على المسؤولية المدنية والخدمة. ينظم الجوالة مبادرات خيرية محلية، ويساعدون في حملات الحفاظ على البيئة، ويصممون رحلات استكشافية مخصصة. إنه يعد الشباب ليكونوا ركائز فاعلة في مجتمع جبيل."
+  },
+  {
+    "key": "caravelles",
+    "titleEn": "Caravelles",
+    "titleAr": "المنجدات",
+    "ages": "Ages 16 - 18+ (Girls)",
+    "colorClass": "border-sec-red text-sec-red bg-sec-red/[0.03] hover:border-sec-red/60 hover:shadow-sec-red/5",
+    "accentColor": "bg-sec-red",
+    "textColor": "text-sec-red",
+    "mottoEn": "Serve",
+    "mottoAr": "الخدمة",
+    "colorNameEn": "Red Section (Girls)",
+    "colorNameAr": "القسم الأحمر (بنات)",
+    "membersCount": 20,
+    "meetingScheduleEn": "Saturdays | 4:00 PM - 7:00 PM",
+    "meetingScheduleAr": "السبت | ٤:٠٠ - ٧:٠٠ مساءً",
+    "coverImage": "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=800&q=80",
+    "leaders": [
+      {
+        "roleEn": "Caravelles Leader",
+        "roleAr": "قائدة المنجدات",
+        "nameEn": "Yasmina Khoury",
+        "nameAr": "ياسمينة الخوري"
+      }
+    ],
+    "troops": [
+      {
+        "nameEn": "St. John Mark Caravelle Circle",
+        "nameAr": "حلقة منجدات مار يوحنا مرقس",
+        "members": [
+          { "nameEn": "Clara S.", "nameAr": "كلارا س.", "rankEn": "Caravelle Lead", "rankAr": "رئيسة المنجدات" },
+          { "nameEn": "Rebecca K.", "nameAr": "ريبكا ك.", "rankEn": "Caravelle Ranger", "rankAr": "منجدة" }
+        ]
+      }
+    ],
+    "descriptionEn": "Fostering active citizenship, leadership, and social responsibility for young women through community service and adventure planning.",
+    "descriptionAr": "تعزيز المواطنة الفاعلة والقيادة والمسؤولية الاجتماعية للشابات من خلال الخدمة المجتمعية والتخطيط للمغامرات.",
+    "detailsEn": "Caravelles focus on empowerment, personal development, and service projects. They lead social awareness campaigns, coordinate workshops, and embark on challenging expeditions that build teamwork, adaptability, and critical thinking.",
+    "detailsAr": "تركز المنجدات على التمكين، والتنمية الشخصية، ومشاريع الخدمة. يقُدن حملات التوعية الاجتماعية، وينسقن ورش العمل، ويخضن رحلات استكشافية مليئة بالتحديات التي تبني العمل الجماعي والقدرة على التكيف والتفكير النقدي."
+  },
+  {
+    "key": "chefs",
+    "titleEn": "Chefs & Cheftaines",
+    "titleAr": "القادة والقائدات",
+    "ages": "Ages 18+",
+    "colorClass": "border-scout-navy text-scout-navy bg-scout-navy/[0.03] hover:border-scout-navy/60 hover:shadow-scout-navy/5",
+    "accentColor": "bg-scout-navy",
+    "textColor": "text-scout-navy",
+    "mottoEn": "Lead by Example",
+    "mottoAr": "القيادة بالقدوة",
+    "colorNameEn": "Orange & Navy Blue",
+    "colorNameAr": "البرتقالي والكحلي",
+    "membersCount": 20,
+    "meetingScheduleEn": "Meetings scheduled as needed",
+    "meetingScheduleAr": "الاجتماعات مجدولة حسب الحاجة",
+    "coverImage": "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=800&q=80",
+    "leaders": [
+      {
+        "roleEn": "Group Scout Leader",
+        "roleAr": "قائد المجموعة الكشفية",
+        "nameEn": "Ghinwa",
+        "nameAr": "غنوة"
+      }
+    ],
+    "troops": [
+      {
+        "nameEn": "Command Council",
+        "nameAr": "مجلس قيادة الفوج",
+        "members": [
+          { "nameEn": "Nicolas", "nameAr": "نيكولا", "rankEn": "Assistant Leader", "rankAr": "مساعد قائد الفوج" }
+        ]
+      }
+    ],
+    "descriptionEn": "Dedicated volunteers who coordinate activities, ensure safety, and guide younger scouts, carrying the group's Phoenician heritage forward.",
+    "descriptionAr": "متطوعون مخلصون ينسقون الأنشطة، ويضمنون السلامة، ويوجهون الكشافة الأصغر سناً، حاملين إرث الفوج الفينيقي إلى الأمام.",
+    "detailsEn": "Our leadership council comprises certified trainers and volunteer mentors dedicated to the physical, emotional, and social development of our scout troops. They continuously undergo scout formation modules to align with global standards set by the World Organization of the Scout Movement.",
+    "detailsAr": "يتألف مجلس القيادة لدينا من مدربين معتمدين وموجهين متطوعين مكرسين للتطوير البدني والعاطفي والاجتماعي لفرقنا الكشفية. يخضعون باستمرار لوحدات التدريب الكشفي للتماشي مع المعايير العالمية التي تضعها المنظمة العالمية للحركة الكشفية."
+  }
+]
