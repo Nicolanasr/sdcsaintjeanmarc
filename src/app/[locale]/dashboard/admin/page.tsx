@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   const [winners, setWinners] = useState<any[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [teamSearch, setTeamSearch] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     async function checkAdmin() {
@@ -357,9 +358,21 @@ export default function AdminDashboard() {
 
         {/* Teams Management Overrides */}
         <div className="glass-panel p-6 rounded-2xl shadow-md">
-          <h2 className="text-xl font-bold font-display text-scout-navy mb-4 border-b pb-2">
-            {isAr ? "ترتيب المنتخبات وتعديل الأهداف والمضاعفات" : "Team Standings, Goals & Multipliers"}
-          </h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-2 mb-4 gap-4">
+            <h2 className="text-xl font-bold font-display text-scout-navy">
+              {isEditing 
+                ? (isAr ? "تعديل ترتيب وأهداف المنتخبات" : "Edit Team Standings & Goals")
+                : (isAr ? "ترتيب المنتخبات ومضاعفات السحب" : "World Cup Teams Standings Leaderboard")}
+            </h2>
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="px-4 py-2 bg-scout-navy hover:bg-scout-navy-light text-white text-xs font-bold rounded-lg transition cursor-pointer"
+            >
+              {isEditing 
+                ? (isAr ? "👁️ عرض الترتيب (قراءة فقط)" : "👁️ View Standings (Read-only)") 
+                : (isAr ? "✏️ تعديل الأهداف والترتيب" : "✏️ Edit Standings & Goals")}
+            </button>
+          </div>
           
           {/* Team Search input */}
           <div className="mb-4">
@@ -379,9 +392,9 @@ export default function AdminDashboard() {
                   <th className="py-3 px-4">{isAr ? "الترتيب / المنتخب" : "Standings / Team"}</th>
                   <th className="py-3 px-4 text-center">{isAr ? "إجمالي الأهداف" : "Total Goals"}</th>
                   <th className="py-3 px-4 text-center">{isAr ? "منصة التتويج" : "Podium Finish"}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? "المضاعف الحالي" : "Multiplier"}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? "إجمالي البطاقات" : "Total Entries"}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? "أقصي" : "Eliminated"}</th>
+                  <th className="py-3 px-4 text-center">{isAr ? "المضاعف" : "Multiplier"}</th>
+                  <th className="py-3 px-4 text-center">{isAr ? "البطاقات لكل تذكرة" : "Entries per Ticket"}</th>
+                  <th className="py-3 px-4 text-center">{isAr ? "الحالة" : "Status"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -401,12 +414,28 @@ export default function AdminDashboard() {
                     )
                     .map((t, idx) => {
                       let multiplier = 1;
-                      if (t.isEliminated) multiplier = 0;
-                      else if (t.podiumFinish === 1) multiplier = 10;
-                      else if (t.podiumFinish === 2) multiplier = 5;
-                      else if (t.podiumFinish === 3) multiplier = 2;
+                      if (t.podiumFinish === 1) multiplier = 3;
+                      else if (t.podiumFinish === 2) multiplier = 2;
+                      else if (t.podiumFinish === 3) multiplier = 1.5;
 
-                      const totalEntries = t.totalGoals * multiplier;
+                      const totalEntries = Math.floor(t.totalGoals * multiplier);
+
+                      let statusLabel = isAr ? "نشط" : "Active";
+                      let statusColor = "text-scout-green-light bg-scout-green/10";
+
+                      if (t.podiumFinish === 1) {
+                        statusLabel = isAr ? "🥇 البطل" : "🥇 Champions";
+                        statusColor = "text-scout-gold bg-scout-gold/15";
+                      } else if (t.podiumFinish === 2) {
+                        statusLabel = isAr ? "🥈 المركز الثاني" : "🥈 2nd Place";
+                        statusColor = "text-scout-navy bg-scout-navy/10";
+                      } else if (t.podiumFinish === 3) {
+                        statusLabel = isAr ? "🥉 المركز الثالث" : "🥉 3rd Place";
+                        statusColor = "text-scout-terracotta bg-scout-terracotta/10";
+                      } else if (t.isEliminated) {
+                        statusLabel = isAr ? "مقصى" : "Eliminated";
+                        statusColor = "text-scout-charcoal/50 bg-scout-charcoal/5";
+                      }
 
                       return (
                         <tr key={t.id} className="border-b hover:bg-white/30 transition">
@@ -428,51 +457,70 @@ export default function AdminDashboard() {
                             </div>
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <div className="inline-flex items-center gap-2">
-                              <button
-                                onClick={() => handleUpdateTeam(t.id, { totalGoals: Math.max(0, t.totalGoals - 1) })}
-                                className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
-                              >
-                                -
-                              </button>
-                              <span className="w-8 font-extrabold text-scout-navy">{t.totalGoals}</span>
-                              <button
-                                onClick={() => handleUpdateTeam(t.id, { totalGoals: t.totalGoals + 1 })}
-                                className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
-                              >
-                                +
-                              </button>
-                            </div>
+                            {isEditing ? (
+                              <div className="inline-flex items-center gap-2">
+                                <button
+                                  onClick={() => handleUpdateTeam(t.id, { totalGoals: Math.max(0, t.totalGoals - 1) })}
+                                  className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
+                                >
+                                  -
+                                </button>
+                                <span className="w-8 font-extrabold text-scout-navy">{t.totalGoals}</span>
+                                <button
+                                  onClick={() => handleUpdateTeam(t.id, { totalGoals: t.totalGoals + 1 })}
+                                  className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="font-extrabold text-scout-navy">{t.totalGoals}</span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <select
-                              value={t.podiumFinish || ""}
-                              onChange={(e) =>
-                                handleUpdateTeam(t.id, {
-                                  podiumFinish: e.target.value ? parseInt(e.target.value) : null,
-                                })
-                              }
-                              className="px-2 py-1 rounded border text-xs bg-white focus:outline-none"
-                            >
-                              <option value="">{isAr ? "لم يحدد" : "None"}</option>
-                              <option value="1">🥇 1st Place (10x)</option>
-                              <option value="2">🥈 2nd Place (5x)</option>
-                              <option value="3">🥉 3rd Place (2x)</option>
-                            </select>
+                            {isEditing ? (
+                              <select
+                                value={t.podiumFinish || ""}
+                                onChange={(e) =>
+                                  handleUpdateTeam(t.id, {
+                                    podiumFinish: e.target.value ? parseInt(e.target.value) : null,
+                                  })
+                                }
+                                className="px-2 py-1 rounded border text-xs bg-white focus:outline-none"
+                              >
+                                <option value="">{isAr ? "لم يحدد" : "None"}</option>
+                                <option value="1">🥇 1st Place (3x)</option>
+                                <option value="2">🥈 2nd Place (2x)</option>
+                                <option value="3">🥉 3rd Place (1.5x)</option>
+                              </select>
+                            ) : (
+                              <span className="text-xs font-semibold text-scout-charcoal/80">
+                                {t.podiumFinish === 1 && "🥇 1st Place"}
+                                {t.podiumFinish === 2 && "🥈 2nd Place"}
+                                {t.podiumFinish === 3 && "🥉 3rd Place"}
+                                {!t.podiumFinish && "-"}
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-center font-bold text-scout-gold">
                             {multiplier}x
                           </td>
-                          <td className="py-3 px-4 text-center font-extrabold text-scout-green-light">
+                          <td className="py-3 px-4 text-center font-black text-scout-green-light">
                             {totalEntries}
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <input
-                              type="checkbox"
-                              checked={t.isEliminated}
-                              onChange={(e) => handleUpdateTeam(t.id, { isEliminated: e.target.checked })}
-                              className="w-4 h-4 rounded text-scout-navy accent-scout-navy focus:ring-scout-navy cursor-pointer"
-                            />
+                            {isEditing ? (
+                              <input
+                                type="checkbox"
+                                checked={t.isEliminated}
+                                onChange={(e) => handleUpdateTeam(t.id, { isEliminated: e.target.checked })}
+                                className="w-4 h-4 rounded text-scout-navy accent-scout-navy focus:ring-scout-navy cursor-pointer"
+                              />
+                            ) : (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor}`}>
+                                {statusLabel}
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );

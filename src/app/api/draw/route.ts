@@ -55,14 +55,13 @@ export async function POST(request: Request) {
       const team = teamsMap.get(ticket.teamId);
       if (!team) return;
 
-      // Podium finish: 1st (10x), 2nd (5x), 3rd (2x), eliminated (0x), active (1x)
+      // Podium finish: 1st (3x), 2nd (2x), 3rd (1.5x), others (1x)
       let multiplier = 1;
-      if (team.isEliminated) multiplier = 0;
-      else if (team.podiumFinish === 1) multiplier = 10;
-      else if (team.podiumFinish === 2) multiplier = 5;
-      else if (team.podiumFinish === 3) multiplier = 2;
+      if (team.podiumFinish === 1) multiplier = 3;
+      else if (team.podiumFinish === 2) multiplier = 2;
+      else if (team.podiumFinish === 3) multiplier = 1.5;
 
-      const entriesCount = team.totalGoals * multiplier;
+      const entriesCount = Math.floor(team.totalGoals * multiplier);
 
       for (let i = 0; i < entriesCount; i++) {
         rafflePool.push(ticket);
