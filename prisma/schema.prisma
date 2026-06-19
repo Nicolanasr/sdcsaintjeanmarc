@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  fullName  String
+  role      String   @default("scout") // "scout" or "admin"
+  tickets   Ticket[]
+  createdAt DateTime @default(now())
+}
+
+model Team {
+  id            String   @id // 'ARG', 'BRA', etc.
+  name          String
+  flagUrl       String
+  totalGoals    Int      @default(0)
+  podiumFinish  Int?     // 1, 2, or 3
+  isEliminated  Boolean  @default(false)
+  tickets       Ticket[]
+  updatedAt     DateTime @updatedAt
+}
+
+model Ticket {
+  id        Int      @id @default(autoincrement())
+  scoutId   String
+  scout     Profile  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+  buyerName String
+  buyerPhone String
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+}

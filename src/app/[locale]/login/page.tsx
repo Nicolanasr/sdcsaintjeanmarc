@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,8 +18,6 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const supabase = createClient();
-
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -29,38 +26,33 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              role: role,
-            },
-          },
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, fullName, role }),
         });
 
-        if (error) throw error;
-        
-        if (data.user && data.session) {
-          // Auto logged in (e.g. email confirmation disabled in Supabase)
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Registration failed");
+
+        setSuccessMsg(
+          isAr
+            ? "تم إنشاء الحساب بنجاح! يتم الآن توجيهك..."
+            : "Account created successfully! Redirecting..."
+        );
+        setTimeout(() => {
           router.replace(`/${locale}/dashboard/scout`);
-        } else {
-          setSuccessMsg(
-            isAr
-              ? "تم إرسال بريد إلكتروني لتأكيد الحساب. يرجى التحقق من بريدك الإلكتروني."
-              : "Check your email for the confirmation link to complete registration."
-          );
-        }
+        }, 1500);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
         });
 
-        if (error) throw error;
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Login failed");
 
-        // Redirect based on role check (the middleware handles checking role)
         router.replace(`/${locale}/dashboard/scout`);
       }
     } catch (err: any) {

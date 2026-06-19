@@ -2,13 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase-client";
 
 interface Team {
   id: string;
   name: string;
-  flag_url: string;
-  total_goals: number;
+  flagUrl: string;
+  totalGoals: number;
 }
 
 interface ScoutStats {
@@ -29,7 +28,6 @@ export default function ScoutDashboard() {
   const isAr = locale === "ar";
 
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<ScoutStats>({ ticketsSold: 0, cashCollected: 0 });
   const [teams, setTeams] = useState<Team[]>([]);
@@ -42,84 +40,53 @@ export default function ScoutDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [successTicket, setSuccessTicket] = useState<any>(null);
 
-  const supabase = createClient();
-
   useEffect(() => {
     async function initDashboard() {
-      // Get user session
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      try {
+        // Get user session
+        const userRes = await fetch("/api/auth/me");
+        if (!userRes.ok) {
+          router.replace(`/${locale}/login`);
+          return;
+        }
+
+        const userData = await userRes.json();
+        setProfile(userData.user);
+
+        await fetchDashboardData();
+      } catch (err) {
         router.replace(`/${locale}/login`);
-        return;
+      } finally {
+        setLoading(false);
       }
-      setUser(user);
-
-      // Fetch user profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      setProfile(profile);
-
-      await fetchDashboardData(user.id);
-      setLoading(false);
     }
 
     initDashboard();
   }, []);
 
-  const fetchDashboardData = async (userId: string) => {
-    // 1. Fetch Scout's tickets count
-    const { count, error: countError } = await supabase
-      .from("tickets")
-      .select("*", { count: "exact", head: true })
-      .eq("scout_id", userId);
+  const fetchDashboardData = async () => {
+    try {
+      // 1. Fetch Scout's tickets and leaderboard stats
+      const statsRes = await fetch("/api/scout/tickets");
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData.stats);
+        setLeaderboard(statsData.leaderboard || []);
+      }
 
-    const ticketsSold = count || 0;
-    setStats({
-      ticketsSold,
-      cashCollected: ticketsSold * 5,
-    });
-
-    // 2. Fetch Teams
-    const { data: teamsData } = await supabase
-      .from("teams")
-      .select("*")
-      .order("name", { ascending: true });
-    setTeams(teamsData || []);
-
-    // 3. Fetch Leaderboard
-    // We fetch all tickets and group them locally by scout_id
-    const { data: allTickets } = await supabase
-      .from("tickets")
-      .select("scout_id");
-
-    const { data: allProfiles } = await supabase
-      .from("profiles")
-      .select("id, full_name");
-
-    if (allTickets && allProfiles) {
-      const counts: Record<string, number> = {};
-      allTickets.forEach((t) => {
-        counts[t.scout_id] = (counts[t.scout_id] || 0) + 1;
-      });
-
-      const leaderData: LeaderboardEntry[] = allProfiles
-        .map((p) => ({
-          id: p.id,
-          full_name: p.full_name,
-          tickets_count: counts[p.id] || 0,
-        }))
-        .filter((entry) => entry.tickets_count > 0)
-        .sort((a, b) => b.tickets_count - a.tickets_count);
-
-      setLeaderboard(leaderData);
+      // 2. Fetch Teams
+      const teamsRes = await fetch("/api/teams");
+      if (teamsRes.ok) {
+        const teamsData = await teamsRes.json();
+        setTeams(teamsData.teams || []);
+      }
+    } catch (err) {
+      console.error("Error fetching dashboard stats:", err);
     }
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await fetch("/api/auth/logout", { method: "POST" });
     router.replace(`/${locale}/login`);
   };
 
@@ -132,26 +99,26 @@ export default function ScoutDashboard() {
 
     setSubmitting(true);
     try {
-      const { data, error } = await supabase
-        .from("tickets")
-        .insert({
-          scout_id: user.id,
-          buyer_name: buyerName,
-          buyer_phone: buyerPhone,
-          team_id: selectedTeamId,
-        })
-        .select()
-        .single();
+      const res = await fetch("/api/scout/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          buyerName,
+          buyerPhone,
+          teamId: selectedTeamId,
+        }),
+      });
 
-      if (error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit ticket sale");
 
-      setSuccessTicket(data);
+      setSuccessTicket(data.ticket);
       // Reset form
       setBuyerName("");
       setBuyerPhone("");
       setSelectedTeamId("");
       // Refresh dashboard data
-      await fetchDashboardData(user.id);
+      await fetchDashboardData();
     } catch (err: any) {
       alert(err.message || "Failed to submit ticket sale");
     } finally {
@@ -161,13 +128,13 @@ export default function ScoutDashboard() {
 
   const getWhatsAppLink = (ticket: any) => {
     if (!ticket) return "";
-    const teamName = teams.find((t) => t.id === ticket.team_id)?.name || ticket.team_id;
+    const teamName = teams.find((t) => t.id === ticket.teamId)?.name || ticket.teamId;
     const msg = isAr
       ? `شكرًا لشرائك تذكرة مسابقة Goal Rush رقم #${ticket.id} لدعم كشافة الأرز! فريقك المختار هو ${teamName}. كل هدف يسجله هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️`
       : `Thank you for purchasing World Cup Goal Rush ticket #${ticket.id} supporting Scouts des Cèdres! Your selected team is ${teamName}. Every goal they score grants you an extra entry in the final raffle! ⚽️`;
     
     // Normalize phone number (strip non-digits, ensure country code)
-    const cleanPhone = ticket.buyer_phone.replace(/\D/g, "");
+    const cleanPhone = ticket.buyerPhone.replace(/\D/g, "");
     return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`;
   };
 
@@ -188,7 +155,7 @@ export default function ScoutDashboard() {
             {isAr ? "بوابة الكشاف المبيعات" : "Scout Sales Dashboard"}
           </h1>
           <p className="text-xs text-white/70">
-            {isAr ? `أهلاً، ${profile?.full_name}` : `Welcome, ${profile?.full_name}`}
+            {isAr ? `أهلاً، ${profile?.fullName}` : `Welcome, ${profile?.fullName}`}
           </p>
         </div>
         <div className="flex gap-4">
@@ -244,7 +211,7 @@ export default function ScoutDashboard() {
             </h2>
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
               {leaderboard.map((entry, index) => {
-                const isCurrentUser = entry.id === user?.id;
+                const isCurrentUser = entry.id === profile?.id;
                 return (
                   <div
                     key={entry.id}
@@ -331,11 +298,10 @@ export default function ScoutDashboard() {
                       }`}
                     >
                       <img
-                        src={t.flag_url}
+                        src={t.flagUrl}
                         alt={t.name}
                         className="w-10 h-7 object-cover rounded shadow-sm mb-1.5"
                         onError={(e) => {
-                          // Fallback flag
                           (e.target as HTMLImageElement).src = "https://flagcdn.com/un.svg";
                         }}
                       />

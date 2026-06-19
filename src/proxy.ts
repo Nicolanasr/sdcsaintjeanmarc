@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { jwtVerify } from "jose";
 
 const locales = ["en", "ar"];
 const defaultLocale = "en";
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "fallback-secret-for-goal-rush-fundraising-portal"
+);
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -23,40 +27,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 2. Refresh/Verify Supabase Session
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+  // 2. Auth Cookie check
+  const token = request.cookies.get("token")?.value;
+  let userPayload: any = null;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
+  if (token) {
+    try {
+      const { payload } = await jwtVerify(token, JWT_SECRET);
+      userPayload = payload;
+    } catch (err) {
+      // Invalid/expired token
     }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  }
 
   // 3. Route Protection Logic
-  // Match path pattern like /[locale]/dashboard/...
   const dashboardMatch = pathname.match(/^\/(en|ar)\/dashboard(\/.*)?$/);
 
   if (dashboardMatch) {
@@ -64,20 +48,16 @@ export async function proxy(request: NextRequest) {
     const subpath = dashboardMatch[2] || "";
 
     // If not authenticated, redirect to login
-    if (!user) {
-      return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+    if (!userPayload) {
+      const response = NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+      // Delete cookie if it was invalid
+      response.cookies.delete("token");
+      return response;
     }
 
     // Role-based authorization
     if (subpath.startsWith("/admin")) {
-      // Query profile role from profiles table
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile || profile.role !== "admin") {
+      if (userPayload.role !== "admin") {
         // Redirect non-admins to scout dashboard
         return NextResponse.redirect(
           new URL(`/${locale}/dashboard/scout`, request.url)
@@ -88,14 +68,14 @@ export async function proxy(request: NextRequest) {
 
   // Allow login page access checks: if user is logged in, don't allow access to login page
   const loginMatch = pathname.match(/^\/(en|ar)\/login$/);
-  if (loginMatch && user) {
+  if (loginMatch && userPayload) {
     const locale = loginMatch[1];
     return NextResponse.redirect(
       new URL(`/${locale}/dashboard/scout`, request.url)
     );
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {

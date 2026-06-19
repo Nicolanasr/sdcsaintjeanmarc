@@ -1,11 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-
-// Bypass RLS on the server using service role key
-const supabaseAdmin = createSupabaseClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   // Simple check to secure cron route if CRON_SECRET is set
@@ -27,12 +21,11 @@ export async function GET(request: Request) {
 
   try {
     // Fetch World Cup matches from Football-Data.org (Competition: WC)
-    // For World Cup 2026, the competition code is WC.
     const res = await fetch("http://api.football-data.org/v4/competitions/WC/matches", {
       headers: {
         "X-Auth-Token": apiKey,
       },
-      next: { revalidate: 3600 }, // Cache for 1 hour
+      next: { revalidate: 3600 },
     });
 
     if (!res.ok) {
@@ -42,12 +35,9 @@ export async function GET(request: Request) {
     const data = await res.json();
     const matches = data.matches || [];
 
-    // Accumulate goals for each team code
-    // Football-Data.org team codes (e.g., ARG, BRA) or names
     const goalsMap: Record<string, number> = {};
 
     matches.forEach((match: any) => {
-      // Only process finished or live matches
       if (match.status === "FINISHED" || match.status === "IN_PLAY") {
         const homeCode = match.homeTeam.tla || match.homeTeam.id?.toString();
         const awayCode = match.awayTeam.tla || match.awayTeam.id?.toString();
@@ -64,20 +54,18 @@ export async function GET(request: Request) {
       }
     });
 
-    // Update teams in Supabase database
+    // Update teams in Prisma database
     const updates = Object.entries(goalsMap).map(async ([teamId, goals]) => {
-      // Check if team exists in our teams table
-      const { data: team } = await supabaseAdmin
-        .from("teams")
-        .select("id")
-        .eq("id", teamId)
-        .single();
+      const team = await prisma.team.findUnique({
+        where: { id: teamId },
+        select: { id: true },
+      });
 
       if (team) {
-        return supabaseAdmin
-          .from("teams")
-          .update({ total_goals: goals })
-          .eq("id", teamId);
+        return prisma.team.update({
+          where: { id: teamId },
+          data: { totalGoals: goals },
+        });
       }
     });
 

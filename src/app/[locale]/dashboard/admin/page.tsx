@@ -2,15 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase-client";
 
 interface Team {
   id: string;
   name: string;
-  flag_url: string;
-  total_goals: number;
-  podium_finish: number | null;
-  is_eliminated: boolean;
+  flagUrl: string;
+  totalGoals: number;
+  podiumFinish: number | null;
+  isEliminated: boolean;
 }
 
 export default function AdminDashboard() {
@@ -33,70 +32,60 @@ export default function AdminDashboard() {
   const [drawing, setDrawing] = useState(false);
   const [winners, setWinners] = useState<any[]>([]);
 
-  const supabase = createClient();
-
   useEffect(() => {
     async function checkAdmin() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.replace(`/${locale}/login`);
-        return;
-      }
+      try {
+        const userRes = await fetch("/api/auth/me");
+        if (!userRes.ok) {
+          router.replace(`/${locale}/login`);
+          return;
+        }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+        const userData = await userRes.json();
+        if (!userData.user || userData.user.role !== "admin") {
+          router.replace(`/${locale}/dashboard/scout`);
+          return;
+        }
 
-      if (!profile || profile.role !== "admin") {
+        setProfile(userData.user);
+        await loadAdminData();
+      } catch (err) {
         router.replace(`/${locale}/dashboard/scout`);
-        return;
+      } finally {
+        setLoading(false);
       }
-
-      setProfile(profile);
-      await loadAdminData();
-      setLoading(false);
     }
 
     checkAdmin();
   }, []);
 
   const loadAdminData = async () => {
-    // Load Teams
-    const { data: teamsData } = await supabase
-      .from("teams")
-      .select("*")
-      .order("name", { ascending: true });
-    setTeams(teamsData || []);
+    try {
+      // Load Teams
+      const teamsRes = await fetch("/api/teams");
+      if (teamsRes.ok) {
+        const teamsData = await teamsRes.json();
+        setTeams(teamsData.teams || []);
+      }
 
-    // Load total tickets sold
-    const { count } = await supabase
-      .from("tickets")
-      .select("*", { count: "exact", head: true });
-    setTicketsCount(count || 0);
+      // Load tickets statistics/count
+      const statsRes = await fetch("/api/scout/tickets");
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setTicketsCount(statsData.totalTicketsCount || 0);
+      }
+    } catch (err) {
+      console.error("Error loading admin data:", err);
+    }
   };
 
   // Quick Seed Teams
   const handleSeedTeams = async () => {
-    const defaultTeams = [
-      { id: "ARG", name: "Argentina", flag_url: "https://flagcdn.com/ar.svg" },
-      { id: "BRA", name: "Brazil", flag_url: "https://flagcdn.com/br.svg" },
-      { id: "FRA", name: "France", flag_url: "https://flagcdn.com/fr.svg" },
-      { id: "GER", name: "Germany", flag_url: "https://flagcdn.com/de.svg" },
-      { id: "ESP", name: "Spain", flag_url: "https://flagcdn.com/es.svg" },
-      { id: "ENG", name: "England", flag_url: "https://flagcdn.com/gb-eng.svg" },
-      { id: "POR", name: "Portugal", flag_url: "https://flagcdn.com/pt.svg" },
-      { id: "ITA", name: "Italy", flag_url: "https://flagcdn.com/it.svg" },
-      { id: "USA", name: "USA", flag_url: "https://flagcdn.com/us.svg" },
-      { id: "MEX", name: "Mexico", flag_url: "https://flagcdn.com/mx.svg" },
-      { id: "MAR", name: "Morocco", flag_url: "https://flagcdn.com/ma.svg" },
-      { id: "SEN", name: "Senegal", flag_url: "https://flagcdn.com/sn.svg" },
-    ];
-
     try {
-      const { error } = await supabase.from("teams").upsert(defaultTeams);
-      if (error) throw error;
+      const res = await fetch("/api/teams/seed", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to seed teams");
+
       alert("Successfully seeded World Cup teams!");
       await loadAdminData();
     } catch (err: any) {
@@ -110,13 +99,18 @@ export default function AdminDashboard() {
     if (!newTeamId || !newTeamName || !newTeamFlag) return;
 
     try {
-      const { error } = await supabase.from("teams").insert({
-        id: newTeamId.toUpperCase(),
-        name: newTeamName,
-        flag_url: newTeamFlag,
+      const res = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: newTeamId,
+          name: newTeamName,
+          flagUrl: newTeamFlag,
+        }),
       });
 
-      if (error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to add team");
 
       setNewTeamId("");
       setNewTeamName("");
@@ -133,12 +127,18 @@ export default function AdminDashboard() {
     updates: Partial<Team>
   ) => {
     try {
-      const { error } = await supabase
-        .from("teams")
-        .update(updates)
-        .eq("id", teamId);
+      const res = await fetch("/api/teams", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: teamId,
+          ...updates,
+        }),
+      });
 
-      if (error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update team");
+
       setTeams((prev) =>
         prev.map((t) => (t.id === teamId ? { ...t, ...updates } : t))
       );
@@ -257,13 +257,13 @@ export default function AdminDashboard() {
                       {isAr ? prizeNamesAr[idx] : prizeNames[idx]}
                     </span>
                     <h4 className="text-lg font-bold text-scout-navy mb-1">
-                      {w.buyer_name}
+                      {w.buyerName}
                     </h4>
                     <p className="text-xs text-scout-charcoal/70 mb-2">
-                      {w.buyer_phone}
+                      {w.buyerPhone}
                     </p>
                     <div className="text-[11px] bg-scout-beige px-3 py-1.5 rounded-lg inline-block border text-scout-navy font-semibold">
-                      Ticket #{w.id} • Team: {w.team_id}
+                      Ticket #{w.id} • Team: {w.teamId}
                     </div>
                   </div>
                 );
@@ -347,7 +347,7 @@ export default function AdminDashboard() {
                   <tr key={t.id} className="border-b hover:bg-white/30 transition">
                     <td className="py-3 px-4 flex items-center gap-3">
                       <img
-                        src={t.flag_url}
+                        src={t.flagUrl}
                         alt={t.name}
                         className="w-8 h-5 object-cover rounded shadow-sm"
                         onError={(e) => {
@@ -362,14 +362,14 @@ export default function AdminDashboard() {
                     <td className="py-3 px-4 text-center">
                       <div className="inline-flex items-center gap-2">
                         <button
-                          onClick={() => handleUpdateTeam(t.id, { total_goals: Math.max(0, t.total_goals - 1) })}
+                          onClick={() => handleUpdateTeam(t.id, { totalGoals: Math.max(0, t.totalGoals - 1) })}
                           className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
                         >
                           -
                         </button>
-                        <span className="w-8 font-extrabold text-scout-navy">{t.total_goals}</span>
+                        <span className="w-8 font-extrabold text-scout-navy">{t.totalGoals}</span>
                         <button
-                          onClick={() => handleUpdateTeam(t.id, { total_goals: t.total_goals + 1 })}
+                          onClick={() => handleUpdateTeam(t.id, { totalGoals: t.totalGoals + 1 })}
                           className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
                         >
                           +
@@ -378,10 +378,10 @@ export default function AdminDashboard() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <select
-                        value={t.podium_finish || ""}
+                        value={t.podiumFinish || ""}
                         onChange={(e) =>
                           handleUpdateTeam(t.id, {
-                            podium_finish: e.target.value ? parseInt(e.target.value) : null,
+                            podiumFinish: e.target.value ? parseInt(e.target.value) : null,
                           })
                         }
                         className="px-2 py-1 rounded border text-xs bg-white focus:outline-none"
@@ -395,8 +395,8 @@ export default function AdminDashboard() {
                     <td className="py-3 px-4 text-center">
                       <input
                         type="checkbox"
-                        checked={t.is_eliminated}
-                        onChange={(e) => handleUpdateTeam(t.id, { is_eliminated: e.target.checked })}
+                        checked={t.isEliminated}
+                        onChange={(e) => handleUpdateTeam(t.id, { isEliminated: e.target.checked })}
                         className="w-4 h-4 rounded text-scout-navy accent-scout-navy focus:ring-scout-navy cursor-pointer"
                       />
                     </td>

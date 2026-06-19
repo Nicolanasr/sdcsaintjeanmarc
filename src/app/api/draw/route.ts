@@ -1,34 +1,33 @@
 import { NextResponse } from "next/server";
-import { createServerSideClient } from "@/lib/supabase";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { prisma } from "@/lib/prisma";
+import { jwtVerify } from "jose";
 import crypto from "crypto";
 
-// Create a bypass RLS admin client
-const supabaseAdmin = createSupabaseClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "fallback-secret-for-goal-rush-fundraising-portal"
 );
 
 export async function POST(request: Request) {
   try {
-    // 1. Verify Authentication & Role
-    const supabase = await createServerSideClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // 1. Verify Authentication & Admin Role
+    const token = request.headers.get("cookie")
+      ?.split("; ")
+      .find((row) => row.startsWith("token="))
+      ?.split("=")[1];
 
-    if (!user) {
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if the user is an admin
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    let payload: any = null;
+    try {
+      const verified = await jwtVerify(token, JWT_SECRET);
+      payload = verified.payload;
+    } catch {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
 
-    if (profileError || !profile || profile.role !== "admin") {
+    if (payload.role !== "admin") {
       return NextResponse.json(
         { error: "Forbidden: Admin role required" },
         { status: 403 }
@@ -36,46 +35,34 @@ export async function POST(request: Request) {
     }
 
     // 2. Fetch all tickets and teams
-    const { data: tickets, error: ticketsError } = await supabaseAdmin
-      .from("tickets")
-      .select(`
-        id,
-        buyer_name,
-        buyer_phone,
-        team_id,
-        scout_id
-      `);
+    const tickets = await prisma.ticket.findMany({
+      select: {
+        id: true,
+        buyerName: true,
+        buyerPhone: true,
+        teamId: true,
+        scoutId: true,
+      },
+    });
 
-    if (ticketsError || !tickets) {
-      throw new Error("Could not fetch tickets");
-    }
-
-    const { data: teams, error: teamsError } = await supabaseAdmin
-      .from("teams")
-      .select("*");
-
-    if (teamsError || !teams) {
-      throw new Error("Could not fetch teams");
-    }
-
+    const teams = await prisma.team.findMany();
     const teamsMap = new Map(teams.map((t) => [t.id, t]));
 
     // 3. Compile the weighted raffle pool
     const rafflePool: any[] = [];
 
     tickets.forEach((ticket) => {
-      const team = teamsMap.get(ticket.team_id);
+      const team = teamsMap.get(ticket.teamId);
       if (!team) return;
 
       // Podium finish: 1st (10x), 2nd (5x), 3rd (2x), others (0x)
       let multiplier = 0;
-      if (team.podium_finish === 1) multiplier = 10;
-      else if (team.podium_finish === 2) multiplier = 5;
-      else if (team.podium_finish === 3) multiplier = 2;
+      if (team.podiumFinish === 1) multiplier = 10;
+      else if (team.podiumFinish === 2) multiplier = 5;
+      else if (team.podiumFinish === 3) multiplier = 2;
 
-      const entriesCount = team.total_goals * multiplier;
+      const entriesCount = team.totalGoals * multiplier;
 
-      // Duplicate the ticket in the pool entriesCount times
       for (let i = 0; i < entriesCount; i++) {
         rafflePool.push(ticket);
       }
@@ -88,19 +75,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Securely select 3 unique winners
+    // 4. Securely select unique winners
     const winners: any[] = [];
-    const chosenTicketIds = new Set<string>();
+    const chosenTicketIds = new Set<number>();
 
-    // Copy raffle pool to shuffle/pick from
     let pool = [...rafflePool];
-
-    // We want 3 unique winners. If total unique tickets in the pool is less than 3, adjust.
     const uniqueTicketsCount = new Set(pool.map((t) => t.id)).size;
     const targetWinnersCount = Math.min(3, uniqueTicketsCount);
 
     while (winners.length < targetWinnersCount && pool.length > 0) {
-      // Cryptographically secure random index selection
       const randomIndex = crypto.randomInt(0, pool.length);
       const candidate = pool[randomIndex];
 
@@ -109,7 +92,6 @@ export async function POST(request: Request) {
         chosenTicketIds.add(candidate.id);
       }
 
-      // Remove all entries of this ticket to ensure uniqueness
       pool = pool.filter((t) => t.id !== candidate.id);
     }
 
