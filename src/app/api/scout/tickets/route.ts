@@ -51,13 +51,13 @@ export async function GET(request: Request) {
     });
 
     const leaderboard = leaderboardData
-      .map((item) => ({
+      .map((item:any) => ({
         id: item.id,
         full_name: item.fullName,
         tickets_count: item._count.tickets,
       }))
-      .filter((item) => item.tickets_count > 0)
-      .sort((a, b) => b.tickets_count - a.tickets_count);
+      .filter((item:any) => item.tickets_count > 0)
+      .sort((a:any, b:any) => b.tickets_count - a.tickets_count);
 
     return NextResponse.json({
       stats: {
