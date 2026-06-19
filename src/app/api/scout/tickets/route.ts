@@ -59,6 +59,18 @@ export async function GET(request: Request) {
       .filter((item:any) => item.tickets_count > 0)
       .sort((a:any, b:any) => b.tickets_count - a.tickets_count);
 
+    // 4. Fetch all detailed tickets if user is an admin
+    let allTickets: any[] = [];
+    if (userPayload.role === "admin") {
+      allTickets = await prisma.ticket.findMany({
+        include: {
+          scout: { select: { fullName: true } },
+          team: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }
+
     return NextResponse.json({
       stats: {
         ticketsSold,
@@ -66,6 +78,7 @@ export async function GET(request: Request) {
       },
       totalTicketsCount,
       leaderboard,
+      allTickets,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

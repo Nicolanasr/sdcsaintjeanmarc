@@ -1,13 +1,37 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jwtVerify } from "jose";
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "fallback-secret-for-goal-rush-fundraising-portal"
+);
 
 export async function GET(request: Request) {
-  // Simple check to secure cron route if CRON_SECRET is set
+  // 1. Secure check: Allow Cron Secret authorization header
   const authHeader = request.headers.get("authorization");
-  if (
+  const isCronAuthorized =
     process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+    authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+  // 2. Secure check: Allow logged-in Admin session cookie
+  let isAdminAuthorized = false;
+  const token = request.headers.get("cookie")
+    ?.split("; ")
+    .find((row) => row.startsWith("token="))
+    ?.split("=")[1];
+
+  if (token) {
+    try {
+      const { payload } = await jwtVerify(token, JWT_SECRET);
+      if (payload.role === "admin") {
+        isAdminAuthorized = true;
+      }
+    } catch {
+      // Invalid token
+    }
+  }
+
+  if (!isCronAuthorized && !isAdminAuthorized) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

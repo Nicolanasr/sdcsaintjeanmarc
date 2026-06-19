@@ -22,6 +22,7 @@ export default function AdminDashboard() {
   const [profile, setProfile] = useState<any>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [ticketsCount, setTicketsCount] = useState(0);
+  const [allTickets, setAllTickets] = useState<any[]>([]);
 
   // New team form state
   const [newTeamId, setNewTeamId] = useState("");
@@ -31,6 +32,7 @@ export default function AdminDashboard() {
   // Draw state
   const [drawing, setDrawing] = useState(false);
   const [winners, setWinners] = useState<any[]>([]);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     async function checkAdmin() {
@@ -73,6 +75,7 @@ export default function AdminDashboard() {
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setTicketsCount(statsData.totalTicketsCount || 0);
+        setAllTickets(statsData.allTickets || []);
       }
     } catch (err) {
       console.error("Error loading admin data:", err);
@@ -90,6 +93,23 @@ export default function AdminDashboard() {
       await loadAdminData();
     } catch (err: any) {
       alert("Seeding failed: " + err.message);
+    }
+  };
+
+  // Sync Goals manually from API
+  const handleSyncGoals = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/cron/sync-goals");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+
+      alert(data.message || "Goals synchronized successfully!");
+      await loadAdminData();
+    } catch (err: any) {
+      alert(err.message || "Failed to sync goals");
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -212,6 +232,13 @@ export default function AdminDashboard() {
               className="mt-6 w-full py-2 border border-scout-navy text-scout-navy text-xs font-semibold rounded-lg hover:bg-scout-navy hover:text-white transition cursor-pointer"
             >
               {isAr ? "تغذية تلقائية للفرق الأساسية" : "Seed Default Teams"}
+            </button>
+            <button
+              onClick={handleSyncGoals}
+              disabled={syncing}
+              className="mt-2 w-full py-2 bg-scout-gold hover:bg-scout-gold-light text-scout-navy text-xs font-bold rounded-lg disabled:opacity-50 transition cursor-pointer"
+            >
+              {syncing ? (isAr ? "جاري المزامنة..." : "Syncing...") : (isAr ? "مزامنة أهداف كأس العالم" : "Sync Live Goals")}
             </button>
           </div>
 
@@ -402,6 +429,66 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Scout Sales Log Section */}
+        <div className="glass-panel p-6 rounded-2xl shadow-md">
+          <h2 className="text-xl font-bold font-display text-scout-navy mb-4 border-b pb-2">
+            {isAr ? "سجل مبيعات تذاكر الكشافة" : "Scout Ticket Sales Log"}
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead>
+                <tr className="border-b text-scout-navy font-bold">
+                  <th className="py-3 px-4">{isAr ? "رقم التذكرة" : "Ticket #"}</th>
+                  <th className="py-3 px-4">{isAr ? "اسم الكشاف" : "Scout Name"}</th>
+                  <th className="py-3 px-4">{isAr ? "المشتري" : "Buyer Name"}</th>
+                  <th className="py-3 px-4">{isAr ? "رقم الهاتف" : "Phone"}</th>
+                  <th className="py-3 px-4">{isAr ? "المنتخب المختار" : "Selected Team"}</th>
+                  <th className="py-3 px-4 text-center">{isAr ? "التاريخ" : "Purchase Date"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allTickets.map((ticket) => (
+                  <tr key={ticket.id} className="border-b hover:bg-white/30 transition">
+                    <td className="py-3 px-4 font-bold text-scout-gold">
+                      #{ticket.id}
+                    </td>
+                    <td className="py-3 px-4">
+                      {ticket.scout?.fullName || "Unknown Scout"}
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-scout-navy">
+                      {ticket.buyerName}
+                    </td>
+                    <td className="py-3 px-4">
+                      {ticket.buyerPhone}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="bg-scout-navy/10 text-scout-navy text-[11px] font-bold px-2 py-1 rounded">
+                        {ticket.team?.name || ticket.teamId}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-xs text-scout-charcoal/60">
+                      {new Date(ticket.createdAt).toLocaleString(
+                        locale === "ar" ? "ar-EG" : "en-US",
+                        {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {allTickets.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-xs text-scout-charcoal/50">
+                      {isAr ? "لا توجد مبيعات تذاكر مسجلة بعد." : "No ticket sales recorded yet."}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
