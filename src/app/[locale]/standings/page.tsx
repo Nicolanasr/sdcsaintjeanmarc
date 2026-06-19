@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import React, { useEffect, useState, Suspense } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 
 interface Team {
   id: string;
@@ -12,10 +12,13 @@ interface Team {
   isEliminated: boolean;
 }
 
-export default function PublicStandings() {
+function StandingsContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  
   const locale = params.locale as string;
   const isAr = locale === "ar";
+  const ticketIdParam = searchParams.get("ticket_id");
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,16 +44,20 @@ export default function PublicStandings() {
     loadTeams();
   }, []);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchId) return;
+  useEffect(() => {
+    if (ticketIdParam) {
+      setSearchId(ticketIdParam);
+      triggerSearch(ticketIdParam);
+    }
+  }, [ticketIdParam]);
 
+  const triggerSearch = async (id: string) => {
     setSearching(true);
     setSearchError("");
     setSearchResult(null);
 
     try {
-      const res = await fetch(`/api/public/ticket?id=${searchId}`);
+      const res = await fetch(`/api/public/ticket?id=${id}`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -62,6 +69,13 @@ export default function PublicStandings() {
       setSearchError(err.message || "Ticket not found");
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleSearchForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchId) {
+      triggerSearch(searchId);
     }
   };
 
@@ -120,7 +134,7 @@ export default function PublicStandings() {
           <h2 className="text-lg font-bold font-display text-scout-navy mb-4">
             🔍 {isAr ? "ابحث عن تذكرتك الكاش" : "Look Up Your Ticket"}
           </h2>
-          <form onSubmit={handleSearch} className="flex gap-4">
+          <form onSubmit={handleSearchForm} className="flex gap-4">
             <input
               type="text"
               required
@@ -312,5 +326,17 @@ export default function PublicStandings() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function PublicStandings() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-scout-beige">
+        <span className="animate-spin border-4 border-scout-navy border-t-transparent rounded-full w-12 h-12" />
+      </div>
+    }>
+      <StandingsContent />
+    </Suspense>
   );
 }

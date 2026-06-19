@@ -130,13 +130,17 @@ export default function ScoutDashboard() {
   const getWhatsAppLink = (ticket: any) => {
     if (!ticket) return "";
     const teamName = teams.find((t) => t.id === ticket.teamId)?.name || ticket.teamId;
-    const msg = isAr
+    const baseMsg = isAr
       ? `شكرًا لشرائك تذكرة مسابقة Goal Rush رقم #${ticket.id} لدعم كشافة الأرز! فريقك المختار هو ${teamName}. كل هدف يسجله هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️`
       : `Thank you for purchasing World Cup Goal Rush ticket #${ticket.id} supporting Scouts des Cèdres! Your selected team is ${teamName}. Every goal they score grants you an extra entry in the final raffle! ⚽️`;
     
+    // Generate tracking link
+    const trackingLink = `${window.location.origin}/${locale}/standings?ticket_id=${ticket.id}`;
+    const fullMsg = `${baseMsg}\n\n${isAr ? "تابع تذكرتك ونقاط فريقك من هنا:" : "Track your ticket and team entries here:"}\n${trackingLink}`;
+
     // Normalize phone number (strip non-digits, ensure country code)
     const cleanPhone = ticket.buyerPhone.replace(/\D/g, "");
-    return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`;
+    return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(fullMsg)}`;
   };
 
   if (loading) {
