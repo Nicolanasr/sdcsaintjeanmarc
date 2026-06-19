@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jwtVerify } from "jose";
+import { getWhatsAppSettings } from "@/lib/whatsapp-settings";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-for-goal-rush-fundraising-portal"
@@ -82,14 +84,39 @@ export async function GET(request: Request) {
     const updates = Object.entries(goalsMap).map(async ([teamId, goals]) => {
       const team = await prisma.team.findUnique({
         where: { id: teamId },
-        select: { id: true },
+        select: { id: true, name: true, totalGoals: true },
       });
 
       if (team) {
-        return prisma.team.update({
+        const goalsDiff = goals - team.totalGoals;
+
+        const updatedTeam = await prisma.team.update({
           where: { id: teamId },
           data: { totalGoals: goals },
         });
+
+        if (goalsDiff > 0) {
+          try {
+            const settings = getWhatsAppSettings();
+            if (settings.sendOnGoal) {
+              const tickets = await prisma.ticket.findMany({
+                where: { teamId },
+              });
+
+              for (const ticket of tickets) {
+                const msgAr = `المنتخب الذي اخترته (${team.name}) قد سجل هدفًا جديدًا! ⚽️ إجمالي أهدافهم الآن هو ${goals}. حظًا موفقًا في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+                const msgEn = `Your selected team (${team.name}) has scored a new goal! ⚽️ Their total goals are now ${goals}. Good luck in the final raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+                const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
+
+                await sendWhatsAppMessage(ticket.buyerPhone, fullMsg);
+              }
+            }
+          } catch (wsErr) {
+            console.error("Failed to send automatic WhatsApp for goal sync:", wsErr);
+          }
+        }
+
+        return updatedTeam;
       }
     });
 

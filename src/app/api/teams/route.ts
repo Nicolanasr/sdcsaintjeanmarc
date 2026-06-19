@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jwtVerify } from "jose";
+import { getWhatsAppSettings } from "@/lib/whatsapp-settings";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-for-goal-rush-fundraising-portal"
@@ -69,6 +71,14 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Missing team id" }, { status: 400 });
     }
 
+    const currentTeam = await prisma.team.findUnique({
+      where: { id },
+    });
+
+    if (!currentTeam) {
+      return NextResponse.json({ error: "Team not found" }, { status: 404 });
+    }
+
     const team = await prisma.team.update({
       where: { id },
       data: {
@@ -77,6 +87,27 @@ export async function PATCH(request: Request) {
         isEliminated: isEliminated !== undefined ? isEliminated : undefined,
       },
     });
+
+    if (totalGoals !== undefined && totalGoals > currentTeam.totalGoals) {
+      try {
+        const settings = getWhatsAppSettings();
+        if (settings.sendOnGoal) {
+          const tickets = await prisma.ticket.findMany({
+            where: { teamId: id },
+          });
+
+          for (const ticket of tickets) {
+            const msgAr = `المنتخب الذي اخترته (${team.name}) قد سجل هدفًا جديدًا! ⚽️ إجمالي أهدافهم الآن هو ${totalGoals}. حظًا موفقًا في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+            const msgEn = `Your selected team (${team.name}) has scored a new goal! ⚽️ Their total goals are now ${totalGoals}. Good luck in the final raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+            const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
+
+            await sendWhatsAppMessage(ticket.buyerPhone, fullMsg);
+          }
+        }
+      } catch (wsErr) {
+        console.error("Failed to send manual goal increase WhatsApp alert:", wsErr);
+      }
+    }
 
     return NextResponse.json({ team });
   } catch (err: any) {

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { MessageCircle, Globe, Megaphone } from "lucide-react";
+import { FaFacebookF, FaInstagram, FaWhatsapp, FaTiktok } from "react-icons/fa6";
 
 interface Team {
     id: string;
@@ -107,26 +109,93 @@ function StandingsContent() {
     return (
         <div className="min-h-screen bg-scout-beige text-scout-charcoal">
             {/* Header Banner */}
-            <header className="bg-scout-navy text-white py-8 px-6 text-center shadow-lg relative overflow-hidden">
+            <header className="bg-scout-navy text-white py-4 px-6 text-center shadow-lg relative overflow-hidden">
                 <div className="absolute inset-0 bg-scout-green-light/10 blur-xl scale-150" />
-                <div className="relative z-10 max-w-4xl mx-auto">
-                    <h1 className="text-3xl sm:text-4xl font-extrabold font-display text-scout-gold tracking-tight">
-                        {isAr ? "مسابقة Goal Rush - كشافة الأرز" : "Goal Rush Fundraising Portal"}
-                    </h1>
-                    <p className="text-sm text-white/80 mt-2 max-w-xl mx-auto">
-                        {isAr
-                            ? "تابع نتائج تذكرتك وترتيب منتخبات كأس العالم ٢٠٢٦"
-                            : "Check your ticket results and monitor the World Cup 2026 team standings."}
-                    </p>
+                <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center gap-2">
+                    <img
+                        src="/sdc-logo-removebg-preview.png"
+                        alt="Scouts des Cèdres Logo"
+                        className="w-36 h-36 object-contain drop-shadow-md filter invert-100"
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/sdc-logo.jpeg";
+                        }}
+                    />
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-bold font-display text-scout-gold tracking-tight">
+                            {isAr ? "كشافة الأرز | فوج سان جان مارك - جبيل" : "Scouts des Cèdres | Saint Jean Marc - Byblos"}
+                        </h1>
+                        <p className="text-xs text-white/70 mt-1.5 font-semibold tracking-wide">
+                            {isAr ? "تاريخ السحب: ١٩ تموز ٢٠٢٦" : "Draw Date: July 19, 2026"}
+                        </p>
+                    </div>
                 </div>
             </header>
 
             <main className="max-w-4xl mx-auto p-6 space-y-8">
-                {/* Sync Disclaimer */}
-                <div className="bg-scout-gold/10 border-l-4 border-scout-gold p-4 rounded-xl text-xs text-scout-navy font-medium">
-                    ⚠️ {isAr
-                        ? "تنبيه: لا يتم تحديث هذه الصفحة مباشرة في نفس اللحظة. نرجو التحقق لاحقًا إذا كانت أهداف منتخبكم لا تطابق نتائج المباريات المباشرة بدقة."
-                        : "Please note: This page is updated daily and may not reflect real-time live match statistics immediately. If goals scored do not match live results exactly, check back later."}
+                {/* Social Media & Follow Rule Card */}
+                <div className="glass-panel p-6 rounded-2xl shadow-md bg-white border border-scout-gold/20 text-center space-y-4">
+                    <div className="max-w-xl mx-auto">
+                        <h3 className="text-base font-bold font-display text-scout-navy flex items-center justify-center gap-2">
+                            <Megaphone className="w-5 h-5 text-scout-gold" />
+                            <span>{isAr ? "ملاحظة هامة للمشاركين" : "Important Notice for Participants"}</span>
+                        </h3>
+                        <p className="text-xs text-scout-charcoal/80 mt-1">
+                            {isAr
+                                ? "يجب على الفائز بالسحب أن يكون متابعاً لحساباتنا الرسمية على وسائل التواصل الاجتماعي عند إعلان النتيجة للتأهل واستلام الجائزة!"
+                                : "To qualify for the prize, the selected winner must be following at least 1 of our official social media accounts at the time of the draw!"}
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap justify-center gap-3 pt-2">
+                        {/* Facebook */}
+                        <a
+                            href="https://www.facebook.com/SDCGroupeSJM/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-scout-navy/5 text-scout-navy hover:bg-scout-navy hover:text-white rounded-xl text-xs font-semibold transition"
+                        >
+                            <FaFacebookF className="w-4 h-4" />
+                            <span>Facebook</span>
+                        </a>
+                        {/* Instagram */}
+                        <a
+                            href="https://www.instagram.com/sdc_saintjeanmarc/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-scout-navy/5 text-scout-navy hover:bg-scout-navy hover:text-white rounded-xl text-xs font-semibold transition"
+                        >
+                            <FaInstagram className="w-4 h-4" />
+                            <span>Instagram</span>
+                        </a>
+                        {/* WhatsApp */}
+                        <a
+                            href="https://wa.me/96179013907"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-scout-navy/5 text-scout-navy hover:bg-scout-navy hover:text-white rounded-xl text-xs font-semibold transition"
+                        >
+                            <FaWhatsapp className="w-4 h-4" />
+                            <span>WhatsApp</span>
+                        </a>
+                        {/* TikTok */}
+                        <a
+                            href="https://www.tiktok.com/@sdcsaintjeanmarc"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-scout-navy/5 text-scout-navy hover:bg-scout-navy hover:text-white rounded-xl text-xs font-semibold transition"
+                        >
+                            <FaTiktok className="w-4 h-4" />
+                            <span>TikTok</span>
+                        </a>
+                        {/* Website */}
+                        <a
+                            href="/"
+                            className="flex items-center gap-2 px-4 py-2 bg-scout-navy/5 text-scout-navy hover:bg-scout-navy hover:text-white rounded-xl text-xs font-semibold transition"
+                        >
+                            <Globe className="w-4 h-4" />
+                            <span>{isAr ? "الموقع الإلكتروني" : "Website"}</span>
+                        </a>
+                    </div>
                 </div>
 
                 {/* Search Ticket Card */}
@@ -233,12 +302,20 @@ function StandingsContent() {
                                     {isAr ? `الكشاف المسؤول: ${searchResult.scout?.fullName || "مخفي"}` : `Sold by Scout: ${searchResult.scout?.fullName || "Hidden"}`}
                                 </span>
                                 <span>
-                                    {isAr ? "حساب مدفوع نقداً ($5)" : "Payment Confirmed ($5 Cash)"}
+                                    {isAr ? "تذكرة نشطة" : "Active Ticket"}
                                 </span>
                             </div>
                         </div>
                     )}
                 </div>
+
+                {/* Sync Disclaimer */}
+                <div className="bg-scout-gold/10 border-l-4 border-scout-gold p-4 rounded-xl text-xs text-scout-navy font-medium">
+                    ⚠️ {isAr
+                        ? "تنبيه: لا يتم تحديث هذه الصفحة مباشرة في نفس اللحظة. نرجو التحقق لاحقًا إذا كانت أهداف منتخبكم لا تطابق نتائج المباريات المباشرة بدقة."
+                        : "Please note: This page is updated daily and may not reflect real-time live match statistics immediately. If goals scored do not match live results exactly, check back later."}
+                </div>
+
 
                 {/* Read-Only Teams Standing Table */}
                 <div className="glass-panel p-6 rounded-2xl shadow-md bg-white">
@@ -249,33 +326,15 @@ function StandingsContent() {
                         <table className="w-full text-sm text-left border-collapse">
                             <thead>
                                 <tr className="border-b text-scout-navy font-bold">
-                                    <th className="py-3 px-4">{isAr ? "الترتيب / المنتخب" : "Standings / Team"}</th>
-                                    <th className="py-3 px-4 text-center">{isAr ? "إجمالي الأهداف" : "Total Goals"}</th>
-                                    <th className="py-3 px-4 text-center">{isAr ? "المضاعف" : "Multiplier"}</th>
-                                    <th className="py-3 px-4 text-center">{isAr ? "البطاقات لكل تذكرة" : "Entries per Ticket"}</th>
-                                    <th className="py-3 px-4 text-center">{isAr ? "الحالة" : "Status"}</th>
+                                    <th className="py-3 px-4">{isAr ? "الترتيب / المنتخب" : "Standings"}</th>
+                                    <th className="py-3 px-4 text-center">{isAr ? "إجمالي الأهداف" : "Goals"}</th>
+                                    <th className="py-3 px-4 text-center">{isAr ? "البطاقات لكل تذكرة" : "Entries"}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sortedTeams.map((t, idx) => {
                                     const multiplier = getTeamMultiplier(t);
                                     const entries = Math.floor(t.totalGoals * multiplier);
-                                    let statusLabel = isAr ? "نشط" : "Active";
-                                    let statusColor = "text-scout-green-light bg-scout-green/10";
-
-                                    if (t.podiumFinish === 1) {
-                                        statusLabel = isAr ? "🥇 البطل" : "🥇 Champions";
-                                        statusColor = "text-scout-gold bg-scout-gold/15";
-                                    } else if (t.podiumFinish === 2) {
-                                        statusLabel = isAr ? "🥈 المركز الثاني" : "🥈 2nd Place";
-                                        statusColor = "text-scout-navy bg-scout-navy/10";
-                                    } else if (t.podiumFinish === 3) {
-                                        statusLabel = isAr ? "🥉 المركز الثالث" : "🥉 3rd Place";
-                                        statusColor = "text-scout-terracotta bg-scout-terracotta/10";
-                                    } else if (t.isEliminated) {
-                                        statusLabel = isAr ? "مقصى" : "Eliminated";
-                                        statusColor = "text-scout-charcoal/50 bg-scout-charcoal/5";
-                                    }
 
                                     return (
                                         <tr key={t.id} className="border-b hover:bg-scout-beige-dark/20 transition">
@@ -299,23 +358,15 @@ function StandingsContent() {
                                             <td className="py-3 px-4 text-center font-bold text-scout-navy">
                                                 {t.totalGoals}
                                             </td>
-                                            <td className="py-3 px-4 text-center font-bold text-scout-gold">
-                                                {multiplier}x
-                                            </td>
                                             <td className="py-3 px-4 text-center font-black text-scout-green-light">
                                                 {entries}
-                                            </td>
-                                            <td className="py-3 px-4 text-center">
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor}`}>
-                                                    {statusLabel}
-                                                </span>
                                             </td>
                                         </tr>
                                     );
                                 })}
                                 {sortedTeams.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="text-center py-6 text-xs text-scout-charcoal/50">
+                                        <td colSpan={3} className="text-center py-6 text-xs text-scout-charcoal/50">
                                             {isAr ? "لا توجد منتخبات مضافة بعد." : "No teams configured yet."}
                                         </td>
                                     </tr>
@@ -323,96 +374,79 @@ function StandingsContent() {
                             </tbody>
                         </table>
                     </div>
+                </div>
 
-                    {/* Rules & Reveal Details Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Rules Card */}
-                        <div className="glass-panel p-6 rounded-2xl shadow-md bg-white">
-                            <h3 className="text-lg font-bold font-display text-scout-navy mb-3">
-                                📋 {isAr ? "شروط وقواعد المسابقة" : "Raffle Rules & Formula"}
-                            </h3>
-                            <ul className="space-y-2.5 text-xs text-scout-charcoal/80">
-                                <li className="flex items-start gap-2">
-                                    <span className="text-scout-gold font-bold">1.</span>
-                                    <span>
-                                        {isAr
-                                            ? "المعادلة الأساسية: إجمالي نقاط السحب = (أهداف الفريق) × (مضاعف المركز)."
-                                            : "The Formula: Total raffle entry tickets = (Total Team Goals) × (Podium Multiplier)."}
-                                    </span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-scout-gold font-bold">2.</span>
-                                    <span>
-                                        {isAr
-                                            ? "المركز الأول (البطل): مضاعف ٣ أضعاف (3x)."
-                                            : "1st Place (Champions): 3x multiplier."}
-                                    </span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-scout-gold font-bold">3.</span>
-                                    <span>
-                                        {isAr
-                                            ? "المركز الثاني: مضاعف ضعفين (2x)."
-                                            : "2nd Place: 2x multiplier."}
-                                    </span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-scout-gold font-bold">4.</span>
-                                    <span>
-                                        {isAr
-                                            ? "المركز الثالث: مضاعف ضعف ونصف (1.5x)."
-                                            : "3rd Place: 1.5x multiplier."}
-                                    </span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-scout-gold font-bold">5.</span>
-                                    <span>
-                                        {isAr
-                                            ? "أي مركز آخر / خروج مبكر: يحتفظ بمضاعف أساسي (1x) استنادًا إلى أهدافه المسجلة فقط."
-                                            : "Any other finish / eliminated: Retains 1x multiplier, meaning goals scored still count 1:1."}
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Reveal & Prize Card */}
-                        <div className="glass-panel p-6 rounded-2xl shadow-md bg-white flex flex-col justify-between">
-                            <div>
-                                <h3 className="text-lg font-bold font-display text-scout-navy mb-3">
-                                    🎁 {isAr ? "سحب وإعلان الجوائز" : "Draw & Prize Details"}
-                                </h3>
-                                <p className="text-xs text-scout-charcoal/85 leading-relaxed">
+                {/* Rules & Reveal Details Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Rules Card */}
+                    <div className="glass-panel p-6 rounded-2xl shadow-md bg-white">
+                        <h3 className="text-lg font-bold font-display text-scout-navy mb-3">
+                            📋 {isAr ? "شروط وقواعد المسابقة" : "Raffle Rules & Formula"}
+                        </h3>
+                        <ul className="space-y-2.5 text-xs text-scout-charcoal/80">
+                            <li className="flex items-start gap-2">
+                                <span className="text-scout-gold font-bold">1.</span>
+                                <span>
                                     {isAr
-                                        ? "سيتم إجراء السحب النهائي على الجوائز القيّمة وإعلان الفائزين مباشرة بعد انتهاء بطولة كأس العالم في حفل كشفي خاص وعلى صفحاتنا الرسمية."
-                                        : "All raffle entries will be compiled at the end of the World Cup tournament. We will draw and reveal the winners live on our official pages during our scout ceremony."}
-                                </p>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-scout-beige-dark text-xs font-semibold text-scout-gold">
-                                📅 {isAr ? "تاريخ السحب: ١٩ تموز ٢٠٢٦" : "Draw Date: July 19, 2026"}
-                            </div>
-                        </div>
+                                        ? "المعادلة الأساسية: إجمالي نقاط السحب = (أهداف الفريق) × (مضاعف المركز)."
+                                        : "The Formula: Total raffle entry tickets = (Total Team Goals) × (Podium Multiplier)."}
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-scout-gold font-bold">2.</span>
+                                <span>
+                                    {isAr
+                                        ? "المركز الأول (البطل): مضاعف ٣ أضعاف (3x)."
+                                        : "1st Place (Champions): 3x multiplier."}
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-scout-gold font-bold">3.</span>
+                                <span>
+                                    {isAr
+                                        ? "المركز الثاني: مضاعف ضعفين (2x)."
+                                        : "2nd Place: 2x multiplier."}
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-scout-gold font-bold">4.</span>
+                                <span>
+                                    {isAr
+                                        ? "المركز الثالث: مضاعف ضعف ونصف (1.5x)."
+                                        : "3rd Place: 1.5x multiplier."}
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-scout-gold font-bold">5.</span>
+                                <span>
+                                    {isAr
+                                        ? "أي مركز آخر / خروج مبكر: يحتفظ بمضاعف أساسي (1x) استنادًا إلى أهدافه المسجلة فقط."
+                                        : "Any other finish / eliminated: Retains 1x multiplier, meaning goals scored still count 1:1."}
+                                </span>
+                            </li>
+                        </ul>
                     </div>
 
-                    {/* Group Logo Section */}
-                    <div className="text-center py-6 flex flex-col items-center justify-center gap-3">
-                        <img
-                            src="/sdc-logo-removebg-preview.png"
-                            alt="Scouts des Cèdres Logo"
-                            className="w-20 h-20 object-contain drop-shadow"
-                            onError={(e) => {
-                                // Fallback to standard logo if removebg is missing
-                                (e.target as HTMLImageElement).src = "/sdc-logo.jpeg";
-                            }}
-                        />
+                    {/* Reveal & Prize Card */}
+                    <div className="glass-panel p-6 rounded-2xl shadow-md bg-white flex flex-col justify-between">
                         <div>
-                            <h4 className="text-sm font-bold font-display text-scout-navy leading-none">
-                                {isAr ? "كشافة الأرز | فوج سان جان مارك - جبيل" : "Scouts des Cèdres | Saint Jean Marc - Byblos"}
-                            </h4>
-                            <span className="text-[10px] text-scout-charcoal/60 block mt-1">
-                                © {new Date().getFullYear()} Scouts des Cèdres Jbeil. All rights reserved.
-                            </span>
+                            <h3 className="text-lg font-bold font-display text-scout-navy mb-3">
+                                🎁 {isAr ? "سحب وإعلان الجوائز" : "Draw & Prize Details"}
+                            </h3>
+                            <p className="text-xs text-scout-charcoal/85 leading-relaxed">
+                                {isAr
+                                    ? "سيتم إجراء السحب النهائي على الجوائز القيّمة وإعلان الفائزين مباشرة بعد انتهاء بطولة كأس العالم في حفل كشفي خاص وعلى صفحاتنا الرسمية."
+                                    : "All raffle entries will be compiled at the end of the World Cup tournament. We will draw and reveal the winners live on our official pages during our scout ceremony."}
+                            </p>
                         </div>
                     </div>
+                </div>
+
+                {/* Copyright footer */}
+                <div className="text-center py-6 border-t border-scout-beige-dark mt-6">
+                    <span className="text-[10px] text-scout-charcoal/60 block">
+                        © {new Date().getFullYear()} Scouts des Cèdres Jbeil. All rights reserved.
+                    </span>
                 </div>
             </main>
         </div>

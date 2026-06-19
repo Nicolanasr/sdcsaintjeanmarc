@@ -37,3 +37,12 @@ model Ticket {
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
 }
+
+model WhatsAppLog {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  body      String
+  status    String   // "SENT" or "FAILED"
+  error     String?
+  createdAt DateTime @default(now())
+}
