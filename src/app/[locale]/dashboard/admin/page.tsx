@@ -33,6 +33,7 @@ export default function AdminDashboard() {
   const [drawing, setDrawing] = useState(false);
   const [winners, setWinners] = useState<any[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [teamSearch, setTeamSearch] = useState("");
 
   useEffect(() => {
     async function checkAdmin() {
@@ -357,78 +358,126 @@ export default function AdminDashboard() {
         {/* Teams Management Overrides */}
         <div className="glass-panel p-6 rounded-2xl shadow-md">
           <h2 className="text-xl font-bold font-display text-scout-navy mb-4 border-b pb-2">
-            {isAr ? "تعديل إحصائيات ومراتب المنتخبات" : "Team Standings & Goals Overrides"}
+            {isAr ? "ترتيب المنتخبات وتعديل الأهداف والمضاعفات" : "Team Standings, Goals & Multipliers"}
           </h2>
+          
+          {/* Team Search input */}
+          <div className="mb-4">
+            <input
+              type="text"
+              value={teamSearch}
+              onChange={(e) => setTeamSearch(e.target.value)}
+              placeholder={isAr ? "ابحث عن منتخب..." : "Search for a team..."}
+              className="w-full max-w-md px-4 py-2 rounded-lg border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy text-sm shadow-sm"
+            />
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse">
               <thead>
                 <tr className="border-b text-scout-navy font-bold">
-                  <th className="py-3 px-4">{isAr ? "المنتخب" : "Team"}</th>
+                  <th className="py-3 px-4">{isAr ? "الترتيب / المنتخب" : "Standings / Team"}</th>
                   <th className="py-3 px-4 text-center">{isAr ? "إجمالي الأهداف" : "Total Goals"}</th>
                   <th className="py-3 px-4 text-center">{isAr ? "منصة التتويج" : "Podium Finish"}</th>
+                  <th className="py-3 px-4 text-center">{isAr ? "المضاعف الحالي" : "Multiplier"}</th>
+                  <th className="py-3 px-4 text-center">{isAr ? "إجمالي البطاقات" : "Total Entries"}</th>
                   <th className="py-3 px-4 text-center">{isAr ? "أقصي" : "Eliminated"}</th>
                 </tr>
               </thead>
               <tbody>
-                {teams.map((t) => (
-                  <tr key={t.id} className="border-b hover:bg-white/30 transition">
-                    <td className="py-3 px-4 flex items-center gap-3">
-                      <img
-                        src={t.flagUrl}
-                        alt={t.name}
-                        className="w-8 h-5 object-cover rounded shadow-sm"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "https://flagcdn.com/un.svg";
-                        }}
-                      />
-                      <div>
-                        <span className="font-bold text-scout-navy block leading-none">{t.name}</span>
-                        <span className="text-[10px] text-scout-charcoal/50">{t.id}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <div className="inline-flex items-center gap-2">
-                        <button
-                          onClick={() => handleUpdateTeam(t.id, { totalGoals: Math.max(0, t.totalGoals - 1) })}
-                          className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
-                        >
-                          -
-                        </button>
-                        <span className="w-8 font-extrabold text-scout-navy">{t.totalGoals}</span>
-                        <button
-                          onClick={() => handleUpdateTeam(t.id, { totalGoals: t.totalGoals + 1 })}
-                          className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <select
-                        value={t.podiumFinish || ""}
-                        onChange={(e) =>
-                          handleUpdateTeam(t.id, {
-                            podiumFinish: e.target.value ? parseInt(e.target.value) : null,
-                          })
-                        }
-                        className="px-2 py-1 rounded border text-xs bg-white focus:outline-none"
-                      >
-                        <option value="">{isAr ? "لم يحدد" : "None"}</option>
-                        <option value="1">🥇 1st Place (10x)</option>
-                        <option value="2">🥈 2nd Place (5x)</option>
-                        <option value="3">🥉 3rd Place (2x)</option>
-                      </select>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={t.isEliminated}
-                        onChange={(e) => handleUpdateTeam(t.id, { isEliminated: e.target.checked })}
-                        className="w-4 h-4 rounded text-scout-navy accent-scout-navy focus:ring-scout-navy cursor-pointer"
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {(() => {
+                  const sorted = [...teams].sort((a, b) => {
+                    const podiumA = a.podiumFinish ?? 999;
+                    const podiumB = b.podiumFinish ?? 999;
+                    if (podiumA !== podiumB) return podiumA - podiumB;
+                    if (b.totalGoals !== a.totalGoals) return b.totalGoals - a.totalGoals;
+                    return a.name.localeCompare(b.name);
+                  });
+
+                  return sorted
+                    .filter((t) =>
+                      t.name.toLowerCase().includes(teamSearch.toLowerCase()) ||
+                      t.id.toLowerCase().includes(teamSearch.toLowerCase())
+                    )
+                    .map((t, idx) => {
+                      let multiplier = 1;
+                      if (t.isEliminated) multiplier = 0;
+                      else if (t.podiumFinish === 1) multiplier = 10;
+                      else if (t.podiumFinish === 2) multiplier = 5;
+                      else if (t.podiumFinish === 3) multiplier = 2;
+
+                      const totalEntries = t.totalGoals * multiplier;
+
+                      return (
+                        <tr key={t.id} className="border-b hover:bg-white/30 transition">
+                          <td className="py-3 px-4 flex items-center gap-3">
+                            <span className="font-bold text-scout-navy text-xs min-w-[20px]">
+                              #{idx + 1}
+                            </span>
+                            <img
+                              src={t.flagUrl}
+                              alt={t.name}
+                              className="w-8 h-5 object-cover rounded shadow-sm"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://flagcdn.com/un.svg";
+                              }}
+                            />
+                            <div>
+                              <span className="font-bold text-scout-navy block leading-none">{t.name}</span>
+                              <span className="text-[10px] text-scout-charcoal/50">{t.id}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                onClick={() => handleUpdateTeam(t.id, { totalGoals: Math.max(0, t.totalGoals - 1) })}
+                                className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
+                              >
+                                -
+                              </button>
+                              <span className="w-8 font-extrabold text-scout-navy">{t.totalGoals}</span>
+                              <button
+                                onClick={() => handleUpdateTeam(t.id, { totalGoals: t.totalGoals + 1 })}
+                                className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <select
+                              value={t.podiumFinish || ""}
+                              onChange={(e) =>
+                                handleUpdateTeam(t.id, {
+                                  podiumFinish: e.target.value ? parseInt(e.target.value) : null,
+                                })
+                              }
+                              className="px-2 py-1 rounded border text-xs bg-white focus:outline-none"
+                            >
+                              <option value="">{isAr ? "لم يحدد" : "None"}</option>
+                              <option value="1">🥇 1st Place (10x)</option>
+                              <option value="2">🥈 2nd Place (5x)</option>
+                              <option value="3">🥉 3rd Place (2x)</option>
+                            </select>
+                          </td>
+                          <td className="py-3 px-4 text-center font-bold text-scout-gold">
+                            {multiplier}x
+                          </td>
+                          <td className="py-3 px-4 text-center font-extrabold text-scout-green-light">
+                            {totalEntries}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={t.isEliminated}
+                              onChange={(e) => handleUpdateTeam(t.id, { isEliminated: e.target.checked })}
+                              className="w-4 h-4 rounded text-scout-navy accent-scout-navy focus:ring-scout-navy cursor-pointer"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    });
+                })()}
               </tbody>
             </table>
           </div>

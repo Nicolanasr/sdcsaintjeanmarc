@@ -55,9 +55,10 @@ export async function POST(request: Request) {
       const team = teamsMap.get(ticket.teamId);
       if (!team) return;
 
-      // Podium finish: 1st (10x), 2nd (5x), 3rd (2x), others (0x)
-      let multiplier = 0;
-      if (team.podiumFinish === 1) multiplier = 10;
+      // Podium finish: 1st (10x), 2nd (5x), 3rd (2x), eliminated (0x), active (1x)
+      let multiplier = 1;
+      if (team.isEliminated) multiplier = 0;
+      else if (team.podiumFinish === 1) multiplier = 10;
       else if (team.podiumFinish === 2) multiplier = 5;
       else if (team.podiumFinish === 3) multiplier = 2;
 

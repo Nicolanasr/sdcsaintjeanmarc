@@ -39,6 +39,7 @@ export default function ScoutDashboard() {
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [successTicket, setSuccessTicket] = useState<any>(null);
+  const [teamSearch, setTeamSearch] = useState("");
 
   useEffect(() => {
     async function initDashboard() {
@@ -285,31 +286,48 @@ export default function ScoutDashboard() {
                 <label className="block text-sm font-medium mb-3 text-scout-navy">
                   {isAr ? "اختر المنتخب المفضل للمشتري" : "Choose Buyer's World Cup Team"}
                 </label>
+                
+                {/* Team Search Input */}
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    value={teamSearch}
+                    onChange={(e) => setTeamSearch(e.target.value)}
+                    placeholder={isAr ? "ابحث عن منتخب بالاسم أو الرمز..." : "Search team by name or code..."}
+                    className="w-full px-4 py-2 rounded-lg border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy text-sm shadow-sm"
+                  />
+                </div>
+
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                  {teams.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setSelectedTeamId(t.id)}
-                      className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${
-                        selectedTeamId === t.id
-                          ? "bg-scout-navy text-white border-scout-gold scale-105 shadow-md"
-                          : "bg-white/80 hover:bg-white text-scout-charcoal hover:border-scout-gold-light border-scout-beige-dark"
-                      }`}
-                    >
-                      <img
-                        src={t.flagUrl}
-                        alt={t.name}
-                        className="w-10 h-7 object-cover rounded shadow-sm mb-1.5"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "https://flagcdn.com/un.svg";
-                        }}
-                      />
-                      <span className="text-[11px] font-bold tracking-tight line-clamp-1">
-                        {t.name}
-                      </span>
-                    </button>
-                  ))}
+                  {teams
+                    .filter((t) =>
+                      t.name.toLowerCase().includes(teamSearch.toLowerCase()) ||
+                      t.id.toLowerCase().includes(teamSearch.toLowerCase())
+                    )
+                    .map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setSelectedTeamId(t.id)}
+                        className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${
+                          selectedTeamId === t.id
+                            ? "bg-scout-navy text-white border-scout-gold scale-105 shadow-md"
+                            : "bg-white/80 hover:bg-white text-scout-charcoal hover:border-scout-gold-light border-scout-beige-dark"
+                        }`}
+                      >
+                        <img
+                          src={t.flagUrl}
+                          alt={t.name}
+                          className="w-10 h-7 object-cover rounded shadow-sm mb-1.5"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "https://flagcdn.com/un.svg";
+                          }}
+                        />
+                        <span className="text-[11px] font-bold tracking-tight line-clamp-1">
+                          {t.name}
+                        </span>
+                      </button>
+                    ))}
                   {teams.length === 0 && (
                     <p className="col-span-full text-xs text-scout-charcoal/50 text-center py-4 bg-white/50 rounded-xl">
                       {isAr
