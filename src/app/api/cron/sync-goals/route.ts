@@ -67,6 +67,9 @@ export async function GET(request: Request) {
       if (match.status === "FINISHED" || match.status === "IN_PLAY") {
         const homeCode = match.homeTeam.tla || match.homeTeam.id?.toString();
         const awayCode = match.awayTeam.tla || match.awayTeam.id?.toString();
+        if(awayCode == "CAN" || homeCode =="CAN"){
+            console.log(match)
+        }
 
         const homeGoals = match.score.fullTime.home ?? 0;
         const awayGoals = match.score.fullTime.away ?? 0;
