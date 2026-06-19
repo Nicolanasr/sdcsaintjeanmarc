@@ -131,9 +131,9 @@ function StandingsContent() {
                 </div>
             </header>
 
-            <main className="max-w-4xl mx-auto p-6 space-y-8">
+            <main className="max-w-4xl mx-auto px-3 py-6 sm:px-6 space-y-6">
                 {/* Social Media & Follow Rule Card */}
-                <div className="glass-panel p-6 rounded-2xl shadow-md bg-white border border-scout-gold/20 text-center space-y-4">
+                <div className="glass-panel p-4 sm:p-6 rounded-2xl shadow-md bg-white border border-scout-gold/20 text-center space-y-4">
                     <div className="max-w-xl mx-auto">
                         <h3 className="text-base font-bold font-display text-scout-navy flex items-center justify-center gap-2">
                             <Megaphone className="w-5 h-5 text-scout-gold" />
@@ -199,7 +199,7 @@ function StandingsContent() {
                 </div>
 
                 {/* Search Ticket Card */}
-                <div className="glass-panel p-6 rounded-2xl shadow-md border border-scout-beige-dark bg-white/70">
+                <div className="glass-panel p-4 sm:p-6 rounded-2xl shadow-md border border-scout-beige-dark bg-white/70">
                     <h2 className="text-lg font-bold font-display text-scout-navy mb-4">
                         🔍 {isAr ? "ابحث عن تذكرتك الكاش" : "Look Up Your Ticket"}
                     </h2>
@@ -229,7 +229,7 @@ function StandingsContent() {
                     )}
 
                     {searchResult && (
-                        <div className="mt-6 bg-white p-5 rounded-xl border border-scout-gold/30 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="mt-6 bg-white p-3.5 sm:p-5 rounded-xl border border-scout-gold/30 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 mb-4 gap-2">
                                 <div>
                                     <span className="text-[10px] uppercase font-bold text-scout-charcoal/50">
@@ -249,7 +249,7 @@ function StandingsContent() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-center">
                                 <div className="bg-scout-beige p-3 rounded-lg border">
                                     <span className="block text-[10px] text-scout-charcoal/50 font-bold mb-1">
                                         {isAr ? "المنتخب المختار" : "Selected Team"}
@@ -318,7 +318,7 @@ function StandingsContent() {
 
 
                 {/* Read-Only Teams Standing Table */}
-                <div className="glass-panel p-6 rounded-2xl shadow-md bg-white">
+                <div className="glass-panel p-3.5 sm:p-6 rounded-2xl shadow-md bg-white">
                     <h2 className="text-xl font-bold font-display text-scout-navy mb-4 border-b pb-2">
                         🏆 {isAr ? "ترتيب المنتخبات ومضاعفات السحب" : "World Cup Teams Raffle Standings"}
                     </h2>
@@ -326,9 +326,9 @@ function StandingsContent() {
                         <table className="w-full text-sm text-left border-collapse">
                             <thead>
                                 <tr className="border-b text-scout-navy font-bold">
-                                    <th className="py-3 px-4">{isAr ? "الترتيب / المنتخب" : "Standings"}</th>
-                                    <th className="py-3 px-4 text-center">{isAr ? "إجمالي الأهداف" : "Goals"}</th>
-                                    <th className="py-3 px-4 text-center">{isAr ? "البطاقات لكل تذكرة" : "Entries"}</th>
+                                    <th className="py-3 px-2 sm:px-4">{isAr ? "الترتيب / المنتخب" : "Standings"}</th>
+                                    <th className="py-3 px-2 sm:px-4 text-center">{isAr ? "إجمالي الأهداف" : "Goals"}</th>
+                                    <th className="py-3 px-2 sm:px-4 text-center">{isAr ? "البطاقات لكل تذكرة" : "Entries"}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -338,27 +338,27 @@ function StandingsContent() {
 
                                     return (
                                         <tr key={t.id} className="border-b hover:bg-scout-beige-dark/20 transition">
-                                            <td className="py-3 px-4 flex items-center gap-3">
-                                                <span className="font-bold text-scout-navy text-xs min-w-[20px]">
+                                            <td className="py-3 px-2 sm:px-4 flex items-center gap-1.5 sm:gap-3">
+                                                <span className="font-bold text-scout-navy text-xs min-w-[14px]">
                                                     #{idx + 1}
                                                 </span>
                                                 <img
                                                     src={t.flagUrl}
                                                     alt={t.name}
-                                                    className="w-8 h-5 object-cover rounded shadow-sm"
+                                                    className="w-7 h-4.5 sm:w-8 sm:h-5 object-cover rounded shadow-sm"
                                                     onError={(e) => {
                                                         (e.target as HTMLImageElement).src = "https://flagcdn.com/un.svg";
                                                     }}
                                                 />
                                                 <div>
-                                                    <span className="font-bold text-scout-navy block leading-none">{t.name}</span>
-                                                    <span className="text-[10px] text-scout-charcoal/50">{t.id}</span>
+                                                    <span className="font-bold text-scout-navy block leading-none text-xs sm:text-sm">{t.name}</span>
+                                                    <span className="text-[9px] sm:text-[10px] text-scout-charcoal/50">{t.id}</span>
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-4 text-center font-bold text-scout-navy">
+                                            <td className="py-3 px-2 sm:px-4 text-center font-bold text-scout-navy text-xs sm:text-sm">
                                                 {t.totalGoals}
                                             </td>
-                                            <td className="py-3 px-4 text-center font-black text-scout-green-light">
+                                            <td className="py-3 px-2 sm:px-4 text-center font-black text-scout-green-light text-xs sm:text-sm">
                                                 {entries}
                                             </td>
                                         </tr>
@@ -379,7 +379,7 @@ function StandingsContent() {
                 {/* Rules & Reveal Details Section */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Rules Card */}
-                    <div className="glass-panel p-6 rounded-2xl shadow-md bg-white">
+                    <div className="glass-panel p-4 sm:p-6 rounded-2xl shadow-md bg-white">
                         <h3 className="text-lg font-bold font-display text-scout-navy mb-3">
                             📋 {isAr ? "شروط وقواعد المسابقة" : "Raffle Rules & Formula"}
                         </h3>
@@ -428,7 +428,7 @@ function StandingsContent() {
                     </div>
 
                     {/* Reveal & Prize Card */}
-                    <div className="glass-panel p-6 rounded-2xl shadow-md bg-white flex flex-col justify-between">
+                    <div className="glass-panel p-4 sm:p-6 rounded-2xl shadow-md bg-white flex flex-col justify-between">
                         <div>
                             <h3 className="text-lg font-bold font-display text-scout-navy mb-3">
                                 🎁 {isAr ? "سحب وإعلان الجوائز" : "Draw & Prize Details"}
