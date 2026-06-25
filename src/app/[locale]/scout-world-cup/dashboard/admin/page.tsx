@@ -38,6 +38,29 @@ export default function AdminDashboard() {
     const [ticketSearchQuery, setTicketSearchQuery] = useState("");
     const [expandedGroups, setExpandedGroups] = useState<{[key: string]: boolean}>({});
     const [whatsappSettings, setWhatsappSettings] = useState({ sendOnPurchase: true, sendOnGoal: false });
+    const [verifyingIds, setVerifyingIds] = useState<number[]>([]);
+
+    const handleVerifyTickets = async (ticketIds: number[]) => {
+        if (!confirm(isAr ? "هل أنت متأكد من تأكيد استلام الدفعة لهذه التذاكر؟" : "Are you sure you want to verify payment for these tickets?")) {
+            return;
+        }
+        setVerifyingIds(prev => [...prev, ...ticketIds]);
+        try {
+            const res = await fetch("/api/admin/verify-ticket", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ticketIds }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Verification failed");
+            alert(isAr ? "تم تأكيد الدفعة بنجاح وإرسال الرسائل!" : "Payment successfully verified and WhatsApp sent!");
+            await loadAdminData();
+        } catch (err: any) {
+            alert("Verification failed: " + err.message);
+        } finally {
+            setVerifyingIds(prev => prev.filter(id => !ticketIds.includes(id)));
+        }
+    };
 
     const toggleGroup = (key: string) => {
         setExpandedGroups(prev => ({
@@ -352,6 +375,84 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                {/* Pending Verification Tickets */}
+                {allTickets.some(t => t.paymentStatus === "PENDING" && t.whishTransactionId) && (
+                    <div className="glass-panel p-6 rounded-2xl shadow-md border-l-4 border-amber-500 bg-amber-500/5">
+                        <h2 className="text-lg font-bold font-display text-scout-navy mb-3 flex items-center gap-2">
+                            <span className="text-amber-500">⏳</span>
+                            <span>{isAr ? "تحقق من الدفعات المعلقة (Whish)" : "Pending Whish Payments Verification"}</span>
+                        </h2>
+                        <p className="text-xs text-scout-charcoal/70 mb-4">
+                            {isAr 
+                                ? "الرجاء مراجعة تطبيق Whish الخاص بك للتأكد من استلام المبالغ ثم اضغط على 'تأكيد الدفع' لإصدار التذاكر للمشترين وإرسالها لهم تلقائياً."
+                                : "Please check your Whish account records to verify the funds were received, then click 'Approve Payment' to issue and send the tickets to the buyers via WhatsApp."}
+                        </p>
+                        
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left border-collapse bg-white/70 rounded-xl">
+                                <thead>
+                                    <tr className="border-b text-scout-navy font-bold text-xs uppercase bg-scout-beige-dark/20">
+                                        <th className="py-2.5 px-4 text-left">{isAr ? "المشتري" : "Buyer"}</th>
+                                        <th className="py-2.5 px-4 text-left">{isAr ? "رقم الهاتف" : "Phone"}</th>
+                                        <th className="py-2.5 px-4 text-left">{isAr ? "المنتخب" : "Selected Team"}</th>
+                                        <th className="py-2.5 px-4 text-center">{isAr ? "الكمية" : "Qty"}</th>
+                                        <th className="py-2.5 px-4 text-center">{isAr ? "المبلغ" : "Amount"}</th>
+                                        <th className="py-2.5 px-4 text-left font-mono">{isAr ? "رقم المعاملة" : "Transaction ID"}</th>
+                                        <th className="py-2.5 px-4 text-center">{isAr ? "إجراء" : "Actions"}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(() => {
+                                        const pendingGroups: { [key: string]: { name: string; phone: string; teamName: string; count: number; whishTransactionId: string; ticketIds: number[] } } = {};
+                                        allTickets.filter(t => t.paymentStatus === "PENDING" && t.whishTransactionId).forEach(t => {
+                                            const groupKey = `${t.buyerPhone}-${t.whishTransactionId}`;
+                                            if (!pendingGroups[groupKey]) {
+                                                pendingGroups[groupKey] = {
+                                                    name: t.buyerName,
+                                                    phone: t.buyerPhone,
+                                                    teamName: t.team?.name || t.teamId,
+                                                    count: 0,
+                                                    whishTransactionId: t.whishTransactionId,
+                                                    ticketIds: []
+                                                };
+                                            }
+                                            pendingGroups[groupKey].count++;
+                                            pendingGroups[groupKey].ticketIds.push(t.id);
+                                        });
+
+                                        return Object.values(pendingGroups).map((group, idx) => {
+                                            const isVerifying = group.ticketIds.some(id => verifyingIds.includes(id));
+                                            return (
+                                                <tr key={idx} className="border-b border-scout-beige-dark/20 hover:bg-white/90 transition text-xs">
+                                                    <td className="py-3 px-4 font-bold text-scout-navy">{group.name}</td>
+                                                    <td className="py-3 px-4">{group.phone}</td>
+                                                    <td className="py-3 px-4">
+                                                        <span className="bg-scout-navy/10 text-scout-navy font-bold px-1.5 py-0.5 rounded text-[10px]">
+                                                            {group.teamName}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-center font-bold">{group.count}</td>
+                                                    <td className="py-3 px-4 text-center font-black text-scout-green-light">${(group.count * 5).toFixed(2)}</td>
+                                                    <td className="py-3 px-4 font-mono font-bold text-amber-600">{group.whishTransactionId}</td>
+                                                    <td className="py-3 px-4 text-center">
+                                                        <button
+                                                            onClick={() => handleVerifyTickets(group.ticketIds)}
+                                                            disabled={isVerifying}
+                                                            className="px-3 py-1.5 bg-scout-green hover:bg-scout-green-light text-white text-[11px] font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm"
+                                                        >
+                                                            {isVerifying ? (isAr ? "جاري التأكيد..." : "Confirming...") : (isAr ? "تأكيد واستلام" : "Approve Payment")}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        });
+                                    })()}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
                 {/* Winners Results Display */}
                 {winners.length > 0 && (
                     <div className="glass-panel p-6 rounded-2xl shadow-md bg-scout-gold/10 border border-scout-gold/40 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -640,6 +741,7 @@ export default function AdminDashboard() {
                                                 <th className="py-3 px-4">{isAr ? "المنتخب المختار" : "Selected Team"}</th>
                                                 <th className="py-3 px-4 text-center">{isAr ? "عدد البطاقات بالسحب" : "Raffle Entries"}</th>
                                                 <th className="py-3 px-4 text-center">{isAr ? "التاريخ" : "Purchase Date"}</th>
+                                                <th className="py-3 px-4 text-center">{isAr ? "الحالة" : "Status"}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -769,6 +871,7 @@ export default function AdminDashboard() {
                                                                                     <th className="py-1.5 px-2 text-center">{isAr ? "بطاقات السحب" : "Raffle Entries"}</th>
                                                                                     <th className="py-1.5 px-2">{isAr ? "الكشاف" : "Scout"}</th>
                                                                                     <th className="py-1.5 px-2">{isAr ? "تاريخ الشراء" : "Purchase Date"}</th>
+                                                                                    <th className="py-1.5 px-2 text-center">{isAr ? "الحالة" : "Status"}</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
@@ -874,6 +977,7 @@ export default function AdminDashboard() {
                                                                                     <th className="py-1.5 px-2">{isAr ? "المنتخب المختار" : "Selected Team"}</th>
                                                                                     <th className="py-1.5 px-2 text-center">{isAr ? "بطاقات السحب" : "Raffle Entries"}</th>
                                                                                     <th className="py-1.5 px-2">{isAr ? "تاريخ الشراء" : "Purchase Date"}</th>
+                                                                                    <th className="py-1.5 px-2 text-center">{isAr ? "الحالة" : "Status"}</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
@@ -885,6 +989,23 @@ export default function AdminDashboard() {
                                                                                         <td className="py-1.5 px-2 font-semibold text-scout-navy">{tk.team?.name || tk.teamId}</td>
                                                                                         <td className="py-1.5 px-2 text-center font-bold text-scout-green-light">{getTicketEntries(tk)}</td>
                                                                                         <td className="py-1.5 px-2 text-scout-charcoal/60" suppressHydrationWarning>{formatLocalDate(tk.createdAt)}</td>
+                                                                                         <td className="py-1.5 px-2 text-center text-xs font-semibold">
+                                                                                             {tk.paymentStatus === "PAID" ? (
+                                                                                                 <span className="text-scout-green-light">{isAr ? "مؤكد" : "PAID"}</span>
+                                                                                             ) : tk.whishTransactionId ? (
+                                                                                                 <div className="flex items-center justify-center gap-1">
+                                                                                                     <span className="text-amber-600 text-[10px]" title={tk.whishTransactionId}>{isAr ? "معلق" : "PENDING"}</span>
+                                                                                                     <button
+                                                                                                         onClick={() => handleVerifyTickets([tk.id])}
+                                                                                                         className="px-1 py-0.5 bg-scout-green hover:bg-scout-green-light text-white text-[9px] rounded cursor-pointer transition font-bold"
+                                                                                                     >
+                                                                                                         {isAr ? "تأكيد" : "Approve"}
+                                                                                                     </button>
+                                                                                                 </div>
+                                                                                             ) : (
+                                                                                                 <span className="text-red-500">{isAr ? "غير مدفوع" : "UNPAID"}</span>
+                                                                                             )}
+                                                                                         </td>
                                                                                     </tr>
                                                                                 ))}
                                                                             </tbody>
