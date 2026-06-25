@@ -40,8 +40,13 @@ export default function AdminDashboard() {
     const [whatsappSettings, setWhatsappSettings] = useState({ sendOnPurchase: true, sendOnGoal: false });
     const [verifyingIds, setVerifyingIds] = useState<number[]>([]);
 
-    const handleVerifyTickets = async (ticketIds: number[]) => {
-        if (!confirm(isAr ? "هل أنت متأكد من تأكيد استلام الدفعة لهذه التذاكر؟" : "Are you sure you want to verify payment for these tickets?")) {
+    const handleVerifyTickets = async (ticketIds: number[], status: "PAID" | "REJECTED" = "PAID") => {
+        const isPaid = status === "PAID";
+        const confirmMsg = isPaid 
+            ? (isAr ? "هل أنت متأكد من تأكيد استلام الدفعة لهذه التذاكر؟" : "Are you sure you want to verify payment for these tickets?")
+            : (isAr ? "هل أنت متأكد من رفض هذه العملية؟" : "Are you sure you want to reject this payment transaction?");
+            
+        if (!confirm(confirmMsg)) {
             return;
         }
         setVerifyingIds(prev => [...prev, ...ticketIds]);
@@ -49,14 +54,17 @@ export default function AdminDashboard() {
             const res = await fetch("/api/admin/verify-ticket", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ticketIds }),
+                body: JSON.stringify({ ticketIds, status }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Verification failed");
-            alert(isAr ? "تم تأكيد الدفعة بنجاح وإرسال الرسائل!" : "Payment successfully verified and WhatsApp sent!");
+            alert(isPaid 
+                ? (isAr ? "تم تأكيد الدفعة بنجاح وإرسال الرسائل!" : "Payment successfully verified and WhatsApp sent!")
+                : (isAr ? "تم رفض الدفعة بنجاح!" : "Payment transaction successfully rejected!")
+            );
             await loadAdminData();
         } catch (err: any) {
-            alert("Verification failed: " + err.message);
+            alert("Action failed: " + err.message);
         } finally {
             setVerifyingIds(prev => prev.filter(id => !ticketIds.includes(id)));
         }
@@ -435,14 +443,23 @@ export default function AdminDashboard() {
                                                     <td className="py-3 px-4 text-center font-black text-scout-green-light">${(group.count * 5).toFixed(2)}</td>
                                                     <td className="py-3 px-4 font-mono font-bold text-amber-600">{group.whishTransactionId}</td>
                                                     <td className="py-3 px-4 text-center">
-                                                        <button
-                                                            onClick={() => handleVerifyTickets(group.ticketIds)}
-                                                            disabled={isVerifying}
-                                                            className="px-3 py-1.5 bg-scout-green hover:bg-scout-green-light text-white text-[11px] font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm"
-                                                        >
-                                                            {isVerifying ? (isAr ? "جاري التأكيد..." : "Confirming...") : (isAr ? "تأكيد واستلام" : "Approve Payment")}
-                                                        </button>
-                                                    </td>
+                                                         <div className="flex items-center justify-center gap-1.5">
+                                                             <button
+                                                                 onClick={() => handleVerifyTickets(group.ticketIds, "PAID")}
+                                                                 disabled={isVerifying}
+                                                                 className="px-2.5 py-1.5 bg-scout-green hover:bg-scout-green-light text-white text-[11px] font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm animate-pulse"
+                                                             >
+                                                                 {isVerifying ? (isAr ? "..." : "...") : (isAr ? "تأكيد" : "Approve")}
+                                                             </button>
+                                                             <button
+                                                                 onClick={() => handleVerifyTickets(group.ticketIds, "REJECTED")}
+                                                                 disabled={isVerifying}
+                                                                 className="px-2.5 py-1.5 bg-red-800 hover:bg-red-700 text-white text-[11px] font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm"
+                                                             >
+                                                                 {isVerifying ? (isAr ? "..." : "...") : (isAr ? "رفض" : "Reject")}
+                                                             </button>
+                                                         </div>
+                                                     </td>
                                                 </tr>
                                             );
                                         });

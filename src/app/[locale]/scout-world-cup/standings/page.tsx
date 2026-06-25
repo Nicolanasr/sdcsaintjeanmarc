@@ -290,7 +290,19 @@ function StandingsContent() {
                                     {isAr ? `الكشاف المسؤول: ${searchResult.ticket.scout?.fullName || "مخفي"}` : `Sold by Scout: ${searchResult.ticket.scout?.fullName || "Hidden"}`}
                                 </span>
                                 <span>
-                                    {isAr ? "تذكرة نشطة" : "Active Ticket"}
+                                    {searchResult.ticket.paymentStatus === "PENDING" ? (
+                                        <span className="bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                                            {isAr ? "⏳ قيد المراجعة" : "⏳ Pending Verification"}
+                                        </span>
+                                    ) : searchResult.ticket.paymentStatus === "REJECTED" ? (
+                                        <span className="bg-red-500/10 text-red-600 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                                            {isAr ? "❌ مرفوض" : "❌ Rejected"}
+                                        </span>
+                                    ) : (
+                                        <span className="bg-scout-green/10 text-scout-green-light font-bold px-2 py-0.5 rounded-full text-[10px]">
+                                            {isAr ? "✅ تذكرة نشطة" : "✅ Active Ticket"}
+                                        </span>
+                                    )}
                                 </span>
                             </div>
                         </div>
@@ -349,6 +361,7 @@ function StandingsContent() {
                                             <th className="py-2 px-1">{isAr ? "المنتخب" : "Selected Team"}</th>
                                             <th className="py-2 px-1 text-center">{isAr ? "الانتصارات" : "Team Wins"}</th>
                                             <th className="py-2 px-1 text-center font-bold">{isAr ? "بطاقات السحب" : "Raffle Entries"}</th>
+                                            <th className="py-2 px-1 text-center font-bold">{isAr ? "الحالة" : "Status"}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -370,6 +383,21 @@ function StandingsContent() {
                                                     </td>
                                                     <td className="py-2 px-1 text-center text-scout-charcoal">{tk.team?.totalWins || 0}</td>
                                                     <td className="py-2 px-1 text-center font-bold text-scout-green-light">{entries}</td>
+                                                    <td className="py-2 px-1 text-center text-xs font-bold">
+                                                        {tk.paymentStatus === "PENDING" ? (
+                                                            <span className="text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full text-[10px]">
+                                                                {isAr ? "⏳ قيد المراجعة" : "⏳ Pending"}
+                                                            </span>
+                                                        ) : tk.paymentStatus === "REJECTED" ? (
+                                                            <span className="text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded-full text-[10px]">
+                                                                {isAr ? "❌ مرفوض" : "❌ Rejected"}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-scout-green-light bg-scout-green/10 px-1.5 py-0.5 rounded-full text-[10px]">
+                                                                {isAr ? "✅ نشطة" : "✅ Active"}
+                                                            </span>
+                                                        )}
+                                                    </td>
                                                 </tr>
                                             );
                                         })}

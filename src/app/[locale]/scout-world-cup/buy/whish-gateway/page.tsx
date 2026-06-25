@@ -234,11 +234,33 @@ export default function WhishGatewayPage() {
                                     <span>{copiedAmount ? (isAr ? "تم النسخ" : "Copied") : (isAr ? "نسخ القيمة" : "Copy Amount")}</span>
                                 </button>
                             </div>
+                            <div className="grid grid-cols-2 gap-2 mt-1">
+                                <a
+                                    href="https://apps.apple.com/us/app/whish-money/id1284243483"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 rounded-lg flex items-center justify-center gap-1.5 transition font-bold text-[10px] cursor-pointer"
+                                >
+                                    <span>App Store (iOS)</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                </a>
+                                <a
+                                    href="https://play.google.com/store/apps/details?id=com.wdf.whish"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 rounded-lg flex items-center justify-center gap-1.5 transition font-bold text-[10px] cursor-pointer"
+                                >
+                                    <span>Google Play (Android)</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                </a>
+                            </div>
                             <a
-                                href="whish://"
-                                className="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 rounded-lg flex items-center justify-center gap-1.5 transition font-bold text-[11px]"
+                                href="https://www.whish.money/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full py-1.5 bg-slate-900/50 hover:bg-slate-900 border border-slate-700 text-gray-300 hover:text-white rounded-lg flex items-center justify-center gap-1.5 transition font-bold text-[10px] cursor-pointer"
                             >
-                                <span>{isAr ? "افتح تطبيق Whish Money" : "Open Whish Money App"}</span>
+                                <span>{isAr ? "زيارة موقع Whish الرسمي" : "Visit Whish Website"}</span>
                                 <ExternalLink className="w-3 h-3" />
                             </a>
                             <p className="text-[10px] text-gray-400 text-center italic mt-1">
