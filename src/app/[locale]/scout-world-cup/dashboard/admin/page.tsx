@@ -785,7 +785,36 @@ export default function AdminDashboard() {
                                                         {getTicketEntries(ticket)}
                                                     </td>
                                                     <td className="py-3 px-4 text-center text-xs text-scout-charcoal/60" suppressHydrationWarning>
-                                                        {formatLocalDate(ticket.createdAt)}
+                                                         {formatLocalDate(ticket.createdAt)}
+                                                     </td>
+                                                     <td className="py-3 px-4 text-center text-xs font-semibold">
+                                                         {ticket.paymentStatus === "PAID" ? (
+                                                             <span className="bg-scout-green/10 text-scout-green-light px-2 py-0.5 rounded-full">
+                                                                 {isAr ? "مؤكد" : "PAID"}
+                                                             </span>
+                                                         ) : ticket.paymentStatus === "REJECTED" ? (
+                                                             <span className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full">
+                                                                 {isAr ? "مرفوض" : "REJECTED"}
+                                                             </span>
+                                                         ) : ticket.whishTransactionId ? (
+                                                             <div className="flex items-center justify-center gap-1">
+                                                                 <span className="bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded-full text-[10px]" title={ticket.whishTransactionId}>
+                                                                     {isAr ? "معلق" : "PENDING"}
+                                                                 </span>
+                                                                 <button
+                                                                     onClick={() => handleVerifyTickets([ticket.id], "PAID")}
+                                                                     className="px-1.5 py-0.5 bg-scout-green hover:bg-scout-green-light text-white text-[10px] rounded cursor-pointer transition font-bold"
+                                                                 >
+                                                                     {isAr ? "تأكيد" : "Approve"}
+                                                                 </button>
+                                                             </div>
+                                                         ) : (
+                                                             <span className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full">
+                                                                 {isAr ? "غير مدفوع" : "UNPAID"}
+                                                             </span>
+                                                         )}
+                                                     </td>
+                                                     <td className="hidden">
                                                     </td>
                                                 </tr>
                                             ))}

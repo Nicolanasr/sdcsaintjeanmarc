@@ -35,31 +35,34 @@ export async function GET(request: Request) {
 
     // 1. Fetch tickets sold by this scout
     const ticketsSold = await prisma.ticket.count({
-      where: { scoutId: userId },
+      where: { scoutId: userId, paymentStatus: "PAID" },
     });
 
-    // 2. Fetch total tickets sold
-    const totalTicketsCount = await prisma.ticket.count();
+    // 2. Fetch total tickets sold (only PAID)
+    const totalTicketsCount = await prisma.ticket.count({
+      where: { paymentStatus: "PAID" },
+    });
 
-    // 3. Fetch Leaderboard (aggregating tickets grouped by scout)
+    // 3. Fetch Leaderboard (aggregating PAID tickets grouped by scout)
     const leaderboardData = await prisma.profile.findMany({
       select: {
         id: true,
         fullName: true,
-        _count: {
-          select: { tickets: true },
+        tickets: {
+          where: { paymentStatus: "PAID" },
+          select: { id: true },
         },
       },
     });
 
     const leaderboard = leaderboardData
-      .map((item:any) => ({
+      .map((item: any) => ({
         id: item.id,
         full_name: item.fullName,
-        tickets_count: item._count.tickets,
+        tickets_count: item.tickets.length,
       }))
-      .filter((item:any) => item.tickets_count > 0)
-      .sort((a:any, b:any) => b.tickets_count - a.tickets_count);
+      .filter((item: any) => item.tickets_count > 0)
+      .sort((a: any, b: any) => b.tickets_count - a.tickets_count);
 
     // 4. Fetch all detailed tickets if user is an admin
     let allTickets: any[] = [];

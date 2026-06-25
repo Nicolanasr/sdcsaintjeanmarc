@@ -36,6 +36,9 @@ export async function POST(request: Request) {
 
     // 2. Fetch all tickets and teams
     const tickets = await prisma.ticket.findMany({
+      where: {
+        paymentStatus: "PAID",
+      },
       select: {
         id: true,
         buyerName: true,

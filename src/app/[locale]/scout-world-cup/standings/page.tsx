@@ -65,6 +65,14 @@ function StandingsContent() {
                 throw new Error(data.error || "Search failed");
             }
 
+            if (data.type === "multi" && data.tickets) {
+                data.tickets = data.tickets.filter((t: any) => t.paymentStatus !== "REJECTED");
+                if (data.tickets.length === 0) {
+                    throw new Error(isAr ? "لم يتم العثور على أي تذاكر نشطة" : "No active tickets found for this phone number");
+                }
+            } else if (data.type === "single" && data.ticket && data.ticket.paymentStatus === "REJECTED") {
+                throw new Error(isAr ? "تم رفض هذه التذكرة" : "This ticket payment was rejected.");
+            }
             setSearchResult(data);
         } catch (err: any) {
             setSearchError(err.message || "No results found");
