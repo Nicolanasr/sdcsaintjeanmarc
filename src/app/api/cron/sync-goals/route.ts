@@ -61,61 +61,55 @@ export async function GET(request: Request) {
     const data = await res.json();
     const matches = data.matches || [];
 
-    const goalsMap: Record<string, number> = {};
+    const winsMap: Record<string, number> = {};
 
     matches.forEach((match: any) => {
       if (match.status === "FINISHED" || match.status === "IN_PLAY") {
         const homeCode = match.homeTeam.tla || match.homeTeam.id?.toString();
         const awayCode = match.awayTeam.tla || match.awayTeam.id?.toString();
-        if(awayCode == "CAN" || homeCode =="CAN"){
-            console.log(match)
-        }
 
-        const homeGoals = match.score.fullTime.home ?? 0;
-        const awayGoals = match.score.fullTime.away ?? 0;
-
-        if (homeCode) {
-          goalsMap[homeCode] = (goalsMap[homeCode] || 0) + homeGoals;
-        }
-        if (awayCode) {
-          goalsMap[awayCode] = (goalsMap[awayCode] || 0) + awayGoals;
+        const winner = match.score?.winner;
+        if (winner === "HOME_TEAM" && homeCode) {
+          winsMap[homeCode] = (winsMap[homeCode] || 0) + 1;
+        } else if (winner === "AWAY_TEAM" && awayCode) {
+          winsMap[awayCode] = (winsMap[awayCode] || 0) + 1;
         }
       }
     });
 
     // Update teams in Prisma database
-    const updates = Object.entries(goalsMap).map(async ([teamId, goals]) => {
+    const updates = Object.entries(winsMap).map(async ([teamId, wins]) => {
       const team = await prisma.team.findUnique({
         where: { id: teamId },
-        select: { id: true, name: true, totalGoals: true },
+        select: { id: true, name: true, totalWins: true },
       });
 
       if (team) {
-        const goalsDiff = goals - team.totalGoals;
+        const winsDiff = wins - team.totalWins;
 
         const updatedTeam = await prisma.team.update({
           where: { id: teamId },
-          data: { totalGoals: goals },
+          data: { totalWins: wins },
         });
 
-        if (goalsDiff > 0) {
+        if (winsDiff > 0) {
           try {
             const settings = getWhatsAppSettings();
-            if (settings.sendOnGoal) {
+            if (settings.sendOnGoal) { // Keep using the sendOnGoal toggle settings
               const tickets = await prisma.ticket.findMany({
                 where: { teamId },
               });
 
               for (const ticket of tickets) {
-                const msgAr = `المنتخب الذي اخترته (${team.name}) قد سجل هدفًا جديدًا! ⚽️ إجمالي أهدافهم الآن هو ${goals}. حظًا موفقًا في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-                const msgEn = `Your selected team (${team.name}) has scored a new goal! ⚽️ Their total goals are now ${goals}. Good luck in the final raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+                const msgAr = `المنتخب الذي اخترته (${team.name}) قد فاز في مباراته! ⚽️ إجمالي انتصاراتهم الآن هو ${wins}. لقد حصلت على بطاقة إضافية في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+                const msgEn = `Your selected team (${team.name}) has won their match! ⚽️ Their total wins are now ${wins}. You have earned +1 bonus entry in the final raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
                 const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
 
                 await sendWhatsAppMessage(ticket.buyerPhone, fullMsg);
               }
             }
           } catch (wsErr) {
-            console.error("Failed to send automatic WhatsApp for goal sync:", wsErr);
+            console.error("Failed to send automatic WhatsApp for match win sync:", wsErr);
           }
         }
 
@@ -127,8 +121,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully synchronized goals for ${Object.keys(goalsMap).length} teams.`,
-      data: goalsMap,
+      message: `Successfully synchronized wins for ${Object.keys(winsMap).length} teams.`,
+      data: winsMap,
     });
   } catch (error: any) {
     return NextResponse.json(

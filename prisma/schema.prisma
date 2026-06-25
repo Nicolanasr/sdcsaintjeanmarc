@@ -20,8 +20,7 @@ model Team {
   id            String   @id // 'ARG', 'BRA', etc.
   name          String
   flagUrl       String
-  totalGoals    Int      @default(0)
-  podiumFinish  Int?     // 1, 2, or 3
+  totalWins     Int      @default(0)
   isEliminated  Boolean  @default(false)
   tickets       Ticket[]
   updatedAt     DateTime @updatedAt
@@ -29,13 +28,16 @@ model Team {
 
 model Ticket {
   id        Int      @id @default(autoincrement())
-  scoutId   String
-  scout     Profile  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+  scoutId   String?
+  scout     Profile? @relation(fields: [scoutId], references: [id], onDelete: Cascade)
   buyerName String
   buyerPhone String
   teamId    String
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
+  paymentStatus String @default("PAID")
+  paymentMethod String @default("CASH")
+  whishTransactionId String?
 }
 
 model WhatsAppLog {

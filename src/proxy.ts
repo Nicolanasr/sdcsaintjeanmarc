@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // 3. Route Protection Logic
-  const dashboardMatch = pathname.match(/^\/(en|ar)\/dashboard(\/.*)?$/);
+  const dashboardMatch = pathname.match(/^\/(en|ar)\/scout-world-cup\/dashboard(\/.*)?$/);
 
   if (dashboardMatch) {
     const locale = dashboardMatch[1];
@@ -60,7 +60,7 @@ export async function proxy(request: NextRequest) {
       if (userPayload.role !== "admin") {
         // Redirect non-admins to scout dashboard
         return NextResponse.redirect(
-          new URL(`/${locale}/dashboard/scout`, request.url)
+          new URL(`/${locale}/scout-world-cup/dashboard/scout`, request.url)
         );
       }
     }
@@ -71,7 +71,7 @@ export async function proxy(request: NextRequest) {
   if (loginMatch && userPayload) {
     const locale = loginMatch[1];
     return NextResponse.redirect(
-      new URL(`/${locale}/dashboard/scout`, request.url)
+      new URL(`/${locale}/scout-world-cup/dashboard/scout`, request.url)
     );
   }
 

@@ -66,7 +66,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id, totalGoals, podiumFinish, isEliminated } = await request.json();
+    const { id, totalWins, isEliminated } = await request.json();
     if (!id) {
       return NextResponse.json({ error: "Missing team id" }, { status: 400 });
     }
@@ -82,30 +82,29 @@ export async function PATCH(request: Request) {
     const team = await prisma.team.update({
       where: { id },
       data: {
-        totalGoals: totalGoals !== undefined ? totalGoals : undefined,
-        podiumFinish: podiumFinish !== undefined ? podiumFinish : undefined,
+        totalWins: totalWins !== undefined ? totalWins : undefined,
         isEliminated: isEliminated !== undefined ? isEliminated : undefined,
       },
     });
 
-    if (totalGoals !== undefined && totalGoals > currentTeam.totalGoals) {
+    if (totalWins !== undefined && totalWins > currentTeam.totalWins) {
       try {
         const settings = getWhatsAppSettings();
-        if (settings.sendOnGoal) {
+        if (settings.sendOnGoal) { // Keep using the sendOnGoal toggle setting for simplicity or general matches
           const tickets = await prisma.ticket.findMany({
             where: { teamId: id },
           });
 
           for (const ticket of tickets) {
-            const msgAr = `المنتخب الذي اخترته (${team.name}) قد سجل هدفًا جديدًا! ⚽️ إجمالي أهدافهم الآن هو ${totalGoals}. حظًا موفقًا في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-            const msgEn = `Your selected team (${team.name}) has scored a new goal! ⚽️ Their total goals are now ${totalGoals}. Good luck in the final raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+            const msgAr = `المنتخب الذي اخترته (${team.name}) قد فاز في مباراته! ⚽️ إجمالي انتصاراتهم الآن هو ${totalWins}. لقد حصلت على بطاقة إضافية في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+            const msgEn = `Your selected team (${team.name}) has won their match! ⚽️ Their total wins are now ${totalWins}. You have earned +1 bonus entry in the final raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
             const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
 
             await sendWhatsAppMessage(ticket.buyerPhone, fullMsg);
           }
         }
       } catch (wsErr) {
-        console.error("Failed to send manual goal increase WhatsApp alert:", wsErr);
+        console.error("Failed to send manual win increase WhatsApp alert:", wsErr);
       }
     }
 

@@ -7,7 +7,7 @@ interface Team {
     id: string;
     name: string;
     flagUrl: string;
-    totalGoals: number;
+    totalWins: number;
 }
 
 interface ScoutStats {
@@ -146,11 +146,11 @@ export default function ScoutDashboard() {
         if (!ticket) return "";
         const teamName = teams.find((t) => t.id === ticket.teamId)?.name || ticket.teamId;
         const baseMsg = isAr
-            ? `شكرًا لشرائك تذكرة مسابقة Goal Rush رقم #${ticket.id} لدعم كشافة الأرز! فريقك المختار هو ${teamName}. كل هدف يسجله هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️`
-            : `Thank you for purchasing World Cup Goal Rush ticket #${ticket.id} supporting Scouts des Cèdres! Your selected team is ${teamName}. Every goal they score grants you an extra entry in the final raffle! ⚽️`;
+            ? `شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة رقم #${ticket.id} لدعم كشافة الأرز! فريقك المختار هو ${teamName}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️`
+            : `Thank you for purchasing World Cup Scout Cup Draw ticket #${ticket.id} supporting Scouts des Cèdres! Your selected team is ${teamName}. Every win they achieve grants you an extra entry in the final raffle! ⚽️`;
 
         // Generate tracking link
-        const trackingLink = `${window.location.origin}/${locale}/standings?ticket_id=${ticket.id}`;
+        const trackingLink = `${window.location.origin}/${locale}/scout-world-cup/standings?phone=${encodeURIComponent(ticket.buyerPhone)}`;
         const fullMsg = `${baseMsg}\n\n${isAr ? "تابع تذكرتك ونقاط فريقك من هنا:" : "Track your ticket and team entries here:"}\n${trackingLink}`;
 
         // Normalize phone number (strip non-digits, ensure country code)
@@ -181,7 +181,7 @@ export default function ScoutDashboard() {
                 <div className="flex gap-4">
                     {profile?.role === "admin" && (
                         <button
-                            onClick={() => router.push(`/${locale}/dashboard/admin`)}
+                            onClick={() => router.push(`/${locale}/scout-world-cup/dashboard/admin`)}
                             className="text-sm px-4 py-1.5 rounded-lg border border-scout-gold text-scout-gold hover:bg-scout-gold hover:text-scout-navy transition cursor-pointer"
                         >
                             {isAr ? "لوحة الإدارة" : "Admin Panel"}

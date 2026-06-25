@@ -55,13 +55,8 @@ export async function POST(request: Request) {
       const team = teamsMap.get(ticket.teamId);
       if (!team) return;
 
-      // Podium finish: 1st (3x), 2nd (2x), 3rd (1.5x), others (1x)
-      let multiplier = 1;
-      if (team.podiumFinish === 1) multiplier = 3;
-      else if (team.podiumFinish === 2) multiplier = 2;
-      else if (team.podiumFinish === 3) multiplier = 1.5;
-
-      const entriesCount = Math.floor(team.totalGoals * multiplier);
+      // Every ticket gets 1 guaranteed entry + 1 entry per team win
+      const entriesCount = 1 + (team.totalWins || 0);
 
       for (let i = 0; i < entriesCount; i++) {
         rafflePool.push(ticket);

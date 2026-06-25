@@ -124,10 +124,10 @@ export async function POST(request: Request) {
       const settings = getWhatsAppSettings();
       if (settings.sendOnPurchase) {
         const origin = request.headers.get("origin") || new URL(request.url).origin;
-        const trackingLink = `${origin}/en/standings?ticket_id=${ticket.id}`;
+        const trackingLink = `${origin}/en/scout-world-cup/standings?phone=${encodeURIComponent(buyerPhone)}`;
         
-        const msgAr = `شكرًا لشرائك تذكرة مسابقة Goal Rush رقم #${ticket.id} لدعم فوج مار يوحنا مرقس - كشافة الأرز! فريقك المختار هو ${team.name}. كل هدف يسجله هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذكرتك ونقاط فريقك من هنا:\n${trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-        const msgEn = `Thank you for purchasing World Cup Goal Rush ticket #${ticket.id} supporting Scouts des Cèdres Saint Jean Marc! Your selected team is ${team.name}. Every goal they score grants you an extra entry in the final raffle! ⚽️\n\nTrack your ticket and team entries here:\n${trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+        const msgAr = `شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة رقم #${ticket.id} لدعم فوج مار يوحنا مرقس - كشافة الأرز! فريقك المختار هو ${team.name}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذكرتك ونقاط فريقك من هنا:\n${trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+        const msgEn = `Thank you for purchasing World Cup Scout Cup Draw ticket #${ticket.id} supporting Scouts des Cèdres Saint Jean Marc! Your selected team is ${team.name}. Every win they achieve grants you an extra entry in the final raffle! ⚽️\n\nTrack your ticket and team entries here:\n${trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
         
         const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
         const sent = await sendWhatsAppMessage(buyerPhone, fullMsg);

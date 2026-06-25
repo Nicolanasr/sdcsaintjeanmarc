@@ -41,7 +41,7 @@ export default function LoginPage() {
             : "Account created successfully! Redirecting..."
         );
         setTimeout(() => {
-          router.replace(`/${locale}/dashboard/scout`);
+          router.replace(`/${locale}/scout-world-cup/dashboard/scout`);
         }, 1500);
       } else {
         const res = await fetch("/api/auth/login", {
@@ -53,7 +53,7 @@ export default function LoginPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Login failed");
 
-        router.replace(`/${locale}/dashboard/scout`);
+        router.replace(`/${locale}/scout-world-cup/dashboard/scout`);
       }
     } catch (err: any) {
       setErrorMsg(err.message || "An error occurred");
@@ -75,8 +75,8 @@ export default function LoginPage() {
           </h1>
           <p className="text-white/60 mt-2 text-sm">
             {isAr
-              ? "مسابقة Goal Rush - كأس العالم ٢٠٢٦"
-              : "World Cup 2026 Goal Rush Fundraising"}
+              ? "مسابقة سحب كأس الكشافة - كأس العالم ٢٠٢٦"
+              : "World Cup 2026 Scout Cup Draw Fundraising"}
           </p>
         </div>
 

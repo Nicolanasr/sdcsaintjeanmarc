@@ -7,8 +7,7 @@ interface Team {
     id: string;
     name: string;
     flagUrl: string;
-    totalGoals: number;
-    podiumFinish: number | null;
+    totalWins: number;
     isEliminated: boolean;
 }
 
@@ -92,14 +91,14 @@ export default function AdminDashboard() {
 
                 const userData = await userRes.json();
                 if (!userData.user || userData.user.role !== "admin") {
-                    router.replace(`/${locale}/dashboard/scout`);
+                    router.replace(`/${locale}/scout-world-cup/dashboard/scout`);
                     return;
                 }
 
                 setProfile(userData.user);
                 await loadAdminData();
             } catch (err) {
-                router.replace(`/${locale}/dashboard/scout`);
+                router.replace(`/${locale}/scout-world-cup/dashboard/scout`);
             } finally {
                 setLoading(false);
             }
@@ -258,11 +257,11 @@ export default function AdminDashboard() {
                         {isAr ? "لوحة تحكم المسؤول" : "Admin Control Panel"}
                     </h1>
                     <p className="text-xs text-white/70">
-                        {isAr ? "إدارة مسابقة Goal Rush وسحب القرعة" : "Manage Goal Rush & Draw Raffle"}
+                        {isAr ? "إدارة مسابقة سحب كأس الكشافة ورسم القرعة" : "Manage Scout Cup Draw & Draw Raffle"}
                     </p>
                 </div>
                 <button
-                    onClick={() => router.push(`/${locale}/dashboard/scout`)}
+                    onClick={() => router.push(`/${locale}/scout-world-cup/dashboard/scout`)}
                     className="text-sm px-4 py-1.5 rounded-lg bg-scout-gold text-scout-navy font-semibold hover:bg-scout-gold-light transition cursor-pointer"
                 >
                     {isAr ? "بوابة المبيعات" : "Sales Portal"}
@@ -474,9 +473,7 @@ export default function AdminDashboard() {
                             <thead>
                                 <tr className="border-b text-scout-navy font-bold">
                                     <th className="py-3 px-4">{isAr ? "الترتيب / المنتخب" : "Standings"}</th>
-                                    <th className="py-3 px-4 text-center">{isAr ? "إجمالي الأهداف" : "Goals"}</th>
-                                    <th className="py-3 px-4 text-center">{isAr ? "منصة التتويج" : "Podium Finish"}</th>
-                                    <th className="py-3 px-4 text-center">{isAr ? "المضاعف" : "Multiplier"}</th>
+                                    <th className="py-3 px-4 text-center">{isAr ? "إجمالي الانتصارات" : "Wins"}</th>
                                     <th className="py-3 px-4 text-center">{isAr ? "البطاقات لكل تذكرة" : "Entries"}</th>
                                     <th className="py-3 px-4 text-center">{isAr ? "الحالة" : "Status"}</th>
                                 </tr>
@@ -484,10 +481,7 @@ export default function AdminDashboard() {
                             <tbody>
                                 {(() => {
                                     const sorted = [...teams].sort((a, b) => {
-                                        const podiumA = a.podiumFinish ?? 999;
-                                        const podiumB = b.podiumFinish ?? 999;
-                                        if (podiumA !== podiumB) return podiumA - podiumB;
-                                        if (b.totalGoals !== a.totalGoals) return b.totalGoals - a.totalGoals;
+                                        if (b.totalWins !== a.totalWins) return b.totalWins - a.totalWins;
                                         return a.name.localeCompare(b.name);
                                     });
 
@@ -497,26 +491,12 @@ export default function AdminDashboard() {
                                             t.id.toLowerCase().includes(teamSearch.toLowerCase())
                                         )
                                         .map((t, idx) => {
-                                            let multiplier = 1;
-                                            if (t.podiumFinish === 1) multiplier = 3;
-                                            else if (t.podiumFinish === 2) multiplier = 2;
-                                            else if (t.podiumFinish === 3) multiplier = 1.5;
-
-                                            const totalEntries = Math.floor(t.totalGoals * multiplier);
+                                            const totalEntries = 1 + (t.totalWins || 0);
 
                                             let statusLabel = isAr ? "نشط" : "Active";
                                             let statusColor = "text-scout-green-light bg-scout-green/10";
 
-                                            if (t.podiumFinish === 1) {
-                                                statusLabel = isAr ? "🥇 البطل" : "🥇 Champions";
-                                                statusColor = "text-scout-gold bg-scout-gold/15";
-                                            } else if (t.podiumFinish === 2) {
-                                                statusLabel = isAr ? "🥈 المركز الثاني" : "🥈 2nd Place";
-                                                statusColor = "text-scout-navy bg-scout-navy/10";
-                                            } else if (t.podiumFinish === 3) {
-                                                statusLabel = isAr ? "🥉 المركز الثالث" : "🥉 3rd Place";
-                                                statusColor = "text-scout-terracotta bg-scout-terracotta/10";
-                                            } else if (t.isEliminated) {
+                                            if (t.isEliminated) {
                                                 statusLabel = isAr ? "مقصى" : "Eliminated";
                                                 statusColor = "text-scout-charcoal/50 bg-scout-charcoal/5";
                                             }
@@ -544,50 +524,22 @@ export default function AdminDashboard() {
                                                         {isEditing ? (
                                                             <div className="inline-flex items-center gap-2">
                                                                 <button
-                                                                    onClick={() => handleUpdateTeam(t.id, { totalGoals: Math.max(0, t.totalGoals - 1) })}
+                                                                    onClick={() => handleUpdateTeam(t.id, { totalWins: Math.max(0, t.totalWins - 1) })}
                                                                     className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
                                                                 >
                                                                     -
                                                                 </button>
-                                                                <span className="w-8 font-extrabold text-scout-navy">{t.totalGoals}</span>
+                                                                <span className="w-8 font-extrabold text-scout-navy">{t.totalWins}</span>
                                                                 <button
-                                                                    onClick={() => handleUpdateTeam(t.id, { totalGoals: t.totalGoals + 1 })}
+                                                                    onClick={() => handleUpdateTeam(t.id, { totalWins: t.totalWins + 1 })}
                                                                     className="w-6 h-6 rounded bg-scout-beige-dark/50 hover:bg-scout-beige-dark font-bold text-xs"
                                                                 >
                                                                     +
                                                                 </button>
                                                             </div>
                                                         ) : (
-                                                            <span className="font-extrabold text-scout-navy">{t.totalGoals}</span>
+                                                            <span className="font-extrabold text-scout-navy">{t.totalWins}</span>
                                                         )}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-center">
-                                                        {isEditing ? (
-                                                            <select
-                                                                value={t.podiumFinish || ""}
-                                                                onChange={(e) =>
-                                                                    handleUpdateTeam(t.id, {
-                                                                        podiumFinish: e.target.value ? parseInt(e.target.value) : null,
-                                                                    })
-                                                                }
-                                                                className="px-2 py-1 rounded border text-xs bg-white focus:outline-none"
-                                                            >
-                                                                <option value="">{isAr ? "لم يحدد" : "None"}</option>
-                                                                <option value="1">🥇 1st Place (3x)</option>
-                                                                <option value="2">🥈 2nd Place (2x)</option>
-                                                                <option value="3">🥉 3rd Place (1.5x)</option>
-                                                            </select>
-                                                        ) : (
-                                                            <span className="text-xs font-semibold text-scout-charcoal/80">
-                                                                {t.podiumFinish === 1 && "🥇 1st Place"}
-                                                                {t.podiumFinish === 2 && "🥈 2nd Place"}
-                                                                {t.podiumFinish === 3 && "🥉 3rd Place"}
-                                                                {!t.podiumFinish && "-"}
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-center font-bold text-scout-gold">
-                                                        {multiplier}x
                                                     </td>
                                                     <td className="py-3 px-4 text-center font-black text-scout-green-light">
                                                         {totalEntries}
@@ -663,12 +615,8 @@ export default function AdminDashboard() {
                         {(() => {
                             // Helper to get entries for a single ticket
                             const getTicketEntries = (ticket: any) => {
-                                if (!ticket.team) return 0;
-                                let multiplier = 1;
-                                if (ticket.team.podiumFinish === 1) multiplier = 3;
-                                else if (ticket.team.podiumFinish === 2) multiplier = 2;
-                                else if (ticket.team.podiumFinish === 3) multiplier = 1.5;
-                                return Math.floor((ticket.team.totalGoals || 0) * multiplier);
+                                if (!ticket.team) return 1;
+                                return 1 + (ticket.team.totalWins || 0);
                             };
 
                             // Filter tickets by search query
@@ -701,7 +649,7 @@ export default function AdminDashboard() {
                                                         #{ticket.id}
                                                     </td>
                                                     <td className="py-3 px-4">
-                                                        {ticket.scout?.fullName || "Unknown Scout"}
+                                                        {ticket.scout?.fullName || (ticket.paymentMethod === "WHISH" ? (isAr ? "شراء أونلاين (Whish)" : "Online (Whish)") : (isAr ? "شراء عام" : "Public Purchase"))}
                                                     </td>
                                                     <td className="py-3 px-4 font-semibold text-scout-navy">
                                                         {ticket.buyerName}
@@ -817,7 +765,7 @@ export default function AdminDashboard() {
                                                                                 <tr className="text-scout-charcoal/70 font-semibold border-b border-scout-beige-dark/20">
                                                                                     <th className="py-1.5 px-2">{isAr ? "رقم التذكرة" : "Ticket #"}</th>
                                                                                     <th className="py-1.5 px-2">{isAr ? "المنتخب المختار" : "Selected Team"}</th>
-                                                                                    <th className="py-1.5 px-2 text-center">{isAr ? "أهداف الفريق" : "Team Goals"}</th>
+                                                                                    <th className="py-1.5 px-2 text-center">{isAr ? "انتصارات الفريق" : "Team Wins"}</th>
                                                                                     <th className="py-1.5 px-2 text-center">{isAr ? "بطاقات السحب" : "Raffle Entries"}</th>
                                                                                     <th className="py-1.5 px-2">{isAr ? "الكشاف" : "Scout"}</th>
                                                                                     <th className="py-1.5 px-2">{isAr ? "تاريخ الشراء" : "Purchase Date"}</th>
@@ -828,9 +776,9 @@ export default function AdminDashboard() {
                                                                                     <tr key={tk.id} className="border-b border-scout-beige-dark/10 last:border-b-0 hover:bg-white/40">
                                                                                         <td className="py-1.5 px-2 font-bold text-scout-gold">#{tk.id}</td>
                                                                                         <td className="py-1.5 px-2 font-semibold text-scout-navy">{tk.team?.name || tk.teamId}</td>
-                                                                                        <td className="py-1.5 px-2 text-center text-scout-charcoal">{tk.team?.totalGoals || 0}</td>
+                                                                                        <td className="py-1.5 px-2 text-center text-scout-charcoal">{tk.team?.totalWins || 0}</td>
                                                                                         <td className="py-1.5 px-2 text-center font-bold text-scout-green-light">{getTicketEntries(tk)}</td>
-                                                                                        <td className="py-1.5 px-2 text-scout-charcoal/80">{tk.scout?.fullName || "Unknown"}</td>
+                                                                                        <td className="py-1.5 px-2 text-scout-charcoal/80">{tk.scout?.fullName || (tk.paymentMethod === "WHISH" ? (isAr ? "شراء أونلاين (Whish)" : "Online (Whish)") : (isAr ? "شراء عام" : "Public Purchase"))}</td>
                                                                                         <td className="py-1.5 px-2 text-scout-charcoal/60" suppressHydrationWarning>{formatLocalDate(tk.createdAt)}</td>
                                                                                     </tr>
                                                                                 ))}
@@ -862,7 +810,7 @@ export default function AdminDashboard() {
                                 } = {};
 
                                 filtered.forEach((t) => {
-                                    const sName = t.scout?.fullName || (isAr ? "كشاف غير معروف" : "Unknown Scout");
+                                    const sName = t.scout?.fullName || (t.paymentMethod === "WHISH" ? (isAr ? "شراء أونلاين (Whish)" : "Online (Whish)") : (isAr ? "شراء عام" : "Public Purchase"));
                                     if (!scoutGroups[sName]) {
                                         scoutGroups[sName] = {
                                             name: sName,
@@ -963,24 +911,18 @@ export default function AdminDashboard() {
                             if (groupBy === "country") {
                                 // Group by team / country
                                 const countryGroups: {
-                                    [key: string]: { name: string; flagUrl: string; ticketsCount: number; totalGoals: number; multiplier: number; totalEntries: number; tickets: any[] };
+                                    [key: string]: { name: string; flagUrl: string; ticketsCount: number; totalWins: number; totalEntries: number; tickets: any[] };
                                 } = {};
 
                                 filtered.forEach((t) => {
                                     const teamName = t.team?.name || t.teamId;
                                     const flagUrl = t.team?.flagUrl || "";
                                     if (!countryGroups[teamName]) {
-                                        let m = 1;
-                                        if (t.team?.podiumFinish === 1) m = 3;
-                                        else if (t.team?.podiumFinish === 2) m = 2;
-                                        else if (t.team?.podiumFinish === 3) m = 1.5;
-
                                         countryGroups[teamName] = {
                                             name: teamName,
                                             flagUrl,
                                             ticketsCount: 0,
-                                            totalGoals: t.team?.totalGoals || 0,
-                                            multiplier: m,
+                                            totalWins: t.team?.totalWins || 0,
                                             totalEntries: 0,
                                             tickets: [],
                                         };
@@ -999,8 +941,7 @@ export default function AdminDashboard() {
                                                 <th className="py-3 px-4 w-10"></th>
                                                 <th className="py-3 px-4">{isAr ? "المنتخب" : "Team / Country"}</th>
                                                 <th className="py-3 px-4 text-center">{isAr ? "التذاكر المباعة لهذا المنتخب" : "Tickets Sold"}</th>
-                                                <th className="py-3 px-4 text-center">{isAr ? "أهداف المنتخب" : "Team Goals"}</th>
-                                                <th className="py-3 px-4 text-center">{isAr ? "المضاعف" : "Multiplier"}</th>
+                                                <th className="py-3 px-4 text-center">{isAr ? "الانتصارات" : "Wins"}</th>
                                                 <th className="py-3 px-4 text-center">{isAr ? "إجمالي بطاقات السحب" : "Total Raffle Entries"}</th>
                                             </tr>
                                         </thead>
@@ -1031,10 +972,7 @@ export default function AdminDashboard() {
                                                                 {country.ticketsCount}
                                                             </td>
                                                             <td className="py-3 px-4 text-center text-scout-charcoal">
-                                                                {country.totalGoals}
-                                                            </td>
-                                                            <td className="py-3 px-4 text-center font-bold text-scout-gold">
-                                                                {country.multiplier}x
+                                                                {country.totalWins}
                                                             </td>
                                                             <td className="py-3 px-4 text-center font-black text-scout-green-light">
                                                                 {country.totalEntries}
@@ -1042,7 +980,7 @@ export default function AdminDashboard() {
                                                         </tr>
                                                         {isExpanded && (
                                                             <tr className="bg-scout-beige-dark/10">
-                                                                <td colSpan={6} className="py-3 px-8">
+                                                                <td colSpan={5} className="py-3 px-8">
                                                                     <div className="rounded-xl bg-white/80 p-4 border border-scout-beige-dark/30 shadow-inner space-y-2">
                                                                         <div className="text-xs font-bold text-scout-navy border-b pb-1">
                                                                             {isAr ? "المشترون والبطاقات لهذا المنتخب" : "Buyers & Tickets for this Team"}

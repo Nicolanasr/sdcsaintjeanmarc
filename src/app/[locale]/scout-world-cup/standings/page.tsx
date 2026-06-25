@@ -9,8 +9,7 @@ interface Team {
     id: string;
     name: string;
     flagUrl: string;
-    totalGoals: number;
-    podiumFinish: number | null;
+    totalWins: number;
     isEliminated: boolean;
 }
 
@@ -20,13 +19,13 @@ function StandingsContent() {
 
     const locale = params.locale as string;
     const isAr = locale === "ar";
-    const ticketIdParam = searchParams.get("ticket_id");
+    const ticketIdParam = searchParams.get("ticket_id") || searchParams.get("query") || searchParams.get("phone");
 
     const [teams, setTeams] = useState<Team[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchId, setSearchId] = useState("");
     const [searching, setSearching] = useState(false);
-    const [searchResult, setSearchResult] = useState<any>(null);
+    const [searchResult, setSearchResult] = useState<any>(null); // holds { type: 'single'|'multi', ticket?, tickets? }
     const [searchError, setSearchError] = useState("");
 
     useEffect(() => {
@@ -53,22 +52,22 @@ function StandingsContent() {
         }
     }, [ticketIdParam]);
 
-    const triggerSearch = async (id: string) => {
+    const triggerSearch = async (queryVal: string) => {
         setSearching(true);
         setSearchError("");
         setSearchResult(null);
 
         try {
-            const res = await fetch(`/api/public/ticket?id=${id}`);
+            const res = await fetch(`/api/public/ticket?query=${encodeURIComponent(queryVal)}`);
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.error || "Ticket search failed");
+                throw new Error(data.error || "Search failed");
             }
 
-            setSearchResult(data.ticket);
+            setSearchResult(data);
         } catch (err: any) {
-            setSearchError(err.message || "Ticket not found");
+            setSearchError(err.message || "No results found");
         } finally {
             setSearching(false);
         }
@@ -81,14 +80,6 @@ function StandingsContent() {
         }
     };
 
-    const getTeamMultiplier = (team: any) => {
-        if (!team) return 1;
-        if (team.podiumFinish === 1) return 3;
-        if (team.podiumFinish === 2) return 2;
-        if (team.podiumFinish === 3) return 1.5;
-        return 1;
-    };
-
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-scout-beige">
@@ -99,10 +90,7 @@ function StandingsContent() {
 
     // Sort teams by standings
     const sortedTeams = [...teams].sort((a, b) => {
-        const podiumA = a.podiumFinish ?? 999;
-        const podiumB = b.podiumFinish ?? 999;
-        if (podiumA !== podiumB) return podiumA - podiumB;
-        if (b.totalGoals !== a.totalGoals) return b.totalGoals - a.totalGoals;
+        if (b.totalWins !== a.totalWins) return b.totalWins - a.totalWins;
         return a.name.localeCompare(b.name);
     });
 
@@ -201,7 +189,7 @@ function StandingsContent() {
                 {/* Search Ticket Card */}
                 <div className="glass-panel p-4 sm:p-6 rounded-2xl shadow-md border border-scout-beige-dark bg-white/70">
                     <h2 className="text-lg font-bold font-display text-scout-navy mb-4">
-                        🔍 {isAr ? "ابحث عن تذكرتك الكاش" : "Look Up Your Ticket"}
+                        🔍 {isAr ? "ابحث عن تذكرتك أو انتصاراتك" : "Look Up Your Tickets / Entries"}
                     </h2>
                     <form onSubmit={handleSearchForm} className="flex gap-4">
                         <input
@@ -209,7 +197,7 @@ function StandingsContent() {
                             required
                             value={searchId}
                             onChange={(e) => setSearchId(e.target.value)}
-                            placeholder={isAr ? "أدخل رقم التذكرة (مثال: 1042)..." : "Enter your Ticket ID (e.g. 1042)..."}
+                            placeholder={isAr ? "أدخل رقم التذكرة أو رقم الهاتف (مثال: 96181090746)..." : "Enter Ticket ID or Phone Number (e.g. 96181090746)..."}
                             className="flex-grow px-4 py-2.5 rounded-lg border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy text-sm shadow-sm"
                         />
                         <button
@@ -228,7 +216,7 @@ function StandingsContent() {
                         </p>
                     )}
 
-                    {searchResult && (
+                    {searchResult && searchResult.type === "single" && searchResult.ticket && (
                         <div className="mt-6 bg-white p-3.5 sm:p-5 rounded-xl border border-scout-gold/30 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 mb-4 gap-2">
                                 <div>
@@ -236,7 +224,7 @@ function StandingsContent() {
                                         {isAr ? "رقم التذكرة" : "Ticket Number"}
                                     </span>
                                     <h4 className="text-xl font-extrabold text-scout-navy">
-                                        #{searchResult.id}
+                                        #{searchResult.ticket.id}
                                     </h4>
                                 </div>
                                 <div className="text-left sm:text-right">
@@ -244,7 +232,7 @@ function StandingsContent() {
                                         {isAr ? "اسم المشتري" : "Buyer Name"}
                                     </span>
                                     <span className="font-bold text-scout-navy text-base">
-                                        {searchResult.buyerName}
+                                        {searchResult.ticket.buyerName}
                                     </span>
                                 </div>
                             </div>
@@ -256,54 +244,137 @@ function StandingsContent() {
                                     </span>
                                     <div className="flex items-center justify-center gap-1.5">
                                         <img
-                                            src={searchResult.team?.flagUrl}
-                                            alt={searchResult.team?.name}
+                                            src={searchResult.ticket.team?.flagUrl}
+                                            alt={searchResult.ticket.team?.name}
                                             className="w-5 h-3.5 object-cover rounded shadow-sm"
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).src = "https://flagcdn.com/un.svg";
                                             }}
                                         />
                                         <span className="font-extrabold text-scout-navy text-xs">
-                                            {searchResult.team?.name || searchResult.teamId}
+                                            {searchResult.ticket.team?.name || searchResult.ticket.teamId}
                                         </span>
                                     </div>
                                 </div>
 
                                 <div className="bg-scout-beige p-3 rounded-lg border">
                                     <span className="block text-[10px] text-scout-charcoal/50 font-bold mb-1">
-                                        {isAr ? "الأهداف المسجلة" : "Goals Scored"}
+                                        {isAr ? "الانتصارات" : "Wins"}
                                     </span>
                                     <span className="text-base font-extrabold text-scout-navy">
-                                        {searchResult.team?.totalGoals || 0}
+                                        {searchResult.ticket.team?.totalWins || 0}
                                     </span>
                                 </div>
 
                                 <div className="bg-scout-beige p-3 rounded-lg border">
                                     <span className="block text-[10px] text-scout-charcoal/50 font-bold mb-1">
-                                        {isAr ? "المضاعف الحالي" : "Current Multiplier"}
+                                        {isAr ? "بطاقة مضمونة" : "Guaranteed Entry"}
                                     </span>
                                     <span className="text-base font-extrabold text-scout-gold">
-                                        {getTeamMultiplier(searchResult.team)}x
+                                        1
                                     </span>
                                 </div>
 
                                 <div className="bg-scout-beige p-3 rounded-lg border border-scout-gold/20 bg-scout-gold/5">
                                     <span className="block text-[10px] text-scout-gold font-bold mb-1">
-                                        {isAr ? "إجمالي البطاقات بالسحب" : "Total Raffle Entries"}
+                                        {isAr ? "إجمالي بطاقات السحب" : "Total Raffle Entries"}
                                     </span>
                                     <span className="text-base font-black text-scout-green-light">
-                                        {Math.floor((searchResult.team?.totalGoals || 0) * getTeamMultiplier(searchResult.team))}
+                                        {1 + (searchResult.ticket.team?.totalWins || 0)}
                                     </span>
                                 </div>
                             </div>
 
                             <div className="mt-4 pt-3 border-t text-[11px] text-scout-charcoal/60 flex justify-between">
                                 <span>
-                                    {isAr ? `الكشاف المسؤول: ${searchResult.scout?.fullName || "مخفي"}` : `Sold by Scout: ${searchResult.scout?.fullName || "Hidden"}`}
+                                    {isAr ? `الكشاف المسؤول: ${searchResult.ticket.scout?.fullName || "مخفي"}` : `Sold by Scout: ${searchResult.ticket.scout?.fullName || "Hidden"}`}
                                 </span>
                                 <span>
                                     {isAr ? "تذكرة نشطة" : "Active Ticket"}
                                 </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {searchResult && searchResult.type === "multi" && searchResult.tickets && searchResult.tickets.length > 0 && (
+                        <div className="mt-6 bg-white p-3.5 sm:p-5 rounded-xl border border-scout-gold/30 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 space-y-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 gap-2">
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-scout-charcoal/50">
+                                        {isAr ? "لوحة التحكم للمشتري" : "Buyer Raffle Dashboard"}
+                                    </span>
+                                    <h4 className="text-lg font-extrabold text-scout-navy">
+                                        {searchResult.tickets[0].buyerName}
+                                    </h4>
+                                </div>
+                                <div className="text-left sm:text-right">
+                                    <span className="text-[10px] uppercase font-bold text-scout-charcoal/50 block">
+                                        {isAr ? "رقم الهاتف" : "Phone Number"}
+                                    </span>
+                                    <span className="font-bold text-scout-navy text-sm">
+                                        {searchResult.tickets[0].buyerPhone}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-2 gap-4 text-center">
+                                <div className="bg-scout-beige p-3 rounded-lg border">
+                                    <span className="block text-[10px] text-scout-charcoal/50 font-bold mb-1">
+                                        {isAr ? "إجمالي التذاكر" : "Total Tickets Purchased"}
+                                    </span>
+                                    <span className="text-xl font-extrabold text-scout-navy">
+                                        {searchResult.tickets.length}
+                                    </span>
+                                </div>
+                                <div className="bg-scout-beige p-3 rounded-lg border border-scout-gold/20 bg-scout-gold/5">
+                                    <span className="block text-[10px] text-scout-gold font-bold mb-1">
+                                        {isAr ? "إجمالي بطاقات السحب المشتركة" : "Total Combined Entries"}
+                                    </span>
+                                    <span className="text-xl font-black text-scout-green-light">
+                                        {searchResult.tickets.reduce((acc: number, tk: any) => acc + 1 + (tk.team?.totalWins || 0), 0)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Tickets Detail List */}
+                            <div className="overflow-x-auto pt-2">
+                                <div className="text-xs font-bold text-scout-navy border-b pb-1 mb-2">
+                                    {isAr ? "تفاصيل تذاكرك" : "Your Ticket Portfolio"}
+                                </div>
+                                <table className="w-full text-xs text-left border-collapse">
+                                    <thead>
+                                        <tr className="text-scout-charcoal/70 font-semibold border-b border-scout-beige-dark/20">
+                                            <th className="py-2 px-1">{isAr ? "رقم التذكرة" : "Ticket #"}</th>
+                                            <th className="py-2 px-1">{isAr ? "المنتخب" : "Selected Team"}</th>
+                                            <th className="py-2 px-1 text-center">{isAr ? "الانتصارات" : "Team Wins"}</th>
+                                            <th className="py-2 px-1 text-center font-bold">{isAr ? "بطاقات السحب" : "Raffle Entries"}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {searchResult.tickets.map((tk: any) => {
+                                            const entries = 1 + (tk.team?.totalWins || 0);
+                                            return (
+                                                <tr key={tk.id} className="border-b border-scout-beige-dark/10 hover:bg-scout-beige/40">
+                                                    <td className="py-2 px-1 font-bold text-scout-navy">#{tk.id}</td>
+                                                    <td className="py-2 px-1 flex items-center gap-2">
+                                                        <img
+                                                            src={tk.team?.flagUrl}
+                                                            alt={tk.team?.name}
+                                                            className="w-5 h-3.5 object-cover rounded shadow-xs"
+                                                            onError={(e) => {
+                                                                (e.target as HTMLImageElement).src = "https://flagcdn.com/un.svg";
+                                                            }}
+                                                        />
+                                                        <span className="font-medium text-scout-charcoal">{tk.team?.name || tk.teamId}</span>
+                                                    </td>
+                                                    <td className="py-2 px-1 text-center text-scout-charcoal">{tk.team?.totalWins || 0}</td>
+                                                    <td className="py-2 px-1 text-center font-bold text-scout-green-light">{entries}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}
@@ -312,29 +383,27 @@ function StandingsContent() {
                 {/* Sync Disclaimer */}
                 <div className="bg-scout-gold/10 border-l-4 border-scout-gold p-4 rounded-xl text-xs text-scout-navy font-medium">
                     ⚠️ {isAr
-                        ? "تنبيه: لا يتم تحديث هذه الصفحة مباشرة في نفس اللحظة. نرجو التحقق لاحقًا إذا كانت أهداف منتخبكم لا تطابق نتائج المباريات المباشرة بدقة."
-                        : "Please note: This page is updated daily and may not reflect real-time live match statistics immediately. If goals scored do not match live results exactly, check back later."}
+                        ? "تنبيه: لا يتم تحديث هذه الصفحة مباشرة في نفس اللحظة. نرجو التحقق لاحقًا إذا كانت نتائج وعدد انتصارات منتخبكم لا تطابق نتائج المباريات المباشرة بدقة."
+                        : "Please note: This page is updated daily and may not reflect real-time live match statistics immediately. If match wins do not match live results exactly, check back later."}
                 </div>
-
 
                 {/* Read-Only Teams Standing Table */}
                 <div className="glass-panel p-3.5 sm:p-6 rounded-2xl shadow-md bg-white">
                     <h2 className="text-xl font-bold font-display text-scout-navy mb-4 border-b pb-2">
-                        🏆 {isAr ? "ترتيب المنتخبات ومضاعفات السحب" : "World Cup Teams Raffle Standings"}
+                        🏆 {isAr ? "ترتيب المنتخبات ونقاط السحب" : "World Cup Teams Raffle Standings"}
                     </h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left border-collapse">
                             <thead>
                                 <tr className="border-b text-scout-navy font-bold">
                                     <th className="py-3 px-2 sm:px-4">{isAr ? "الترتيب / المنتخب" : "Standings"}</th>
-                                    <th className="py-3 px-2 sm:px-4 text-center">{isAr ? "إجمالي الأهداف" : "Goals"}</th>
+                                    <th className="py-3 px-2 sm:px-4 text-center">{isAr ? "الانتصارات" : "Wins"}</th>
                                     <th className="py-3 px-2 sm:px-4 text-center">{isAr ? "البطاقات لكل تذكرة" : "Entries"}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sortedTeams.map((t, idx) => {
-                                    const multiplier = getTeamMultiplier(t);
-                                    const entries = Math.floor(t.totalGoals * multiplier);
+                                    const entries = 1 + (t.totalWins || 0);
 
                                     return (
                                         <tr key={t.id} className="border-b hover:bg-scout-beige-dark/20 transition">
@@ -356,7 +425,7 @@ function StandingsContent() {
                                                 </div>
                                             </td>
                                             <td className="py-3 px-2 sm:px-4 text-center font-bold text-scout-navy text-xs sm:text-sm">
-                                                {t.totalGoals}
+                                                {t.totalWins}
                                             </td>
                                             <td className="py-3 px-2 sm:px-4 text-center font-black text-scout-green-light text-xs sm:text-sm">
                                                 {entries}
@@ -388,40 +457,32 @@ function StandingsContent() {
                                 <span className="text-scout-gold font-bold">1.</span>
                                 <span>
                                     {isAr
-                                        ? "المعادلة الأساسية: إجمالي نقاط السحب = (أهداف الفريق) × (مضاعف المركز)."
-                                        : "The Formula: Total raffle entry tickets = (Total Team Goals) × (Podium Multiplier)."}
+                                        ? "كل تذكرة تشتريها تضمن لك بطاقة واحدة (1) كحد أدنى للدخول في السحب النهائي."
+                                        : "Every ticket you purchase guarantees you at least one (1) entry in the final draw."}
                                 </span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="text-scout-gold font-bold">2.</span>
                                 <span>
                                     {isAr
-                                        ? "المركز الأول (البطل): مضاعف ٣ أضعاف (3x)."
-                                        : "1st Place (Champions): 3x multiplier."}
+                                        ? "في كل مرة يفوز فيها المنتخب المخصص لتذكرتك بمباراة في كأس العالم، تحصل على بطاقة إضافية (+1) في السحب."
+                                        : "Every time the team assigned to your ticket wins a match in the World Cup, you gain one (+1) bonus entry."}
                                 </span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="text-scout-gold font-bold">3.</span>
                                 <span>
                                     {isAr
-                                        ? "المركز الثاني: مضاعف ضعفين (2x)."
-                                        : "2nd Place: 2x multiplier."}
+                                        ? "المعادلة البسيطة: إجمالي بطاقات السحب للتذكرة = 1 (مضمونة) + عدد انتصارات المنتخب."
+                                        : "The Simple Formula: Total Raffle Entries = 1 (Guaranteed) + Team Wins."}
                                 </span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="text-scout-gold font-bold">4.</span>
                                 <span>
                                     {isAr
-                                        ? "المركز الثالث: مضاعف ضعف ونصف (1.5x)."
-                                        : "3rd Place: 1.5x multiplier."}
-                                </span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-scout-gold font-bold">5.</span>
-                                <span>
-                                    {isAr
-                                        ? "أي مركز آخر / خروج مبكر: يحتفظ بمضاعف أساسي (1x) استنادًا إلى أهدافه المسجلة فقط."
-                                        : "Any other finish / eliminated: Retains 1x multiplier, meaning goals scored still count 1:1."}
+                                        ? "المنتخبات التي لا تحقق أي فوز تحتفظ بفرصتها المضمونة (بطاقة واحدة) كاملة للدخول في السحب."
+                                        : "Teams with zero wins still retain their guaranteed entry (1 ticket) in the draw."}
                                 </span>
                             </li>
                         </ul>
