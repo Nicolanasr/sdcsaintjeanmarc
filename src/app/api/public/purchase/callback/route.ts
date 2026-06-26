@@ -49,7 +49,7 @@ export async function POST(request: Request) {
 
     // Try sending automated WhatsApp if enabled
     try {
-      const settings = getWhatsAppSettings();
+      const settings = await getWhatsAppSettings();
       if (settings.sendOnPurchase) {
         const origin = request.headers.get("origin") || new URL(request.url).origin;
         const trackingLink = `${origin}/en/scout-world-cup/standings?phone=${encodeURIComponent(firstTicket.buyerPhone)}`;

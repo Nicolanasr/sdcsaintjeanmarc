@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     if (!(await isAdmin(request))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    const settings = getWhatsAppSettings();
+    const settings = await getWhatsAppSettings();
     return NextResponse.json({ settings });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -45,13 +45,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    const success = saveWhatsAppSettings({ sendOnPurchase, sendOnGoal });
-    if (!success) {
-      return NextResponse.json({ error: "Failed to save settings" }, { status: 500 });
-    }
-
+    await saveWhatsAppSettings({ sendOnPurchase, sendOnGoal });
     return NextResponse.json({ success: true, settings: { sendOnPurchase, sendOnGoal } });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Failed to save settings" }, { status: 500 });
   }
 }

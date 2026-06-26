@@ -48,3 +48,8 @@ model WhatsAppLog {
   error     String?
   createdAt DateTime @default(now())
 }
+
+model SystemSetting {
+  key   String @id
+  value String
+}

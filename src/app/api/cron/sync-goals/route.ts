@@ -94,15 +94,15 @@ export async function GET(request: Request) {
 
         if (winsDiff > 0) {
           try {
-            const settings = getWhatsAppSettings();
-            if (settings.sendOnGoal) { // Keep using the sendOnGoal toggle settings
+            const settings = await getWhatsAppSettings();
+            if (settings.sendOnGoal) { 
               const tickets = await prisma.ticket.findMany({
-                where: { teamId },
+                where: { teamId, paymentStatus: "PAID" },
               });
 
               for (const ticket of tickets) {
-                const msgAr = `المنتخب الذي اخترته (${team.name}) قد فاز في مباراته! ⚽️ إجمالي انتصاراتهم الآن هو ${wins}. لقد حصلت على بطاقة إضافية في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-                const msgEn = `Your selected team (${team.name}) has won their match! ⚽️ Their total wins are now ${wins}. You have earned +1 bonus entry in the final raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+                const msgAr = `فاز منتخبك المختار (${team.name}) في مباراته! ⚽️ لقد فازوا بإجمالي ${wins} مباريات، مما يمنحك ${wins + 1} فرص في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+                const msgEn = `Your selected team (${team.name}) has won their match! ⚽️ They have won a total of ${wins} matches, giving you ${wins + 1} entries in the raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
                 const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
 
                 await sendWhatsAppMessage(ticket.buyerPhone, fullMsg);

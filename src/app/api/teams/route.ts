@@ -89,7 +89,7 @@ export async function PATCH(request: Request) {
 
     if (totalWins !== undefined && totalWins > currentTeam.totalWins) {
       try {
-        const settings = getWhatsAppSettings();
+        const settings = await getWhatsAppSettings();
         if (settings.sendOnGoal) { // Keep using the sendOnGoal toggle setting for simplicity or general matches
           const tickets = await prisma.ticket.findMany({
             where: { teamId: id },

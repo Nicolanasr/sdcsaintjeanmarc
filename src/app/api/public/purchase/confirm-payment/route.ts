@@ -38,6 +38,20 @@ export async function POST(request: Request) {
       },
     });
 
+    // Send WhatsApp notification to admin (+96170078138)
+    try {
+      const origin = request.headers.get("origin") || `https://${request.headers.get("host")}`;
+      const approvalLink = `${origin}/en/scout-world-cup/dashboard/admin`;
+      const firstTicket = tickets[0];
+      const buyerName = firstTicket?.buyerName || "Customer";
+      
+      const { sendWhatsAppMessage } = await import("@/lib/whatsapp");
+      const alertMsg = `📢 New payment verification pending! ⏳\n\nBuyer: ${buyerName}\nTxID: ${whishTransactionId.trim()}\nTickets Count: ${numericIds.length}\n\nApprove here:\n${approvalLink}`;
+      await sendWhatsAppMessage("+96170078138", alertMsg);
+    } catch (err) {
+      console.error("Failed to send WhatsApp alert to admin:", err);
+    }
+
     return NextResponse.json({ success: true, count: numericIds.length });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

@@ -66,6 +66,7 @@ export async function GET(request: Request) {
 
     // 4. Fetch all detailed tickets if user is an admin
     let allTickets: any[] = [];
+    let whatsAppLogs: any[] = [];
     if (userPayload.role === "admin") {
       allTickets = await prisma.ticket.findMany({
         include: {
@@ -73,6 +74,10 @@ export async function GET(request: Request) {
           team: true,
         },
         orderBy: { createdAt: "desc" },
+      });
+      whatsAppLogs = await prisma.whatsAppLog.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 100,
       });
     }
 
@@ -83,6 +88,7 @@ export async function GET(request: Request) {
       totalTicketsCount,
       leaderboard,
       allTickets,
+      whatsAppLogs,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -97,10 +103,15 @@ export async function POST(request: Request) {
     }
 
     const userId = userPayload.userId as string;
-    const { buyerName, buyerPhone, teamId } = await request.json();
+    const { buyerName, buyerPhone, teamId, paymentMethod = "CASH", whishTransactionId } = await request.json();
 
     if (!buyerName || !buyerPhone || !teamId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const isWhish = paymentMethod === "WHISH";
+    if (isWhish && !whishTransactionId) {
+      return NextResponse.json({ error: "Whish Transaction ID is required" }, { status: 400 });
     }
 
     // Verify team exists
@@ -119,25 +130,41 @@ export async function POST(request: Request) {
         buyerName,
         buyerPhone,
         teamId,
+        paymentMethod: isWhish ? "WHISH" : "CASH",
+        paymentStatus: isWhish ? "PENDING" : "PAID",
+        whishTransactionId: isWhish ? whishTransactionId.trim() : null,
       },
     });
 
-    // Try sending automated WhatsApp if enabled
-    try {
-      const settings = getWhatsAppSettings();
-      if (settings.sendOnPurchase) {
-        const origin = request.headers.get("origin") || new URL(request.url).origin;
-        const trackingLink = `${origin}/en/scout-world-cup/standings?phone=${encodeURIComponent(buyerPhone)}`;
-        
-        const msgAr = `شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة رقم #${ticket.id} لدعم فوج مار يوحنا مرقس - كشافة الأرز! فريقك المختار هو ${team.name}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذكرتك ونقاط فريقك من هنا:\n${trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-        const msgEn = `Thank you for purchasing World Cup Scout Cup Draw ticket #${ticket.id} supporting Scouts des Cèdres Saint Jean Marc! Your selected team is ${team.name}. Every win they achieve grants you an extra entry in the final raffle! ⚽️\n\nTrack your ticket and team entries here:\n${trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-        
-        const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
-        const sent = await sendWhatsAppMessage(buyerPhone, fullMsg);
-        console.log(`Automated ticket purchase WhatsApp sent to ${buyerPhone}: ${sent}`);
+    if (!isWhish) {
+      // Try sending automated WhatsApp if enabled
+      try {
+        const settings = await getWhatsAppSettings();
+        if (settings.sendOnPurchase) {
+          const origin = request.headers.get("origin") || new URL(request.url).origin;
+          const trackingLink = `${origin}/en/scout-world-cup/standings?phone=${encodeURIComponent(buyerPhone)}`;
+          
+          const msgAr = `شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة رقم #${ticket.id} لدعم فوج مار يوحنا مرقس - كشافة الأرز! فريقك المختار هو ${team.name}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذكرتك ونقاط فريقك من هنا:\n${trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+          const msgEn = `Thank you for purchasing World Cup Scout Cup Draw ticket #${ticket.id} supporting Scouts des Cèdres Saint Jean Marc! Your selected team is ${team.name}. Every win they achieve grants you an extra entry in the final raffle! ⚽️\n\nTrack your ticket and team entries here:\n${trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+          
+          const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
+          const sent = await sendWhatsAppMessage(buyerPhone, fullMsg);
+          console.log(`Automated ticket purchase WhatsApp sent to ${buyerPhone}: ${sent}`);
+        }
+      } catch (wsErr) {
+        console.error("Failed to send automatic WhatsApp for ticket purchase:", wsErr);
       }
-    } catch (wsErr) {
-      console.error("Failed to send automatic WhatsApp for ticket purchase:", wsErr);
+    } else {
+      // Send WhatsApp notification to admin (+96170078138) for pending Whish ticket
+      try {
+        const origin = request.headers.get("origin") || `https://${request.headers.get("host")}`;
+        const approvalLink = `${origin}/en/scout-world-cup/dashboard/admin`;
+        
+        const alertMsg = `📢 New Scout Whish payment verification pending! ⏳\n\nScout: ${userPayload.fullName || "Scout"}\nBuyer: ${buyerName}\nTxID: ${whishTransactionId.trim()}\n\nApprove here:\n${approvalLink}`;
+        await sendWhatsAppMessage("+96170078138", alertMsg);
+      } catch (err) {
+        console.error("Failed to send WhatsApp alert to admin for scout Whish payment:", err);
+      }
     }
 
     return NextResponse.json({ success: true, ticket });

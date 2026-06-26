@@ -1,7 +1,4 @@
-import fs from "fs";
-import path from "path";
-
-const settingsPath = path.join(process.cwd(), "src/lib/whatsapp-settings.json");
+import { prisma } from "./prisma";
 
 export interface WhatsAppSettings {
   sendOnPurchase: boolean;
@@ -13,35 +10,38 @@ const defaultSettings: WhatsAppSettings = {
   sendOnGoal: false,
 };
 
-export function getWhatsAppSettings(): WhatsAppSettings {
+export async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
   try {
-    if (!fs.existsSync(settingsPath)) {
-      // Ensure the directory exists
-      const dir = path.dirname(settingsPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2));
-      return defaultSettings;
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: "whatsapp_settings" },
+    });
+    if (setting) {
+      return JSON.parse(setting.value);
     }
-    const content = fs.readFileSync(settingsPath, "utf-8");
-    return JSON.parse(content);
+    // Seed default settings into the DB if not present
+    await prisma.systemSetting.create({
+      data: {
+        key: "whatsapp_settings",
+        value: JSON.stringify(defaultSettings),
+      },
+    });
+    return defaultSettings;
   } catch (err) {
-    console.error("Error reading WhatsApp settings:", err);
+    console.error("Error reading WhatsApp settings from DB:", err);
     return defaultSettings;
   }
 }
 
-export function saveWhatsAppSettings(settings: WhatsAppSettings): boolean {
+export async function saveWhatsAppSettings(settings: WhatsAppSettings): Promise<boolean> {
   try {
-    const dir = path.dirname(settingsPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+    await prisma.systemSetting.upsert({
+      where: { key: "whatsapp_settings" },
+      update: { value: JSON.stringify(settings) },
+      create: { key: "whatsapp_settings", value: JSON.stringify(settings) },
+    });
     return true;
   } catch (err) {
-    console.error("Error saving WhatsApp settings:", err);
-    return false;
+    console.error("Error saving WhatsApp settings to DB:", err);
+    throw err;
   }
 }

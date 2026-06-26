@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
     let pool = [...rafflePool];
     const uniqueTicketsCount = new Set(pool.map((t) => t.id)).size;
-    const targetWinnersCount = Math.min(3, uniqueTicketsCount);
+    const targetWinnersCount = Math.min(1, uniqueTicketsCount);
 
     while (winners.length < targetWinnersCount && pool.length > 0) {
       const randomIndex = crypto.randomInt(0, pool.length);
