@@ -36,6 +36,7 @@ export async function GET(request: Request) {
         email: true,
         fullName: true,
         role: true,
+        unit: true,
         createdAt: true,
       },
       orderBy: {
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { email, password, fullName, role } = await request.json();
+    const { email, password, fullName, role, unit } = await request.json();
 
     if (!email || !password || !fullName) {
       return NextResponse.json({ error: "Email, password, and full name are required" }, { status: 400 });
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
         password: hashedPassword,
         fullName: fullName.trim(),
         role: role === "admin" ? "admin" : "scout",
+        unit: unit ? String(unit) : null,
       },
     });
 
@@ -93,6 +95,7 @@ export async function POST(request: Request) {
         email: profile.email,
         fullName: profile.fullName,
         role: profile.role,
+        unit: profile.unit,
       },
     });
   } catch (err: any) {
@@ -107,7 +110,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id, email, password, fullName, role } = await request.json();
+    const { id, email, password, fullName, role, unit } = await request.json();
 
     if (!id || !email || !fullName || !role) {
       return NextResponse.json({ error: "ID, email, full name, and role are required" }, { status: 400 });
@@ -131,6 +134,7 @@ export async function PATCH(request: Request) {
       email: cleanEmail,
       fullName: fullName.trim(),
       role: role === "admin" ? "admin" : "scout",
+      unit: unit ? String(unit) : null,
     };
 
     if (password) {
@@ -149,6 +153,7 @@ export async function PATCH(request: Request) {
         email: profile.email,
         fullName: profile.fullName,
         role: profile.role,
+        unit: profile.unit,
       },
     });
   } catch (err: any) {

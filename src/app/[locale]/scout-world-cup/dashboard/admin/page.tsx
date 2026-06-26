@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { TICKET_PRICE } from "@/lib/constants";
 
 interface Team {
     id: string;
@@ -46,33 +47,69 @@ export default function AdminDashboard() {
     const [groupBy, setGroupBy] = useState<"none" | "country" | "scout" | "buyer" | "paymentMethod">("none");
     const [ticketSearchQuery, setTicketSearchQuery] = useState("");
     const [expandedGroups, setExpandedGroups] = useState<{[key: string]: boolean}>({});
-    const [whatsappSettings, setWhatsappSettings] = useState({ sendOnPurchase: true, sendOnGoal: false });
+    const [whatsappSettings, setWhatsappSettings] = useState({ 
+        sendOnPurchase: true, 
+        sendOnGoal: false,
+        templatePurchaseAr: "",
+        templatePurchaseEn: ""
+    });
     const [verifyingIds, setVerifyingIds] = useState<number[]>([]);
 
+    const [templateArInput, setTemplateArInput] = useState("");
+    const [templateEnInput, setTemplateEnInput] = useState("");
+    const [savingTemplates, setSavingTemplates] = useState(false);
+
     // Advanced Filters & Custom Dropdown State
-    const [filterPaymentMethod, setFilterPaymentMethod] = useState<"ALL" | "CASH" | "WHISH">("ALL");
-    const [filterStatus, setFilterStatus] = useState<"ALL" | "PAID" | "PENDING" | "REJECTED">("ALL");
-    const [filterScoutId, setFilterScoutId] = useState<string>("ALL");
-    const [filterTeamId, setFilterTeamId] = useState<string>("ALL");
+    const [filterPaymentMethods, setFilterPaymentMethods] = useState<string[]>([]);
+    const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+    const [filterScoutIds, setFilterScoutIds] = useState<string[]>([]);
+    const [filterTeamIds, setFilterTeamIds] = useState<string[]>([]);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [scoutsList, setScoutsList] = useState<any[]>([]);
     const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
     // Tabs & Logs state
-    const [activeTab, setActiveTab] = useState<"raffle" | "teams" | "reporting" | "logs" | "users" | "leaderboard">("raffle");
+    const [activeTab, setActiveTab] = useState<"raffle" | "teams" | "reporting" | "logs" | "users" | "leaderboard" | "treasury">("raffle");
     const [whatsAppLogs, setWhatsAppLogs] = useState<WhatsAppLog[]>([]);
     const [retryingWhatsApp, setRetryingWhatsApp] = useState(false);
     const [selectedLogId, setSelectedLogId] = useState<number | null>(null);
+
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowFilterDropdown(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     // Create/Edit User state
     const [newUserEmail, setNewUserEmail] = useState("");
     const [newUserPassword, setNewUserPassword] = useState("");
     const [newUserFullName, setNewUserFullName] = useState("");
     const [newUserRole, setNewUserRole] = useState<"scout" | "admin">("scout");
+    const [newUserUnit, setNewUserUnit] = useState("");
     const [creatingUser, setCreatingUser] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
     const [editingUser, setEditingUser] = useState<any | null>(null);
     const [updatingUser, setUpdatingUser] = useState(false);
+
+    // Treasury States
+    const [treasuryScouts, setTreasuryScouts] = useState<any[]>([]);
+    const [financialSummary, setFinancialSummary] = useState<any | null>(null);
+    const [treasurySummary, setTreasurySummary] = useState<{ grandTotal: number; grandPending: number; grandSettled: number; scoutsWithPending: number } | null>(null);
+    const [selectedTreasuryScout, setSelectedTreasuryScout] = useState<any | null>(null);
+    const [scoutTickets, setScoutTickets] = useState<any[]>([]);
+    const [scoutTicketsNextCursor, setScoutTicketsNextCursor] = useState<number | null>(null);
+    const [scoutTicketsHasMore, setScoutTicketsHasMore] = useState(false);
+    const [loadingDrill, setLoadingDrill] = useState(false);
+    const [selectedSettleTicketIds, setSelectedSettleTicketIds] = useState<number[]>([]);
+    const [settlingCash, setSettlingCash] = useState(false);
+    const [loadingTreasury, setLoadingTreasury] = useState(false);
 
     // Shuffling animation state for raffle draw
     const [shufflingName, setShufflingName] = useState("");
@@ -115,6 +152,7 @@ export default function AdminDashboard() {
                     password: newUserPassword,
                     fullName: newUserFullName,
                     role: newUserRole,
+                    unit: newUserUnit ? newUserUnit : null,
                 }),
             });
             const data = await res.json();
@@ -125,6 +163,7 @@ export default function AdminDashboard() {
             setNewUserPassword("");
             setNewUserFullName("");
             setNewUserRole("scout");
+            setNewUserUnit("");
             await reloadActiveTabData();
         } catch (err: any) {
             alert(err.message || "Failed to create user");
@@ -148,6 +187,7 @@ export default function AdminDashboard() {
                     password: newUserPassword || undefined,
                     fullName: newUserFullName,
                     role: newUserRole,
+                    unit: newUserUnit ? newUserUnit : null,
                 }),
             });
             const data = await res.json();
@@ -159,6 +199,7 @@ export default function AdminDashboard() {
             setNewUserPassword("");
             setNewUserFullName("");
             setNewUserRole("scout");
+            setNewUserUnit("");
             await reloadActiveTabData();
         } catch (err: any) {
             alert(err.message || "Failed to update user");
@@ -173,6 +214,7 @@ export default function AdminDashboard() {
         setNewUserFullName(u.fullName);
         setNewUserRole(u.role);
         setNewUserPassword("");
+        setNewUserUnit(u.unit || "");
     };
 
     const cancelEditingUser = () => {
@@ -232,14 +274,14 @@ export default function AdminDashboard() {
         }
     };
 
-    const handleToggleWhatsApp = async (key: "sendOnPurchase" | "sendOnGoal", checked: boolean) => {
-        const updated = { ...whatsappSettings, [key]: checked };
-        setWhatsappSettings(updated);
+    const handleSaveWhatsAppSettingsObj = async (updatedObj: any) => {
+        const old = whatsappSettings;
+        setWhatsappSettings(updatedObj);
         try {
             const res = await fetch("/api/admin/whatsapp-settings", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updated),
+                body: JSON.stringify(updatedObj),
             });
             if (!res.ok) {
                 const data = await res.json();
@@ -247,9 +289,77 @@ export default function AdminDashboard() {
             }
         } catch (err: any) {
             alert(err.message || "Failed to update settings");
-            // revert
-            setWhatsappSettings(whatsappSettings);
+            setWhatsappSettings(old);
         }
+    };
+
+    const handleSaveTemplates = async () => {
+        setSavingTemplates(true);
+        const updated = { 
+            ...whatsappSettings, 
+            templatePurchaseAr: templateArInput, 
+            templatePurchaseEn: templateEnInput 
+        };
+        try {
+            const res = await fetch("/api/admin/whatsapp-settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updated),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to save templates");
+            setWhatsappSettings(updated);
+            alert(isAr ? "تم حفظ قوالب الرسائل بنجاح!" : "WhatsApp templates saved successfully!");
+        } catch (err: any) {
+            alert(err.message || "Failed to save templates");
+        } finally {
+            setSavingTemplates(false);
+        }
+    };
+
+    const handleExportCSV = (ticketsList: any[]) => {
+        const headers = [
+            "Ticket ID",
+            "Scout Name",
+            "Buyer Name",
+            "Phone Number",
+            "Selected Team",
+            "Raffle Entries",
+            "Payment Method",
+            "Transaction ID",
+            "Purchase Date",
+            "Status"
+        ];
+        
+        const rows = ticketsList.map((t) => {
+            const scoutName = t.scout?.fullName || (t.paymentMethod === "WHISH" ? "Online" : "Public");
+            const entries = t.team ? (1 + (t.team.totalWins || 0)) : 1;
+            return [
+                t.id,
+                scoutName,
+                t.buyerName,
+                t.buyerPhone,
+                t.team?.name || t.teamId,
+                entries,
+                t.paymentMethod || "CASH",
+                t.whishTransactionId || "",
+                new Date(t.createdAt).toLocaleDateString(),
+                t.paymentStatus
+            ];
+        });
+
+        const csvContent = 
+            "\uFEFF" + // UTF-8 BOM
+            [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+            
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `scout_tickets_export_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     // Reset expanded state when group method changes
@@ -285,17 +395,20 @@ export default function AdminDashboard() {
 
     const loadRaffleData = async () => {
         try {
-            const statsRes = await fetch("/api/scout/tickets");
+            const [statsRes, waRes] = await Promise.all([
+                fetch("/api/admin/raffle-stats"),
+                fetch("/api/admin/whatsapp-settings"),
+            ]);
             if (statsRes.ok) {
                 const statsData = await statsRes.json();
-                setTicketsCount(statsData.totalTicketsCount || 0);
-                setAllTickets(statsData.allTickets || []);
-                setWhatsAppLogs(statsData.whatsAppLogs || []);
+                setTicketsCount(statsData.totalTickets || 0);
             }
-            const waRes = await fetch("/api/admin/whatsapp-settings");
             if (waRes.ok) {
                 const waData = await waRes.json();
-                setWhatsappSettings(waData.settings || { sendOnPurchase: true, sendOnGoal: false });
+                const settings = waData.settings || { sendOnPurchase: true, sendOnGoal: false };
+                setWhatsappSettings(settings);
+                setTemplateArInput(settings.templatePurchaseAr || "");
+                setTemplateEnInput(settings.templatePurchaseEn || "");
             }
         } catch (err) {
             console.error("Error loading raffle data:", err);
@@ -316,17 +429,19 @@ export default function AdminDashboard() {
 
     const loadReportingData = async () => {
         try {
-            const statsRes = await fetch("/api/scout/tickets");
-            if (statsRes.ok) {
-                const statsData = await statsRes.json();
-                setAllTickets(statsData.allTickets || []);
+            const [repRes, usersRes, teamsRes] = await Promise.all([
+                fetch("/api/admin/reports"),
+                fetch("/api/admin/create-user"),
+                fetch("/api/teams"),
+            ]);
+            if (repRes.ok) {
+                const repData = await repRes.json();
+                setAllTickets(repData.tickets || []);
             }
-            const usersRes = await fetch("/api/admin/create-user");
             if (usersRes.ok) {
                 const usersData = await usersRes.json();
                 setScoutsList(usersData.users || []);
             }
-            const teamsRes = await fetch("/api/teams");
             if (teamsRes.ok) {
                 const teamsData = await teamsRes.json();
                 setTeams(teamsData.teams || []);
@@ -338,10 +453,10 @@ export default function AdminDashboard() {
 
     const loadLogsData = async () => {
         try {
-            const statsRes = await fetch("/api/scout/tickets");
-            if (statsRes.ok) {
-                const statsData = await statsRes.json();
-                setWhatsAppLogs(statsData.whatsAppLogs || []);
+            const logsRes = await fetch("/api/admin/logs");
+            if (logsRes.ok) {
+                const logsData = await logsRes.json();
+                setWhatsAppLogs(logsData.logs || []);
             }
         } catch (err) {
             console.error("Error loading logs data:", err);
@@ -362,13 +477,98 @@ export default function AdminDashboard() {
 
     const loadLeaderboardData = async () => {
         try {
-            const statsRes = await fetch("/api/scout/tickets");
-            if (statsRes.ok) {
-                const statsData = await statsRes.json();
-                setLeaderboard(statsData.leaderboard || []);
+            const res = await fetch("/api/admin/leaderboard");
+            if (res.ok) {
+                const data = await res.json();
+                setLeaderboard(data.leaderboard || []);
             }
         } catch (err) {
             console.error("Error loading leaderboard data:", err);
+        }
+    };
+
+    const loadTreasuryData = async () => {
+        setLoadingTreasury(true);
+        try {
+            // Parallel: full financial summary + per-scout ledger (both use DB aggregations)
+            const [summaryRes, ledgerRes] = await Promise.all([
+                fetch("/api/admin/treasury?mode=summary"),
+                fetch("/api/admin/treasury?mode=ledger"),
+            ]);
+
+            if (summaryRes.ok) {
+                const summaryData = await summaryRes.json();
+                setFinancialSummary(summaryData.summary || null);
+                // Build legacy treasurySummary shape for existing UI cards
+                if (summaryData.summary) {
+                    const s = summaryData.summary;
+                    setTreasurySummary({
+                        grandTotal: s.cashRevenue,
+                        grandPending: s.cashOutstanding,
+                        grandSettled: s.cashSettledValue,
+                        scoutsWithPending: 0,
+                    });
+                }
+            }
+
+            if (ledgerRes.ok) {
+                const ledgerData = await ledgerRes.json();
+                const ledger = ledgerData.ledger || [];
+                setTreasuryScouts(ledger);
+                // Update scoutsWithPending in treasurySummary
+                const withPending = ledger.filter((sc: any) => sc.pendingCashHandover > 0).length;
+                setTreasurySummary((prev) => prev ? { ...prev, scoutsWithPending: withPending } : prev);
+
+                // If a scout was selected, reload their drill-down
+                if (selectedTreasuryScout) {
+                    const updated = ledger.find((s: any) => s.id === selectedTreasuryScout.id);
+                    if (updated) setSelectedTreasuryScout(updated);
+                }
+            }
+        } catch (err) {
+            console.error("Error loading treasury data:", err);
+        } finally {
+            setLoadingTreasury(false);
+        }
+    };
+
+    const loadDrillDown = async (scoutId: string, append = false) => {
+        setLoadingDrill(true);
+        try {
+            const cursorParam = append && scoutTicketsNextCursor ? `&cursor=${scoutTicketsNextCursor}` : "";
+            const res = await fetch(`/api/admin/treasury?mode=drill&scoutId=${scoutId}&limit=50${cursorParam}`);
+            if (res.ok) {
+                const data = await res.json();
+                setScoutTickets((prev) => append ? [...prev, ...(data.tickets || [])] : (data.tickets || []));
+                setScoutTicketsNextCursor(data.nextCursor ?? null);
+                setScoutTicketsHasMore(data.hasMore ?? false);
+            }
+        } catch (err) {
+            console.error("Error loading drill-down tickets:", err);
+        } finally {
+            setLoadingDrill(false);
+        }
+    };
+
+
+    const handleSettleCash = async () => {
+        if (selectedSettleTicketIds.length === 0) return;
+        setSettlingCash(true);
+        try {
+            const res = await fetch("/api/admin/treasury/settle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ticketIds: selectedSettleTicketIds }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to settle");
+            alert(`✅ ${data.count} cash ticket(s) marked as settled successfully!`);
+            setSelectedSettleTicketIds([]);
+            await loadTreasuryData();
+        } catch (err: any) {
+            alert("❌ Settlement failed: " + err.message);
+        } finally {
+            setSettlingCash(false);
         }
     };
 
@@ -379,6 +579,7 @@ export default function AdminDashboard() {
         else if (activeTab === "logs") await loadLogsData();
         else if (activeTab === "users") await loadUsersData();
         else if (activeTab === "leaderboard") await loadLeaderboardData();
+        else if (activeTab === "treasury") await loadTreasuryData();
     };
 
     useEffect(() => {
@@ -537,6 +738,64 @@ export default function AdminDashboard() {
         }
     };
 
+    // Analytics & Charts Calculations
+    const getSalesOverTime = () => {
+        const dates: { [key: string]: number } = {};
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+            dates[label] = 0;
+        }
+        allTickets.forEach((t) => {
+            if (t.paymentStatus === "PAID") {
+                const dateStr = new Date(t.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+                if (dates[dateStr] !== undefined) {
+                    dates[dateStr]++;
+                }
+            }
+        });
+        return Object.entries(dates).map(([date, count]) => ({ date, count }));
+    };
+
+    const salesOverTime = getSalesOverTime();
+    const maxCount = Math.max(...salesOverTime.map(d => d.count), 1);
+    const chartWidth = 500;
+    const chartHeight = 130;
+    const points = salesOverTime.map((d, idx) => {
+        const x = (idx / 6) * chartWidth;
+        const y = chartHeight - (d.count / maxCount) * (chartHeight - 30) - 15;
+        return { x, y, date: d.date, count: d.count };
+    });
+    const pathData = points.length > 0 
+        ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ")
+        : "";
+    const areaData = pathData ? `${pathData} L ${points[points.length-1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z` : "";
+
+    const getTopTeamsData = () => {
+        const counts: { [key: string]: { name: string, count: number, flag: string } } = {};
+        allTickets.forEach((t) => {
+            if (t.paymentStatus === "PAID" && t.team) {
+                const key = t.team.name;
+                if (!counts[key]) {
+                    counts[key] = { name: t.team.name, count: 0, flag: t.team.flagUrl };
+                }
+                counts[key].count++;
+            }
+        });
+        return Object.values(counts).sort((a, b) => b.count - a.count).slice(0, 5);
+    };
+    const topTeamsData = getTopTeamsData();
+
+    const cashCount = allTickets.filter(t => t.paymentStatus === "PAID" && t.paymentMethod === "CASH").length;
+    const whishCount = allTickets.filter(t => t.paymentStatus === "PAID" && t.paymentMethod === "WHISH").length;
+    const totalPaidCount = cashCount + whishCount;
+    const cashPct = totalPaidCount > 0 ? (cashCount / totalPaidCount) * 100 : 0;
+    const whishPct = totalPaidCount > 0 ? (whishCount / totalPaidCount) * 100 : 0;
+    const circ = 251.2;
+    const cashStroke = (cashPct / 100) * circ;
+    const whishStroke = (whishPct / 100) * circ;
+
     const failedLogsCount = whatsAppLogs.filter((log) => log.status === "FAILED").length;
 
     if (loading) {
@@ -551,6 +810,7 @@ export default function AdminDashboard() {
         { id: "raffle", label: isAr ? "السحب والإعدادات" : "Raffle & Settings", icon: "🎟️" },
         { id: "teams", label: isAr ? "إعداد الفرق" : "Teams Config", icon: "⚽" },
         { id: "reporting", label: isAr ? "التقارير والإحصاءات" : "Ticket Reports", icon: "📊" },
+        { id: "treasury", label: isAr ? "الخزنة والتحصيل" : "Treasury & Cash", icon: "💰" },
         { id: "leaderboard", label: isAr ? "لوحة الصدارة" : "Leaderboard", icon: "🏆" },
         { id: "logs", label: isAr ? "سجلات واتساب" : "WhatsApp Logs", icon: "💬" },
         { id: "users", label: isAr ? "إنشاء مستخدمين" : "Create Users", icon: "👤" },
@@ -672,6 +932,129 @@ export default function AdminDashboard() {
                             </div>
                         </div>
 
+                        {/* Analytics Section */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Daily Sales Trend Chart */}
+                            <div className="glass-panel p-5 rounded-2xl shadow-md bg-white/70 flex flex-col justify-between">
+                                <div>
+                                    <h3 className="text-xs font-bold text-scout-navy uppercase tracking-wider mb-3">
+                                        📈 {isAr ? "اتجاه المبيعات اليومية (آخر 7 أيام)" : "Daily Sales Trend (Last 7 Days)"}
+                                    </h3>
+                                    <div className="w-full flex items-center justify-center pt-2">
+                                        <svg viewBox="0 0 500 170" className="w-full h-auto overflow-visible">
+                                            <defs>
+                                                <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.3" />
+                                                    <stop offset="100%" stopColor="#1E3A8A" stopOpacity="0.0" />
+                                                </linearGradient>
+                                            </defs>
+                                            {/* Grids */}
+                                            <line x1="0" y1="140" x2="500" y2="140" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4 4" />
+                                            <line x1="0" y1="80" x2="500" y2="80" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4 4" />
+                                            <line x1="0" y1="20" x2="500" y2="20" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4 4" />
+                                            {/* Area */}
+                                            {areaData && <path d={areaData} fill="url(#salesGrad)" />}
+                                            {/* Line */}
+                                            {pathData && <path d={pathData} fill="none" stroke="#1E3A8A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+                                            {/* Dots */}
+                                            {points.map((p, idx) => (
+                                                <g key={idx} className="group cursor-pointer">
+                                                    <circle cx={p.x} cy={p.y} r="5" fill="#D97706" stroke="#1E3A8A" strokeWidth="2" />
+                                                    <text x={p.x} y={p.y - 10} textAnchor="middle" className="text-[10px] font-bold fill-scout-navy opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {p.count}
+                                                    </text>
+                                                </g>
+                                            ))}
+                                            {/* Axis labels */}
+                                            {points.map((p, idx) => (
+                                                <text key={idx} x={p.x} y="160" textAnchor="middle" className="text-[9px] fill-scout-charcoal/60 font-semibold">
+                                                    {p.date}
+                                                </text>
+                                            ))}
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Top Teams Selected Chart */}
+                            <div className="glass-panel p-5 rounded-2xl shadow-md bg-white/70 flex flex-col justify-between">
+                                <div>
+                                    <h3 className="text-xs font-bold text-scout-navy uppercase tracking-wider mb-3">
+                                        ⚽ {isAr ? "أكثر المنتخبات اختياراً" : "Top Selected Teams"}
+                                    </h3>
+                                    <div className="space-y-3 pt-2">
+                                        {topTeamsData.length === 0 ? (
+                                            <p className="text-xs text-scout-charcoal/40 text-center py-8">{isAr ? "لا توجد بيانات حالياً." : "No team sales data yet."}</p>
+                                        ) : (
+                                            topTeamsData.map((team, idx) => {
+                                                const maxTeamCount = Math.max(...topTeamsData.map(t => t.count), 1);
+                                                const pct = (team.count / maxTeamCount) * 100;
+                                                return (
+                                                    <div key={idx} className="space-y-1">
+                                                        <div className="flex justify-between items-center text-[10px] font-semibold text-scout-navy">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <img src={team.flag} alt="" className="w-5 h-3 object-cover rounded" onError={(e) => {
+                                                                    (e.target as HTMLImageElement).src = "https://flagcdn.com/un.svg";
+                                                                }} />
+                                                                <span>{team.name}</span>
+                                                            </div>
+                                                            <span>{team.count} {isAr ? "تذكرة" : "tickets"}</span>
+                                                        </div>
+                                                        <div className="w-full bg-scout-beige-dark/30 h-2 rounded-full overflow-hidden">
+                                                            <div className="bg-scout-gold h-full rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Payment Method Donut Chart */}
+                            <div className="glass-panel p-5 rounded-2xl shadow-md bg-white/70 flex flex-col justify-between">
+                                <div>
+                                    <h3 className="text-xs font-bold text-scout-navy uppercase tracking-wider mb-3">
+                                        💳 {isAr ? "تصنيف طرق الدفع" : "Payment Method Mix"}
+                                    </h3>
+                                    <div className="flex items-center justify-around pt-2">
+                                        {totalPaidCount === 0 ? (
+                                            <p className="text-xs text-scout-charcoal/40 text-center py-8">{isAr ? "لا توجد مبيعات مؤكدة." : "No confirmed sales yet."}</p>
+                                        ) : (
+                                            <>
+                                                <svg width="100" height="100" viewBox="0 0 100 100" className="transform -rotate-90">
+                                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#E2E8F0" strokeWidth="12" />
+                                                    {/* Cash segment */}
+                                                    {cashPct > 0 && (
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10B981" strokeWidth="12"
+                                                                strokeDasharray={`${cashStroke} ${circ}`} strokeDashoffset={0} />
+                                                    )}
+                                                    {/* Whish segment */}
+                                                    {whishPct > 0 && (
+                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#8B5CF6" strokeWidth="12"
+                                                                strokeDasharray={`${whishStroke} ${circ}`} strokeDashoffset={-cashStroke} />
+                                                    )}
+                                                </svg>
+                                                <div className="space-y-2 text-[10px] font-semibold text-scout-navy">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+                                                        <span>{isAr ? "نقدي (Cash)" : "Cash"}: {cashCount} ({cashPct.toFixed(0)}%)</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="w-2.5 h-2.5 bg-violet-500 rounded-full" />
+                                                        <span>{isAr ? "ويش (Whish)" : "Whish"}: {whishCount} ({whishPct.toFixed(0)}%)</span>
+                                                    </div>
+                                                    <div className="text-center font-bold border-t pt-1 text-[11px]">
+                                                        {isAr ? "الإجمالي:" : "Total PAID:"} {totalPaidCount}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Shuffling Roulette Animation Overlay */}
                         {animationRunning && (
                             <div className="bg-scout-navy/10 border-2 border-dashed border-scout-gold p-8 rounded-2xl text-center space-y-4 animate-pulse">
@@ -721,7 +1104,7 @@ export default function AdminDashboard() {
                                     <input
                                         type="checkbox"
                                         checked={whatsappSettings.sendOnPurchase}
-                                        onChange={(e) => handleToggleWhatsApp("sendOnPurchase", e.target.checked)}
+                                        onChange={(e) => handleSaveWhatsAppSettingsObj({ ...whatsappSettings, sendOnPurchase: e.target.checked })}
                                         className="w-5 h-5 rounded border-scout-beige-dark text-scout-green accent-scout-green focus:ring-scout-green cursor-pointer"
                                     />
                                     <span className="text-xs font-semibold text-scout-navy">
@@ -733,7 +1116,7 @@ export default function AdminDashboard() {
                                     <input
                                         type="checkbox"
                                         checked={whatsappSettings.sendOnGoal}
-                                        onChange={(e) => handleToggleWhatsApp("sendOnGoal", e.target.checked)}
+                                        onChange={(e) => handleSaveWhatsAppSettingsObj({ ...whatsappSettings, sendOnGoal: e.target.checked })}
                                         className="w-5 h-5 rounded border-scout-beige-dark text-scout-green accent-scout-green focus:ring-scout-green cursor-pointer"
                                     />
                                     <span className="text-xs font-semibold text-scout-navy">
@@ -741,6 +1124,55 @@ export default function AdminDashboard() {
                                     </span>
                                 </label>
                             </div>
+
+                            {whatsappSettings.sendOnPurchase && (
+                                <div className="mt-6 border-t pt-4 space-y-4">
+                                    <h3 className="text-xs font-bold text-scout-navy uppercase tracking-wider">
+                                        {isAr ? "تخصيص رسالة الشراء التلقائية" : "Customize Automated Purchase Messages"}
+                                    </h3>
+                                    <p className="text-[10px] text-scout-charcoal/60">
+                                        {isAr 
+                                            ? "يمكنك استخدام المتغيرات التالية: {ticketId} لرقم التذكرة، {buyerName} لاسم المشتري، {teamName} للمنتخب المختار، {trackingLink} لرابط المتابعة."
+                                            : "Available variables: {ticketId} (Ticket number), {buyerName} (Buyer's name), {teamName} (Selected team), {trackingLink} (Tracking URL)."}
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-scout-charcoal/70 uppercase">
+                                                {isAr ? "الرسالة بالعربية" : "Arabic Message Template"}
+                                            </label>
+                                            <textarea
+                                                value={templateArInput}
+                                                onChange={(e) => setTemplateArInput(e.target.value)}
+                                                rows={5}
+                                                className="w-full px-3 py-2 rounded-lg border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy text-xs font-mono"
+                                                placeholder="شكرًا لشرائك تذكرة..."
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-scout-charcoal/70 uppercase">
+                                                {isAr ? "الرسالة بالإنجليزية" : "English Message Template"}
+                                            </label>
+                                            <textarea
+                                                value={templateEnInput}
+                                                onChange={(e) => setTemplateEnInput(e.target.value)}
+                                                rows={5}
+                                                className="w-full px-3 py-2 rounded-lg border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy text-xs font-mono"
+                                                placeholder="Thank you for purchasing..."
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveTemplates}
+                                            disabled={savingTemplates}
+                                            className="px-4 py-2 bg-scout-navy hover:bg-scout-navy-light text-white text-xs font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm"
+                                        >
+                                            {savingTemplates ? (isAr ? "جاري الحفظ..." : "Saving...") : (isAr ? "حفظ القوالب" : "Save Templates")}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Pending Verification Tickets */}
@@ -1022,8 +1454,31 @@ export default function AdminDashboard() {
                 )}
 
                 {/* 3. TICKET REPORTS TAB */}
-                {activeTab === "reporting" && (
-                    <div className="space-y-6 animate-in fade-in duration-200 bg-white/70 p-6 rounded-2xl shadow-md">
+                {activeTab === "reporting" && (() => {
+                    const getTicketEntries = (ticket: any) => {
+                        if (!ticket.team) return 1;
+                        return 1 + (ticket.team.totalWins || 0);
+                    };
+
+                    const filtered = allTickets.filter((ticket) => {
+                        const q = ticketSearchQuery.toLowerCase();
+                        const matchesSearch = 
+                            ticket.buyerName.toLowerCase().includes(q) ||
+                            ticket.buyerPhone.toLowerCase().includes(q) ||
+                            (ticket.id && String(ticket.id).includes(q));
+
+                        const matchesMethod = filterPaymentMethods.length === 0 || filterPaymentMethods.includes(ticket.paymentMethod);
+                        const matchesStatus = filterStatuses.length === 0 || filterStatuses.includes(ticket.paymentStatus);
+                        
+                        const tScoutId = ticket.scoutId || "PUBLIC";
+                        const matchesScout = filterScoutIds.length === 0 || filterScoutIds.includes(tScoutId);
+                        const matchesTeam = filterTeamIds.length === 0 || filterTeamIds.includes(ticket.teamId);
+
+                        return matchesSearch && matchesMethod && matchesStatus && matchesScout && matchesTeam;
+                    });
+
+                    return (
+                        <div className="space-y-6 animate-in fade-in duration-200 bg-white/70 p-6 rounded-2xl shadow-md">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-4">
                             <div>
                                 <h2 className="text-lg font-bold font-display text-scout-navy">
@@ -1048,140 +1503,196 @@ export default function AdminDashboard() {
                                 />
                             </div>
 
-                            <div className="relative w-full sm:w-auto">
+                            <div className="relative w-full sm:w-auto flex flex-wrap gap-2 items-center justify-end">
                                 <button
                                     type="button"
-                                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-scout-navy hover:bg-scout-navy-light text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                                    onClick={() => handleExportCSV(filtered)}
+                                    className="px-4 py-2 bg-scout-green hover:bg-scout-green-light text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
                                 >
-                                    <span>⚙️</span>
-                                    <span>{isAr ? "خيارات التصفية والتجميع" : "Filters & Grouping"}</span>
-                                    {(filterPaymentMethod !== "ALL" || filterStatus !== "ALL" || filterScoutId !== "ALL" || filterTeamId !== "ALL" || groupBy !== "none") && (
-                                        <span className="w-2 h-2 rounded-full bg-scout-gold animate-pulse" />
-                                    )}
+                                    📥 {isAr ? "تصدير CSV" : "Export CSV"}
                                 </button>
 
-                                {showFilterDropdown && (
-                                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-scout-beige-dark p-4 z-50 space-y-4 text-xs">
-                                        <div className="flex justify-between items-center border-b pb-2">
-                                            <span className="font-bold text-scout-navy">{isAr ? "تصفية وتجميع متقدم" : "Advanced Settings"}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setFilterPaymentMethod("ALL");
-                                                    setFilterStatus("ALL");
-                                                    setFilterScoutId("ALL");
-                                                    setFilterTeamId("ALL");
-                                                    setGroupBy("none");
-                                                }}
-                                                className="text-[10px] text-red-500 hover:underline font-bold cursor-pointer"
-                                            >
-                                                {isAr ? "إعادة ضبط" : "Reset All"}
-                                            </button>
-                                        </div>
+                                <div className="relative" ref={dropdownRef}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-scout-navy hover:bg-scout-navy-light text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                                    >
+                                        <span>⚙️</span>
+                                        <span>{isAr ? "خيارات التصفية والتجميع" : "Filters & Grouping"}</span>
+                                        {(filterPaymentMethods.length > 0 || filterStatuses.length > 0 || filterScoutIds.length > 0 || filterTeamIds.length > 0 || groupBy !== "none") && (
+                                            <span className="w-2 h-2 rounded-full bg-scout-gold animate-pulse" />
+                                        )}
+                                    </button>
 
-                                        {/* Filter by Scout */}
-                                        <div className="space-y-1">
-                                            <label className="block font-bold text-scout-charcoal/70">{isAr ? "الكشاف المسؤول:" : "Scout:"}</label>
-                                            <select
-                                                value={filterScoutId}
-                                                onChange={(e) => setFilterScoutId(e.target.value)}
-                                                className="w-full px-2.5 py-1.5 rounded-md border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy"
-                                            >
-                                                <option value="ALL">{isAr ? "جميع الكشافين" : "All Scouts"}</option>
-                                                {scoutsList.map((s) => (
-                                                    <option key={s.id} value={s.id}>{s.fullName}</option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                    {showFilterDropdown && (
+                                        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-scout-beige-dark p-4 z-50 space-y-4 text-xs">
+                                            <div className="flex justify-between items-center border-b pb-2">
+                                                <span className="font-bold text-scout-navy">{isAr ? "تصفية وتجميع متقدم" : "Advanced Settings"}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setFilterPaymentMethods([]);
+                                                        setFilterStatuses([]);
+                                                        setFilterScoutIds([]);
+                                                        setFilterTeamIds([]);
+                                                        setGroupBy("none");
+                                                    }}
+                                                    className="text-[10px] text-red-500 hover:underline font-bold cursor-pointer"
+                                                >
+                                                    {isAr ? "إعادة ضبط" : "Reset All"}
+                                                </button>
+                                            </div>
 
-                                        {/* Filter by Team */}
-                                        <div className="space-y-1">
-                                            <label className="block font-bold text-scout-charcoal/70">{isAr ? "المنتخب المختار:" : "Selected Team:"}</label>
-                                            <select
-                                                value={filterTeamId}
-                                                onChange={(e) => setFilterTeamId(e.target.value)}
-                                                className="w-full px-2.5 py-1.5 rounded-md border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy"
-                                            >
-                                                <option value="ALL">{isAr ? "جميع المنتخبات" : "All Teams"}</option>
-                                                {teams.map((t) => (
-                                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                            {/* Filter by Scout */}
+                                            <div className="space-y-1">
+                                                <label className="block font-bold text-scout-charcoal/70">{isAr ? "تصفية حسب الكشاف:" : "Filter by Scout:"}</label>
+                                                <div className="max-h-28 overflow-y-auto border border-scout-beige-dark bg-white rounded p-1.5 space-y-1">
+                                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={filterScoutIds.includes("PUBLIC")}
+                                                            onChange={() => {
+                                                                if (filterScoutIds.includes("PUBLIC")) {
+                                                                    setFilterScoutIds(filterScoutIds.filter(id => id !== "PUBLIC"));
+                                                                } else {
+                                                                    setFilterScoutIds([...filterScoutIds, "PUBLIC"]);
+                                                                }
+                                                            }}
+                                                            className="w-3.5 h-3.5 rounded text-scout-navy accent-scout-navy cursor-pointer"
+                                                        />
+                                                        <span className="text-[10px] font-bold text-scout-gold">{isAr ? "شراء عام (أونلاين)" : "Public / Online Purchase"}</span>
+                                                    </label>
+                                                    {scoutsList.map((s) => {
+                                                        const checked = filterScoutIds.includes(s.id);
+                                                        return (
+                                                            <label key={s.id} className="flex items-center gap-2 cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={() => {
+                                                                        if (checked) {
+                                                                            setFilterScoutIds(filterScoutIds.filter(id => id !== s.id));
+                                                                        } else {
+                                                                            setFilterScoutIds([...filterScoutIds, s.id]);
+                                                                        }
+                                                                    }}
+                                                                    className="w-3.5 h-3.5 rounded text-scout-navy accent-scout-navy cursor-pointer"
+                                                                />
+                                                                <span className="text-[10px]">{s.fullName}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
 
-                                        {/* Filter by Payment Method */}
-                                        <div className="space-y-1">
-                                            <label className="block font-bold text-scout-charcoal/70">{isAr ? "طريقة الدفع:" : "Payment Method:"}</label>
-                                            <select
-                                                value={filterPaymentMethod}
-                                                onChange={(e) => setFilterPaymentMethod(e.target.value as any)}
-                                                className="w-full px-2.5 py-1.5 rounded-md border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy"
-                                            >
-                                                <option value="ALL">{isAr ? "الكل" : "All Methods"}</option>
-                                                <option value="CASH">{isAr ? "نقدي (Cash)" : "Cash"}</option>
-                                                <option value="WHISH">{isAr ? "ويش (Whish)" : "Whish"}</option>
-                                            </select>
-                                        </div>
+                                            {/* Filter by Team */}
+                                            <div className="space-y-1">
+                                                <label className="block font-bold text-scout-charcoal/70">{isAr ? "تصفية حسب المنتخب:" : "Filter by Team:"}</label>
+                                                <div className="max-h-28 overflow-y-auto border border-scout-beige-dark bg-white rounded p-1.5 space-y-1">
+                                                    {teams.map((t) => {
+                                                        const checked = filterTeamIds.includes(t.id);
+                                                        return (
+                                                            <label key={t.id} className="flex items-center gap-2 cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={() => {
+                                                                        if (checked) {
+                                                                            setFilterTeamIds(filterTeamIds.filter(id => id !== t.id));
+                                                                        } else {
+                                                                            setFilterTeamIds([...filterTeamIds, t.id]);
+                                                                        }
+                                                                    }}
+                                                                    className="w-3.5 h-3.5 rounded text-scout-navy accent-scout-navy cursor-pointer"
+                                                                />
+                                                                <span className="text-[10px]">{t.name}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
 
-                                        {/* Filter by Status */}
-                                        <div className="space-y-1">
-                                            <label className="block font-bold text-scout-charcoal/70">{isAr ? "حالة الدفع:" : "Payment Status:"}</label>
-                                            <select
-                                                value={filterStatus}
-                                                onChange={(e) => setFilterStatus(e.target.value as any)}
-                                                className="w-full px-2.5 py-1.5 rounded-md border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy"
-                                            >
-                                                <option value="ALL">{isAr ? "الكل" : "All Statuses"}</option>
-                                                <option value="PAID">{isAr ? "مؤكد (PAID)" : "PAID"}</option>
-                                                <option value="PENDING">{isAr ? "غير مؤكد / معلق" : "UNPAID / PENDING"}</option>
-                                                <option value="REJECTED">{isAr ? "مرفوض (REJECTED)" : "REJECTED"}</option>
-                                            </select>
-                                        </div>
+                                            {/* Filter by Payment Method */}
+                                            <div className="space-y-1">
+                                                <label className="block font-bold text-scout-charcoal/70">{isAr ? "طريقة الدفع:" : "Payment Methods:"}</label>
+                                                <div className="border border-scout-beige-dark bg-white rounded p-1.5 space-y-1">
+                                                    {["CASH", "WHISH"].map((m) => {
+                                                        const checked = filterPaymentMethods.includes(m);
+                                                        return (
+                                                            <label key={m} className="flex items-center gap-2 cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={() => {
+                                                                        if (checked) {
+                                                                            setFilterPaymentMethods(filterPaymentMethods.filter(item => item !== m));
+                                                                        } else {
+                                                                            setFilterPaymentMethods([...filterPaymentMethods, m]);
+                                                                        }
+                                                                    }}
+                                                                    className="w-3.5 h-3.5 rounded text-scout-navy accent-scout-navy cursor-pointer"
+                                                                />
+                                                                <span className="text-[10px]">{m === "WHISH" ? (isAr ? "ويش (Whish)" : "Whish") : (isAr ? "نقدي (Cash)" : "Cash")}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
 
-                                        {/* Group By */}
-                                        <div className="space-y-1">
-                                            <label className="block font-bold text-scout-charcoal/70">{isAr ? "تجميع حسب:" : "Group By:"}</label>
-                                            <select
-                                                value={groupBy}
-                                                onChange={(e) => setGroupBy(e.target.value as any)}
-                                                className="w-full px-2.5 py-1.5 rounded-md border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy"
-                                            >
-                                                <option value="none">{isAr ? "بدون تجميع" : "None (Individual Tickets)"}</option>
-                                                <option value="buyer">{isAr ? "المشتري" : "Buyer Name/Phone"}</option>
-                                                <option value="scout">{isAr ? "الكشاف" : "Scout"}</option>
-                                                <option value="country">{isAr ? "البلد / المنتخب" : "Country / Team"}</option>
-                                                <option value="paymentMethod">{isAr ? "طريقة الدفع" : "Payment Method"}</option>
-                                            </select>
+                                            {/* Filter by Status */}
+                                            <div className="space-y-1">
+                                                <label className="block font-bold text-scout-charcoal/70">{isAr ? "حالة الدفع:" : "Payment Statuses:"}</label>
+                                                <div className="border border-scout-beige-dark bg-white rounded p-1.5 space-y-1">
+                                                    {["PAID", "PENDING", "REJECTED"].map((st) => {
+                                                        const checked = filterStatuses.includes(st);
+                                                        return (
+                                                            <label key={st} className="flex items-center gap-2 cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={() => {
+                                                                        if (checked) {
+                                                                            setFilterStatuses(filterStatuses.filter(item => item !== st));
+                                                                        } else {
+                                                                            setFilterStatuses([...filterStatuses, st]);
+                                                                        }
+                                                                    }}
+                                                                    className="w-3.5 h-3.5 rounded text-scout-navy accent-scout-navy cursor-pointer"
+                                                                />
+                                                                <span className="text-[10px]">
+                                                                    {st === "PAID" ? (isAr ? "مؤكد (PAID)" : "PAID") : st === "PENDING" ? (isAr ? "غير مؤكد / معلق" : "UNPAID / PENDING") : (isAr ? "مرفوض (REJECTED)" : "REJECTED")}
+                                                                </span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Group By */}
+                                            <div className="space-y-1">
+                                                <label className="block font-bold text-scout-charcoal/70">{isAr ? "تجميع حسب:" : "Group By:"}</label>
+                                                <select
+                                                    value={groupBy}
+                                                    onChange={(e) => setGroupBy(e.target.value as any)}
+                                                    className="w-full px-2.5 py-1.5 rounded-md border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy"
+                                                >
+                                                    <option value="none">{isAr ? "بدون تجميع" : "None (Individual Tickets)"}</option>
+                                                    <option value="buyer">{isAr ? "المشتري" : "Buyer Name/Phone"}</option>
+                                                    <option value="scout">{isAr ? "الكشاف" : "Scout"}</option>
+                                                    <option value="country">{isAr ? "البلد / المنتخب" : "Country / Team"}</option>
+                                                    <option value="paymentMethod">{isAr ? "طريقة الدفع" : "Payment Method"}</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         {/* Grouping Render logic */}
                         <div className="overflow-x-auto">
                             {(() => {
-                                const getTicketEntries = (ticket: any) => {
-                                    if (!ticket.team) return 1;
-                                    return 1 + (ticket.team.totalWins || 0);
-                                };
-
-                                const filtered = allTickets.filter((ticket) => {
-                                    const q = ticketSearchQuery.toLowerCase();
-                                    const matchesSearch = 
-                                        ticket.buyerName.toLowerCase().includes(q) ||
-                                        ticket.buyerPhone.toLowerCase().includes(q) ||
-                                        (ticket.id && String(ticket.id).includes(q));
-
-                                    const matchesMethod = filterPaymentMethod === "ALL" || ticket.paymentMethod === filterPaymentMethod;
-                                    const matchesStatus = filterStatus === "ALL" || ticket.paymentStatus === filterStatus;
-                                    const matchesScout = filterScoutId === "ALL" || ticket.scoutId === filterScoutId;
-                                    const matchesTeam = filterTeamId === "ALL" || ticket.teamId === filterTeamId;
-
-                                    return matchesSearch && matchesMethod && matchesStatus && matchesScout && matchesTeam;
-                                });
-
                                 if (groupBy === "none") {
                                     return (
                                         <table className="w-full text-xs text-left border-collapse">
@@ -1709,7 +2220,8 @@ export default function AdminDashboard() {
                             })()}
                         </div>
                     </div>
-                )}
+                    );
+                })()}
 
                 {/* 4. WHATSAPP LOGS TAB */}
                 {activeTab === "logs" && (
@@ -1841,6 +2353,7 @@ export default function AdminDashboard() {
                                     <thead>
                                         <tr className="border-b text-scout-navy font-bold uppercase">
                                             <th className="py-3 px-4">{isAr ? "الاسم الكامل" : "Full Name"}</th>
+                                            <th className="py-3 px-4">{isAr ? "الفرقة" : "Unit"}</th>
                                             <th className="py-3 px-4">{isAr ? "البريد الإلكتروني" : "Email Address"}</th>
                                             <th className="py-3 px-4">{isAr ? "الدور" : "Role"}</th>
                                             <th className="py-3 px-4 text-right">{isAr ? "إجراءات" : "Actions"}</th>
@@ -1849,7 +2362,7 @@ export default function AdminDashboard() {
                                     <tbody>
                                         {users.length === 0 ? (
                                             <tr>
-                                                <td colSpan={4} className="py-8 text-center text-scout-charcoal/40">
+                                                <td colSpan={5} className="py-8 text-center text-scout-charcoal/40">
                                                     {isAr ? "لا يوجد مستخدمون مسجلون حالياً." : "No registered users found."}
                                                 </td>
                                             </tr>
@@ -1857,6 +2370,15 @@ export default function AdminDashboard() {
                                             users.map((u) => (
                                                 <tr key={u.id} className="border-b hover:bg-white/40 transition">
                                                     <td className="py-3 px-4 font-bold text-scout-navy">{u.fullName}</td>
+                                                    <td className="py-3 px-4">
+                                                        {u.unit ? (
+                                                            <span className="bg-scout-gold/20 text-scout-navy border border-scout-gold/40 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">
+                                                                {u.unit}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-scout-charcoal/40 font-semibold italic text-[11px]">-</span>
+                                                        )}
+                                                    </td>
                                                     <td className="py-3 px-4 text-scout-charcoal/80">{u.email}</td>
                                                     <td className="py-3 px-4">
                                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
@@ -1958,6 +2480,26 @@ export default function AdminDashboard() {
                                     </select>
                                 </div>
 
+                                <div>
+                                    <label className="block text-[10px] font-bold text-scout-charcoal/60 uppercase mb-1">
+                                        {isAr ? "الفرقة (Unit)" : "Scout Unit"}
+                                    </label>
+                                    <select
+                                        value={newUserUnit}
+                                        onChange={(e) => setNewUserUnit(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-lg border bg-white focus:outline-none focus:border-scout-navy text-xs"
+                                    >
+                                        <option value="">{isAr ? "بلا فرقة" : "None / Admin"}</option>
+                                        <option value="jouwele">jouwele</option>
+                                        <option value="mounjidet">mounjidet</option>
+                                        <option value="kechefe">kechefe</option>
+                                        <option value="mourchidet">mourchidet</option>
+                                        <option value="jaramiz">jaramiz</option>
+                                        <option value="zaharat">zaharat</option>
+                                        <option value="iyede">iyede</option>
+                                    </select>
+                                </div>
+
                                 <div className="flex gap-2 pt-2">
                                     {editingUser && (
                                         <button
@@ -2025,13 +2567,20 @@ export default function AdminDashboard() {
                                                         {rankBadge}
                                                     </td>
                                                     <td className="py-3 px-4 font-bold text-scout-navy text-xs">
-                                                        {item.full_name}
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>{item.full_name}</span>
+                                                            {item.tickets_count >= 50 && <span title="Legend Scout">👑</span>}
+                                                            {item.tickets_count >= 25 && item.tickets_count < 50 && <span title="Gold Seller">🥇</span>}
+                                                            {item.tickets_count >= 10 && item.tickets_count < 25 && <span title="Silver Seller">🥈</span>}
+                                                            {item.tickets_count >= 5 && item.tickets_count < 10 && <span title="Bronze Seller">🥉</span>}
+                                                            {item.tickets_count >= 1 && item.tickets_count < 5 && <span title="Rookie Seller">🏆</span>}
+                                                        </div>
                                                     </td>
                                                     <td className="py-3 px-4 text-center font-bold text-scout-charcoal">
                                                         {item.tickets_count}
                                                     </td>
                                                     <td className="py-3 px-4 text-center font-bold text-scout-green-light">
-                                                        ${item.tickets_count * 10} USD
+                                                        ${item.tickets_count * TICKET_PRICE} USD
                                                     </td>
                                                 </tr>
                                             );
@@ -2040,6 +2589,319 @@ export default function AdminDashboard() {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                )}
+
+                {/* 7. TREASURY & CASH MANAGEMENT TAB */}
+                {activeTab === "treasury" && (
+                    <div className="space-y-6 animate-in fade-in duration-200">
+                        {/* Header */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-xl font-bold text-scout-navy">💰 Treasury & Cash Management</h2>
+                                <p className="text-sm text-scout-charcoal/60 mt-0.5">
+                                    Track all cash collected by scouts. Select tickets and confirm handovers to keep records clean.
+                                </p>
+                            </div>
+                            <button
+                                onClick={loadTreasuryData}
+                                disabled={loadingTreasury}
+                                className="flex items-center gap-2 px-4 py-2 bg-scout-navy text-white rounded-xl text-sm font-semibold hover:bg-opacity-90 transition disabled:opacity-50"
+                            >
+                                {loadingTreasury ? "🔄 Loading..." : "🔄 Refresh"}
+                            </button>
+                        </div>
+
+                        {/* Full Financial Overview — WHISH + CASH */}
+                        {financialSummary && !loadingTreasury && (
+                            <div className="space-y-3">
+                                {/* Row 1: Revenue Overview */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    <div className="bg-gradient-to-br from-scout-navy/5 to-scout-navy/10 rounded-xl border border-scout-navy/15 shadow-sm p-3 sm:col-span-1 col-span-2 text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-scout-charcoal/50 font-semibold mb-1">💰 Total Revenue (PAID)</div>
+                                        <div className="text-2xl font-bold text-scout-navy">${financialSummary.totalRevenue}</div>
+                                        <div className="text-[10px] text-scout-charcoal/40 mt-0.5">{financialSummary.cashPaidCount + financialSummary.whishPaidCount} tickets confirmed</div>
+                                    </div>
+                                    <div className="bg-purple-50 rounded-xl border border-purple-200 shadow-sm p-3 text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-purple-600/70 font-semibold mb-1">💳 Whish Revenue</div>
+                                        <div className="text-xl font-bold text-purple-700">${financialSummary.whishRevenue}</div>
+                                        <div className="text-[10px] text-purple-500/60 mt-0.5">{financialSummary.whishPaidCount} tickets</div>
+                                    </div>
+                                    <div className="bg-scout-navy/5 rounded-xl border border-scout-navy/15 shadow-sm p-3 text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-scout-charcoal/50 font-semibold mb-1">💵 Cash Revenue</div>
+                                        <div className="text-xl font-bold text-scout-navy">${financialSummary.cashRevenue}</div>
+                                        <div className="text-[10px] text-scout-charcoal/40 mt-0.5">{financialSummary.cashPaidCount} tickets</div>
+                                    </div>
+                                </div>
+
+                                {/* Row 2: WHISH Pipeline */}
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="bg-amber-50 rounded-xl border border-amber-200 shadow-sm p-3 text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-amber-600/70 font-semibold mb-1">⏳ Whish Pending</div>
+                                        <div className="text-xl font-bold text-amber-600">${financialSummary.whishPendingValue}</div>
+                                        <div className="text-[10px] text-amber-500/60 mt-0.5">{financialSummary.whishPendingCount} awaiting verification</div>
+                                    </div>
+                                    <div className="bg-red-50 rounded-xl border border-red-200 shadow-sm p-3 text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-red-500/70 font-semibold mb-1">❌ Whish Rejected</div>
+                                        <div className="text-xl font-bold text-red-500">{financialSummary.whishRejectedCount}</div>
+                                        <div className="text-[10px] text-red-400/60 mt-0.5">tickets rejected</div>
+                                    </div>
+                                    <div className="bg-blue-50 rounded-xl border border-blue-200 shadow-sm p-3 text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-blue-600/70 font-semibold mb-1">📊 Settlement Rate</div>
+                                        <div className="text-xl font-bold text-blue-600">{financialSummary.settlementRate}%</div>
+                                        <div className="text-[10px] text-blue-500/60 mt-0.5">cash handed over</div>
+                                    </div>
+                                </div>
+
+                                {/* Row 3: Cash Settlement */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-amber-50 rounded-xl border border-amber-200 shadow-sm p-3 text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-amber-600/70 font-semibold mb-1">🕐 Cash Outstanding</div>
+                                        <div className="text-xl font-bold text-amber-600">${financialSummary.cashOutstanding}</div>
+                                        <div className="text-[10px] text-amber-500/60 mt-0.5">{financialSummary.cashPendingHandoverCount} tickets with scouts</div>
+                                    </div>
+                                    <div className="bg-green-50 rounded-xl border border-green-200 shadow-sm p-3 text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-green-600/70 font-semibold mb-1">✅ Cash Settled</div>
+                                        <div className="text-xl font-bold text-green-600">${financialSummary.cashSettledValue}</div>
+                                        <div className="text-[10px] text-green-500/60 mt-0.5">{financialSummary.cashSettledCount} tickets handed over</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {loadingTreasury ? (
+                            <div className="text-center py-16 text-scout-charcoal/40">Loading treasury data...</div>
+                        ) : (
+                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                                {/* Scout Ledger Table — left panel */}
+                                <div className="lg:col-span-2 bg-white/70 rounded-2xl shadow-md overflow-hidden">
+                                    <div className="px-4 py-3 bg-scout-navy/5 border-b border-scout-navy/10">
+                                        <h3 className="font-bold text-scout-navy text-sm">Scout Cash Ledger</h3>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="bg-scout-navy/5 text-scout-charcoal/60 uppercase text-[10px] tracking-wider">
+                                                    <th className="py-2 px-3 text-left">Scout</th>
+                                                    <th className="py-2 px-3 text-right">Total</th>
+                                                    <th className="py-2 px-3 text-right text-amber-600">Pending</th>
+                                                    <th className="py-2 px-3 text-right text-green-600">Settled</th>
+                                                    <th className="py-2 px-3"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {treasuryScouts.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={5} className="py-8 text-center text-scout-charcoal/40">
+                                                            No cash ticket data found.
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    treasuryScouts.map((scout: any) => (
+                                                        <tr
+                                                            key={scout.id}
+                                                            className={`border-b transition cursor-pointer ${
+                                                                selectedTreasuryScout?.id === scout.id
+                                                                    ? "bg-scout-green-light/10 border-l-4 border-l-scout-green-light"
+                                                                    : "hover:bg-white/60"
+                                                            }`}
+                                                            onClick={() => {
+                                                                setSelectedTreasuryScout(scout);
+                                                                setScoutTickets([]);
+                                                                setScoutTicketsNextCursor(null);
+                                                                setSelectedSettleTicketIds([]);
+                                                                loadDrillDown(scout.id);
+                                                            }}
+                                                        >
+                                                            <td className="py-2.5 px-3 font-semibold text-scout-navy">
+                                                                <div>{scout.fullName}</div>
+                                                                {scout.unit && (
+                                                                    <span className="text-[10px] text-scout-charcoal/50 bg-scout-navy/5 px-1.5 py-0.5 rounded-full mt-0.5 inline-block">
+                                                                        {scout.unit}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-right font-bold">${scout.totalCashCollected}</td>
+                                                            <td className="py-2.5 px-3 text-right font-bold text-amber-600">
+                                                                {scout.pendingCashHandover > 0 ? `$${scout.pendingCashHandover}` : "—"}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-right font-bold text-green-600">
+                                                                {scout.settledCash > 0 ? `$${scout.settledCash}` : "—"}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center">
+                                                                {scout.pendingCashHandover > 0 && (
+                                                                    <span className="w-2 h-2 inline-block rounded-full bg-amber-400"></span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                            {treasuryScouts.length > 0 && (
+                                                <tfoot className="bg-scout-navy/5 text-xs font-bold border-t-2">
+                                                    <tr>
+                                                        <td className="py-2.5 px-3 text-scout-navy">TOTAL</td>
+                                                        <td className="py-2.5 px-3 text-right">
+                                                            ${treasuryScouts.reduce((s: number, sc: any) => s + sc.totalCashCollected, 0)}
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-right text-amber-600">
+                                                            ${treasuryScouts.reduce((s: number, sc: any) => s + sc.pendingCashHandover, 0)}
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-right text-green-600">
+                                                            ${treasuryScouts.reduce((s: number, sc: any) => s + sc.settledCash, 0)}
+                                                        </td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            )}
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Right panel — drill-down for selected scout */}
+                                <div className="lg:col-span-3">
+                                    {!selectedTreasuryScout ? (
+                                        <div className="flex flex-col items-center justify-center h-full min-h-[300px] bg-white/40 rounded-2xl border-2 border-dashed border-scout-navy/20 text-scout-charcoal/40 text-sm gap-2">
+                                            <span className="text-4xl">👈</span>
+                                            <span>Select a scout to view their cash tickets</span>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-white/70 rounded-2xl shadow-md overflow-hidden">
+                                            {/* Scout header */}
+                                            <div className="px-5 py-4 bg-gradient-to-r from-scout-navy/10 to-transparent border-b border-scout-navy/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                <div>
+                                                    <h3 className="font-bold text-scout-navy">
+                                                        {selectedTreasuryScout.fullName}
+                                                        {selectedTreasuryScout.unit && (
+                                                            <span className="ml-2 text-xs font-normal text-scout-charcoal/50 bg-scout-navy/10 px-2 py-0.5 rounded-full">
+                                                                {selectedTreasuryScout.unit}
+                                                            </span>
+                                                        )}
+                                                    </h3>
+                                                    <div className="flex gap-4 mt-1 text-xs">
+                                                        <span className="text-scout-charcoal/60">Total: <strong>${selectedTreasuryScout.totalCashCollected}</strong></span>
+                                                        <span className="text-amber-600">Pending: <strong>${selectedTreasuryScout.pendingCashHandover}</strong></span>
+                                                        <span className="text-green-600">Settled: <strong>${selectedTreasuryScout.settledCash}</strong></span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {selectedSettleTicketIds.length > 0 && (
+                                                        <button
+                                                            onClick={handleSettleCash}
+                                                            disabled={settlingCash}
+                                                            className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition disabled:opacity-50"
+                                                        >
+                                                            {settlingCash ? "⏳ Settling..." : `✅ Confirm Handover (${selectedSettleTicketIds.length})`}
+                                                        </button>
+                                                    )}
+                                                    {scoutTickets.filter((t: any) => !t.cashSettled).length > 0 && (
+                                                        <button
+                                                            onClick={() => {
+                                                                const pendingIds = scoutTickets
+                                                                    .filter((t: any) => !t.cashSettled)
+                                                                    .map((t: any) => t.id);
+                                                                setSelectedSettleTicketIds(pendingIds);
+                                                            }}
+                                                            className="flex items-center gap-1 px-3 py-2 bg-amber-100 text-amber-800 rounded-xl text-xs font-semibold hover:bg-amber-200 transition"
+                                                        >
+                                                            Select All Pending
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Ticket list */}
+                                            <div className="overflow-y-auto max-h-[460px]">
+                                                <table className="w-full text-xs">
+                                                    <thead className="sticky top-0 bg-white z-10">
+                                                        <tr className="bg-scout-navy/5 text-scout-charcoal/60 uppercase text-[10px] tracking-wider border-b">
+                                                            <th className="py-2 px-3 text-center w-8">✓</th>
+                                                            <th className="py-2 px-3 text-left">Ticket #</th>
+                                                            <th className="py-2 px-3 text-left">Buyer</th>
+                                                            <th className="py-2 px-3 text-center">Date</th>
+                                                            <th className="py-2 px-3 text-center">Amount</th>
+                                                            <th className="py-2 px-3 text-center">Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {scoutTickets.length === 0 ? (
+                                                            <tr>
+                                                                <td colSpan={6} className="py-8 text-center text-scout-charcoal/40">
+                                                                    No cash tickets found for this scout.
+                                                                </td>
+                                                            </tr>
+                                                        ) : (
+                                                            scoutTickets.map((ticket: any) => {
+                                                                const isPending = !ticket.cashSettled;
+                                                                const isSelected = selectedSettleTicketIds.includes(ticket.id);
+                                                                return (
+                                                                    <tr
+                                                                        key={ticket.id}
+                                                                        className={`border-b transition ${
+                                                                            ticket.cashSettled
+                                                                                ? "opacity-50"
+                                                                                : isSelected
+                                                                                ? "bg-green-50"
+                                                                                : "hover:bg-white/60"
+                                                                        } ${isPending ? "cursor-pointer" : ""}`}
+                                                                        onClick={() => {
+                                                                            if (!isPending) return;
+                                                                            setSelectedSettleTicketIds((prev) =>
+                                                                                isSelected
+                                                                                    ? prev.filter((id) => id !== ticket.id)
+                                                                                    : [...prev, ticket.id]
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <td className="py-2 px-3 text-center">
+                                                                            {isPending ? (
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={isSelected}
+                                                                                    onChange={() => {}}
+                                                                                    className="w-3.5 h-3.5 accent-green-600 cursor-pointer"
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                />
+                                                                            ) : (
+                                                                                <span className="text-green-600">✅</span>
+                                                                            )}
+                                                                        </td>
+                                                                        <td className="py-2 px-3 font-mono font-bold text-scout-navy">#{ticket.id}</td>
+                                                                        <td className="py-2 px-3">
+                                                                            <div className="font-semibold text-scout-charcoal text-xs">{ticket.buyerName || "—"}</div>
+                                                                            {ticket.buyerPhone && (
+                                                                                <div className="text-[10px] text-scout-charcoal/50 font-mono mt-0.5">{ticket.buyerPhone}</div>
+                                                                            )}
+                                                                        </td>
+                                                                        <td className="py-2 px-3 text-center text-scout-charcoal/60">
+                                                                            {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : "—"}
+                                                                        </td>
+                                                                        <td className="py-2 px-3 text-center font-bold text-scout-navy">${TICKET_PRICE}</td>
+                                                                        <td className="py-2 px-3 text-center">
+                                                                            {ticket.cashSettled ? (
+                                                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold text-[10px]">
+                                                                                    Settled ✅
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold text-[10px]">
+                                                                                    Pending 💵
+                                                                                </span>
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {loadingDrill && (<div className="py-3 text-center text-xs text-scout-charcoal/40 animate-pulse">Loading tickets...</div>)}
+                                            {scoutTicketsHasMore && !loadingDrill && selectedTreasuryScout && (<div className="py-3 text-center border-t"><button onClick={() => loadDrillDown(selectedTreasuryScout.id, true)} className="text-xs text-scout-navy font-semibold hover:underline">↓ Load more tickets</button></div>)}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </main>

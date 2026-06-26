@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { jwtVerify } from "jose";
 import { getWhatsAppSettings } from "@/lib/whatsapp-settings";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { TICKET_PRICE } from "@/lib/constants";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-for-goal-rush-fundraising-portal"
@@ -38,6 +39,15 @@ export async function GET(request: Request) {
       where: { scoutId: userId, paymentStatus: "PAID" },
     });
 
+    const pendingCashCount = await prisma.ticket.count({
+      where: {
+        scoutId: userId,
+        paymentMethod: "CASH",
+        paymentStatus: "PAID",
+        cashSettled: false,
+      },
+    });
+
     // 2. Fetch total tickets sold (only PAID)
     const totalTicketsCount = await prisma.ticket.count({
       where: { paymentStatus: "PAID" },
@@ -48,6 +58,7 @@ export async function GET(request: Request) {
       select: {
         id: true,
         fullName: true,
+        unit: true,
         tickets: {
           where: { paymentStatus: "PAID" },
           select: { id: true },
@@ -59,6 +70,7 @@ export async function GET(request: Request) {
       .map((item: any) => ({
         id: item.id,
         full_name: item.fullName,
+        unit: item.unit,
         tickets_count: item.tickets.length,
       }))
       .filter((item: any) => item.tickets_count > 0)
@@ -84,6 +96,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       stats: {
         ticketsSold,
+        pendingCashCount,
+        pendingCashAmount: pendingCashCount * TICKET_PRICE,
       },
       totalTicketsCount,
       leaderboard,
@@ -144,8 +158,19 @@ export async function POST(request: Request) {
           const origin = request.headers.get("origin") || new URL(request.url).origin;
           const trackingLink = `${origin}/en/scout-world-cup/standings?phone=${encodeURIComponent(buyerPhone)}`;
           
-          const msgAr = `شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة رقم #${ticket.id} لدعم فوج مار يوحنا مرقس - كشافة الأرز! فريقك المختار هو ${team.name}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذكرتك ونقاط فريقك من هنا:\n${trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-          const msgEn = `Thank you for purchasing World Cup Scout Cup Draw ticket #${ticket.id} supporting Scouts des Cèdres Saint Jean Marc! Your selected team is ${team.name}. Every win they achieve grants you an extra entry in the final raffle! ⚽️\n\nTrack your ticket and team entries here:\n${trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+          const templateAr = settings.templatePurchaseAr || "شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة رقم #{ticketId} لدعم فوج مار يوحنا مرقس - كشافة الأرز! فريقك المختار هو {teamName}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذكرتك ونقاط فريقك من هنا:\n{trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/";
+          const templateEn = settings.templatePurchaseEn || "Thank you for purchasing World Cup Scout Cup Draw ticket #{ticketId} supporting Scouts des Cèdres Saint Jean Marc! Your selected team is {teamName}. Every win they achieve grants you an extra entry in the final raffle! ⚽️\n\nTrack your ticket and team entries here:\n{trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/";
+
+          const interpolate = (tmpl: string) => {
+            return tmpl
+              .replace(/{ticketId}/g, String(ticket.id))
+              .replace(/{buyerName}/g, buyerName)
+              .replace(/{teamName}/g, team.name)
+              .replace(/{trackingLink}/g, trackingLink);
+          };
+
+          const msgAr = interpolate(templateAr);
+          const msgEn = interpolate(templateEn);
           
           const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
           const sent = await sendWhatsAppMessage(buyerPhone, fullMsg);

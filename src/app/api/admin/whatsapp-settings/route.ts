@@ -40,13 +40,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { sendOnPurchase, sendOnGoal } = await request.json();
+    const { sendOnPurchase, sendOnGoal, templatePurchaseAr, templatePurchaseEn } = await request.json();
     if (sendOnPurchase === undefined || sendOnGoal === undefined) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    await saveWhatsAppSettings({ sendOnPurchase, sendOnGoal });
-    return NextResponse.json({ success: true, settings: { sendOnPurchase, sendOnGoal } });
+    await saveWhatsAppSettings({ 
+      sendOnPurchase, 
+      sendOnGoal, 
+      templatePurchaseAr, 
+      templatePurchaseEn 
+    });
+    return NextResponse.json({ 
+      success: true, 
+      settings: { sendOnPurchase, sendOnGoal, templatePurchaseAr, templatePurchaseEn } 
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to save settings" }, { status: 500 });
   }

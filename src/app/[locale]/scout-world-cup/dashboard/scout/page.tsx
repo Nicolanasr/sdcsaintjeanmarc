@@ -172,6 +172,28 @@ export default function ScoutDashboard() {
         return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(fullMsg)}`;
     };
 
+    const getMilestones = (ticketsSold: number) => {
+        const milestonesDef = [
+            { id: "rookie", nameAr: "بائع مبتدئ 🏆", nameEn: "Rookie Seller 🏆", target: 1, descAr: "بيع أول تذكرة مؤكدة", descEn: "Sell your first confirmed ticket" },
+            { id: "bronze", nameAr: "نادي برونزي 🥉", nameEn: "Bronze Club 🥉", target: 5, descAr: "بيع 5 تذاكر مؤكدة", descEn: "Sell 5 confirmed tickets" },
+            { id: "silver", nameAr: "نادي فضي 🥈", nameEn: "Silver Club 🥈", target: 10, descAr: "بيع 10 تذاكر مؤكدة", descEn: "Sell 10 confirmed tickets" },
+            { id: "gold", nameAr: "نادي ذهبي 🥇", nameEn: "Gold Club 🥇", target: 25, descAr: "بيع 25 تذكرة مؤكدة", descEn: "Sell 25 confirmed tickets" },
+            { id: "legend", nameAr: "كشاف أسطوري 👑", nameEn: "Legend Scout 👑", target: 50, descAr: "بيع 50 تذكرة مؤكدة", descEn: "Sell 50 confirmed tickets" }
+        ];
+
+        return milestonesDef.map((m) => {
+            const unlocked = ticketsSold >= m.target;
+            const progress = Math.min(100, (ticketsSold / m.target) * 100);
+            return {
+                ...m,
+                unlocked,
+                progress
+            };
+        });
+    };
+
+    const milestones = getMilestones(stats.ticketsSold);
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-scout-beige">
@@ -188,8 +210,13 @@ export default function ScoutDashboard() {
                     <h1 className="text-sm sm:text-base font-bold font-display text-scout-gold leading-tight">
                         {isAr ? "بوابة المبيعات" : "Sales Dashboard"}
                     </h1>
-                    <p className="text-[10px] sm:text-xs text-white/60 leading-none mt-0.5">
-                        {profile?.fullName}
+                    <p className="text-[10px] sm:text-xs text-white/60 leading-none mt-0.5 flex items-center gap-1.5">
+                        <span>{profile?.fullName}</span>
+                        {profile?.unit && (
+                            <span className="bg-scout-gold/25 text-scout-gold border border-scout-gold/40 text-[9px] uppercase px-1.5 py-0.5 rounded font-bold">
+                                {profile.unit}
+                            </span>
+                        )}
                     </p>
                 </div>
                 <div className="flex gap-2 items-center">
@@ -210,7 +237,7 @@ export default function ScoutDashboard() {
                 </div>
             </header>
 
-            <main className="max-w-6xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            <main className="max-w-6xl mx-auto md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                 {/* Left Side: Summary and Leaderboard */}
                 <div className="space-y-6 lg:col-span-1 order-2 lg:order-1">
                     {/* Summary Card */}
@@ -218,15 +245,60 @@ export default function ScoutDashboard() {
                         <h2 className="text-lg font-bold mb-4 font-display text-scout-navy">
                             {isAr ? "إحصاءات المبيعات الخاصة بك" : "Your Sales Performance"}
                         </h2>
-                        <div className="flex justify-center">
-                            <div className="bg-scout-beige-dark/50 p-6 rounded-xl text-center w-full max-w-xs">
-                                <span className="block text-3xl font-extrabold text-scout-navy">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-scout-beige-dark/50 p-4 rounded-xl text-center">
+                                <span className="block text-2xl font-extrabold text-scout-navy">
                                     {stats.ticketsSold}
                                 </span>
-                                <span className="text-sm text-scout-charcoal/60">
+                                <span className="text-xs text-scout-charcoal/60">
                                     {isAr ? "تذكرة مباعة" : "Tickets Sold"}
                                 </span>
                             </div>
+                            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl text-center flex flex-col justify-center">
+                                <span className="block text-2xl font-extrabold text-amber-700">
+                                    ${(stats as any).pendingCashAmount ?? 0}
+                                </span>
+                                <span className="text-[10px] text-amber-700/80 font-bold leading-tight">
+                                    {isAr ? "كاش مستحق للتسليم" : "Pending Handover"}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Achievements Card */}
+                    <div className="glass-panel p-6 rounded-2xl shadow-md space-y-4">
+                        <h2 className="text-lg font-bold font-display text-scout-navy">
+                            {isAr ? "إنجازاتك وكؤوسك" : "Your Achievements & Milestones"}
+                        </h2>
+                        <div className="space-y-4">
+                            {milestones.map((m) => (
+                                <div key={m.id} className={`p-3 rounded-xl border transition-all ${m.unlocked
+                                        ? "bg-emerald-500/5 border-emerald-500/20"
+                                        : "bg-scout-beige-dark/20 border-scout-beige-dark/40 opacity-70"
+                                    }`}>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className={`text-xs font-bold ${m.unlocked ? "text-emerald-700" : "text-scout-navy"}`}>
+                                                {isAr ? m.nameAr : m.nameEn}
+                                            </h3>
+                                            <p className="text-[10px] text-scout-charcoal/60">
+                                                {isAr ? m.descAr : m.descEn}
+                                            </p>
+                                        </div>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.unlocked ? "bg-emerald-100 text-emerald-800" : "bg-scout-beige-dark/40 text-scout-navy"
+                                            }`}>
+                                            {m.unlocked ? (isAr ? "مكتمل" : "Unlocked") : `${stats.ticketsSold} / ${m.target}`}
+                                        </span>
+                                    </div>
+                                    {/* Progress Bar */}
+                                    <div className="mt-2.5 space-y-1">
+                                        <div className="w-full bg-scout-beige-dark/30 h-1.5 rounded-full overflow-hidden">
+                                            <div className={`h-full rounded-full transition-all duration-500 ${m.unlocked ? "bg-emerald-500" : "bg-scout-gold"
+                                                }`} style={{ width: `${m.progress}%` }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
@@ -250,8 +322,18 @@ export default function ScoutDashboard() {
                                             <span className="font-bold text-scout-navy">
                                                 #{index + 1}
                                             </span>
-                                            <span className={isCurrentUser ? "font-bold text-scout-navy" : ""}>
-                                                {entry.full_name}
+                                            <span className={isCurrentUser ? "font-bold text-scout-navy flex flex-wrap items-center gap-1.5" : "flex flex-wrap items-center gap-1.5"}>
+                                                <span>{entry.full_name}</span>
+                                                {(entry as any).unit && (
+                                                    <span className="bg-scout-navy/10 text-scout-navy text-[9px] uppercase px-1 py-0.2 rounded font-bold">
+                                                        {(entry as any).unit}
+                                                    </span>
+                                                )}
+                                                {entry.tickets_count >= 50 && <span title="Legend Scout">👑</span>}
+                                                {entry.tickets_count >= 25 && entry.tickets_count < 50 && <span title="Gold Seller">🥇</span>}
+                                                {entry.tickets_count >= 10 && entry.tickets_count < 25 && <span title="Silver Seller">🥈</span>}
+                                                {entry.tickets_count >= 5 && entry.tickets_count < 10 && <span title="Bronze Seller">🥉</span>}
+                                                {entry.tickets_count >= 1 && entry.tickets_count < 5 && <span title="Rookie Seller">🏆</span>}
                                             </span>
                                         </div>
                                         <span className="font-semibold text-scout-green-light">

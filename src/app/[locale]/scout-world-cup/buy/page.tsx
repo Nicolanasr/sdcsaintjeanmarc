@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Megaphone, Trophy, Phone, User, Globe, ChevronRight } from "lucide-react";
 import { FaFacebookF, FaInstagram, FaWhatsapp, FaTiktok } from "react-icons/fa6";
+import { TICKET_PRICE, TICKET_PRICE_DISPLAY } from "@/lib/constants";
 
 interface Team {
     id: string;
@@ -210,9 +211,9 @@ export default function BuyTicketPage() {
                 </div>
             </header>
 
-            <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
+            <main className="max-w-xl mx-auto py-2 space-y-6">
                 {/* Intro Promo Card */}
-                <div className="glass-panel p-5 rounded-2xl shadow-md bg-white border border-scout-gold/20 text-center space-y-3">
+                <div className="glass-panel p-5 rounded-xl shadow-md bg-white border border-scout-gold/20 text-center space-y-3">
                     <h3 className="text-base font-bold font-display text-scout-navy flex items-center justify-center gap-2">
                         <Trophy className="w-5 h-5 text-scout-gold" />
                         <span>{isAr ? "ادعم كشفتنا واربح!" : "Support Our Scout Group & Win!"}</span>
@@ -220,7 +221,7 @@ export default function BuyTicketPage() {
                     <p className="text-xs text-scout-charcoal/80 leading-relaxed">
                         {isAr
                             ? "اشترِ تذكرتك الآن مقابل ٥ دولارات فقط (أو ما يعادلها عبر Whish Pay). كل تذكرة مضمونة للدخول في السحب النهائي ولها فرصة إضافية مع كل فوز يحققه منتخبك!"
-                            : "Get your ticket today for only $5.00 via Whish Pay. Each ticket guarantees you a raffle entry, plus bonus entries for every match victory your chosen team achieves!"}
+                            : `Get your ticket today for only ${TICKET_PRICE_DISPLAY} via Whish Pay. Each ticket guarantees you a raffle entry, plus bonus entries for every match victory your chosen team achieves!`}
                     </p>
                 </div>
 
@@ -318,10 +319,10 @@ export default function BuyTicketPage() {
                                             }
                                         }}
                                         className={`flex items-center justify-between p-3 transition cursor-pointer select-none ${t.isEliminated
-                                                ? "opacity-40 cursor-not-allowed bg-transparent"
-                                                : isSelected
-                                                    ? "bg-scout-gold/20 border-l-4 border-scout-gold"
-                                                    : "hover:bg-white/60 bg-transparent"
+                                            ? "opacity-40 cursor-not-allowed bg-transparent"
+                                            : isSelected
+                                                ? "bg-scout-gold/20 border-l-4 border-scout-gold"
+                                                : "hover:bg-white/60 bg-transparent"
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
@@ -390,7 +391,7 @@ export default function BuyTicketPage() {
                     <div className="bg-scout-gold/5 border border-scout-gold/30 p-4 rounded-xl space-y-2">
                         <div className="flex justify-between items-center text-sm font-bold text-scout-navy">
                             <span>{isAr ? "سعر التذاكر الإجمالي:" : "Total Tickets Price:"}</span>
-                            <span className="text-scout-green-light text-base">${(5 * quantity).toFixed(2)}</span>
+                            <span className="text-scout-green-light text-base">${(TICKET_PRICE * quantity).toFixed(2)}</span>
                         </div>
                         <div className="text-[10px] text-scout-charcoal/70">
                             ⚡ {isAr

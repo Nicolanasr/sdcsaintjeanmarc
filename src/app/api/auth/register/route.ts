@@ -9,7 +9,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 export async function POST(request: Request) {
   try {
-    const { email, password, fullName, role } = await request.json();
+    const { email, password, fullName, role, unit } = await request.json();
 
     if (!email || !password || !fullName) {
       return NextResponse.json(
@@ -40,6 +40,7 @@ export async function POST(request: Request) {
         password: hashedPassword,
         fullName,
         role: role === "admin" ? "admin" : "scout",
+        unit: unit ? String(unit) : null,
       },
     });
 
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
         email: profile.email,
         fullName: profile.fullName,
         role: profile.role,
+        unit: profile.unit,
       },
     });
 

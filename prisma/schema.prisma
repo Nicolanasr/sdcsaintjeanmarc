@@ -12,6 +12,7 @@ model Profile {
   password  String
   fullName  String
   role      String   @default("scout") // "scout" or "admin"
+  unit      String?  // "jouwele", "mounjidet", "kechefe", "mourchidet", "jaramiz", "zaharat", "iyede"
   tickets   Ticket[]
   createdAt DateTime @default(now())
 }
@@ -38,6 +39,7 @@ model Ticket {
   paymentStatus String @default("PAID")
   paymentMethod String @default("CASH")
   whishTransactionId String?
+  cashSettled Boolean @default(false)
 }
 
 model WhatsAppLog {

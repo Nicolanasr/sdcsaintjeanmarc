@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ShieldCheck, ArrowLeft, Landmark, Copy, Check, ExternalLink } from "lucide-react";
+import { TICKET_PRICE } from "@/lib/constants";
 
 export default function WhishGatewayPage() {
     const searchParams = useSearchParams();
@@ -74,7 +75,7 @@ export default function WhishGatewayPage() {
     };
 
     const handleCopyAmount = () => {
-        navigator.clipboard.writeText((5 * ticketIds.length).toString());
+        navigator.clipboard.writeText((TICKET_PRICE * ticketIds.length).toString());
         setCopiedAmount(true);
         setTimeout(() => setCopiedAmount(false), 2000);
     };
@@ -179,7 +180,7 @@ export default function WhishGatewayPage() {
         );
     }
 
-    const totalAmount = 5 * ticketIds.length;
+    const totalAmount = TICKET_PRICE * ticketIds.length;
 
     return (
         <div className="min-h-screen bg-emerald-950 text-white flex flex-col items-center justify-center p-4 font-sans">

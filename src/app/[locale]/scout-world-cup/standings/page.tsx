@@ -127,7 +127,7 @@ function StandingsContent() {
                 </div>
             </header>
 
-            <main className="max-w-4xl mx-auto px-3 py-6 sm:px-6 space-y-6">
+            <main className="max-w-4xl mx-auto  sm:px-6 space-y-6">
                 {/* Social Media & Follow Rule Card */}
                 <div className="glass-panel p-4 sm:p-6 rounded-2xl shadow-md bg-white border border-scout-gold/20 text-center space-y-4">
                     <div className="max-w-xl mx-auto">
