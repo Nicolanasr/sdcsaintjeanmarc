@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jwtVerify } from "jose";
 import { getWhatsAppSettings } from "@/lib/whatsapp-settings";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, sendMatchWinWhatsAppSummary } from "@/lib/whatsapp";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-for-goal-rush-fundraising-portal"
@@ -90,17 +90,28 @@ export async function PATCH(request: Request) {
     if (totalWins !== undefined && totalWins > currentTeam.totalWins) {
       try {
         const settings = await getWhatsAppSettings();
-        if (settings.sendOnGoal) { // Keep using the sendOnGoal toggle setting for simplicity or general matches
+        if (settings.sendOnGoal) { 
           const tickets = await prisma.ticket.findMany({
-            where: { teamId: id },
+            where: { teamId: id, paymentStatus: "PAID" },
+            select: { buyerPhone: true, buyerName: true },
           });
 
-          for (const ticket of tickets) {
-            const msgAr = `المنتخب الذي اخترته (${team.name}) قد فاز في مباراته! ⚽️ إجمالي انتصاراتهم الآن هو ${totalWins}. لقد حصلت على بطاقة إضافية في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-            const msgEn = `Your selected team (${team.name}) has won their match! ⚽️ Their total wins are now ${totalWins}. You have earned +1 bonus entry in the final raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-            const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
+          // Group by unique phone number
+          const uniqueBuyers = new Map<string, string>();
+          tickets.forEach((ticket) => {
+            const phone = ticket.buyerPhone.trim();
+            if (!uniqueBuyers.has(phone)) {
+              uniqueBuyers.set(phone, ticket.buyerName);
+            }
+          });
 
-            await sendWhatsAppMessage(ticket.buyerPhone, fullMsg);
+          for (const [phone, name] of uniqueBuyers.entries()) {
+            await sendMatchWinWhatsAppSummary(phone, name, [{
+              id: team.id,
+              name: team.name,
+              flagUrl: team.flagUrl,
+              totalWins: totalWins,
+            }]);
           }
         }
       } catch (wsErr) {

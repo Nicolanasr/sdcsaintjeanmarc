@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jwtVerify } from "jose";
 import { getWhatsAppSettings } from "@/lib/whatsapp-settings";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, sendMatchWinWhatsAppSummary } from "@/lib/whatsapp";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-for-goal-rush-fundraising-portal"
@@ -77,11 +77,13 @@ export async function GET(request: Request) {
       }
     });
 
+    const winningTeams: any[] = [];
+
     // Update teams in Prisma database
     const updates = Object.entries(winsMap).map(async ([teamId, wins]) => {
       const team = await prisma.team.findUnique({
         where: { id: teamId },
-        select: { id: true, name: true, totalWins: true },
+        select: { id: true, name: true, totalWins: true, flagUrl: true },
       });
 
       if (team) {
@@ -93,24 +95,12 @@ export async function GET(request: Request) {
         });
 
         if (winsDiff > 0) {
-          try {
-            const settings = await getWhatsAppSettings();
-            if (settings.sendOnGoal) { 
-              const tickets = await prisma.ticket.findMany({
-                where: { teamId, paymentStatus: "PAID" },
-              });
-
-              for (const ticket of tickets) {
-                const msgAr = `فاز منتخبك المختار (${team.name}) في مباراته! ⚽️ لقد فازوا بإجمالي ${wins} مباريات، مما يمنحك ${wins + 1} فرص في السحب النهائي!\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-                const msgEn = `Your selected team (${team.name}) has won their match! ⚽️ They have won a total of ${wins} matches, giving you ${wins + 1} entries in the raffle!\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-                const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
-
-                await sendWhatsAppMessage(ticket.buyerPhone, fullMsg);
-              }
-            }
-          } catch (wsErr) {
-            console.error("Failed to send automatic WhatsApp for match win sync:", wsErr);
-          }
+          winningTeams.push({
+            id: team.id,
+            name: team.name,
+            flagUrl: team.flagUrl,
+            totalWins: wins,
+          });
         }
 
         return updatedTeam;
@@ -118,6 +108,36 @@ export async function GET(request: Request) {
     });
 
     await Promise.all(updates);
+
+    // Send unified WhatsApp summary alerts if there are winning teams
+    if (winningTeams.length > 0) {
+      try {
+        const settings = await getWhatsAppSettings();
+        if (settings.sendOnGoal) {
+          const winningTeamIds = winningTeams.map((t) => t.id);
+          const tickets = await prisma.ticket.findMany({
+            where: { teamId: { in: winningTeamIds }, paymentStatus: "PAID" },
+            select: { buyerPhone: true, buyerName: true },
+          });
+
+          // Group by unique phone number
+          const uniqueBuyers = new Map<string, string>();
+          tickets.forEach((ticket) => {
+            const phone = ticket.buyerPhone.trim();
+            if (!uniqueBuyers.has(phone)) {
+              uniqueBuyers.set(phone, ticket.buyerName);
+            }
+          });
+
+          for (const [phone, name] of uniqueBuyers.entries()) {
+            await sendMatchWinWhatsAppSummary(phone, name, winningTeams);
+          }
+        }
+      } catch (wsErr) {
+        console.error("Failed to send unified match win WhatsApp summary alerts:", wsErr);
+      }
+    }
+
 
     return NextResponse.json({
       success: true,

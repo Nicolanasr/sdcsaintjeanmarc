@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jwtVerify } from "jose";
 import { getWhatsAppSettings } from "@/lib/whatsapp-settings";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, getTeamFlagEmoji } from "@/lib/whatsapp";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-for-goal-rush-fundraising-portal"
@@ -67,9 +67,37 @@ export async function POST(request: Request) {
     if (status === "PAID") {
       // Send WhatsApp confirmation
       const firstTicket = tickets[0];
-      const ticketCount = tickets.length;
-      const ticketIdsStr = tickets.map((t) => `#${t.id}`).join(", ");
-      const teamName = firstTicket.team?.name || "";
+
+      // Group by teamId
+      const teamGroups: Record<string, {
+        teamName: string;
+        flagUrl: string;
+        ticketIds: number[];
+      }> = {};
+
+      tickets.forEach((t) => {
+        const team = t.team;
+        if (!teamGroups[t.teamId]) {
+          teamGroups[t.teamId] = {
+            teamName: team.name,
+            flagUrl: team.flagUrl,
+            ticketIds: [],
+          };
+        }
+        teamGroups[t.teamId].ticketIds.push(t.id);
+      });
+
+      const teamListAr = Object.values(teamGroups).map((group) => {
+        const flag = getTeamFlagEmoji(group.flagUrl, "");
+        const ids = group.ticketIds.map((id) => `#${id}`).join("، ");
+        return `${flag} ${group.teamName} (${group.ticketIds.length} بطاقة: ${ids})`;
+      }).join("\n");
+
+      const teamListEn = Object.values(teamGroups).map((group) => {
+        const flag = getTeamFlagEmoji(group.flagUrl, "");
+        const ids = group.ticketIds.map((id) => `#${id}`).join(", ");
+        return `${flag} ${group.teamName} (${group.ticketIds.length} ticket(s): ${ids})`;
+      }).join("\n");
 
       try {
         const settings = await getWhatsAppSettings();
@@ -77,8 +105,8 @@ export async function POST(request: Request) {
           const origin = request.headers.get("origin") || new URL(request.url).origin;
           const trackingLink = `${origin}/en/scout-world-cup/standings?phone=${encodeURIComponent(firstTicket.buyerPhone)}`;
           
-          const msgAr = `شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة (${ticketCount} تذاكر: ${ticketIdsStr}) لدعم فوج مار يوحنا مرقس - كشافة الأرز! فريقك المختار هو ${teamName}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذاكرك ونقاط فريقك من هنا:\n${trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
-          const msgEn = `Thank you for purchasing World Cup Scout Cup Draw ticket(s) (${ticketCount} ticket(s): ${ticketIdsStr}) supporting Scouts des Cèdres Saint Jean Marc! Your selected team is ${teamName}. Every win they achieve grants you an extra entry in the final raffle! ⚽️\n\nTrack your tickets and team entries here:\n${trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+          const msgAr = `شكرًا لشرائك تذاكر مسابقة سحب كأس الكشافة لدعم فوج مار يوحنا مرقس - كشافة الأرز! ⚽️\n\nتذاكرك المشتراة:\n${teamListAr}\n\nكل فوز يحققه أي من هذه المنتخبات يمنحك فرصة إضافية في السحب النهائي!\n\nتابع تذاكرك ونقاط فريقك من هنا:\n${trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+          const msgEn = `Thank you for purchasing World Cup Scout Cup Draw ticket(s) supporting Scouts des Cèdres Saint Jean Marc! ⚽️\n\nYour purchased tickets:\n${teamListEn}\n\nEvery win they achieve grants you an extra entry in the final raffle!\n\nTrack your tickets and team entries here:\n${trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
           
           const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
           const sent = await sendWhatsAppMessage(firstTicket.buyerPhone, fullMsg);

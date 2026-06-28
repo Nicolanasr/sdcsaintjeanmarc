@@ -7,14 +7,16 @@ datasource db {
 }
 
 model Profile {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  fullName  String
-  role      String   @default("scout") // "scout" or "admin"
-  unit      String?  // "jouwele", "mounjidet", "kechefe", "mourchidet", "jaramiz", "zaharat", "iyede"
-  tickets   Ticket[]
-  createdAt DateTime @default(now())
+  id               String           @id @default(uuid())
+  email            String           @unique
+  password         String
+  fullName         String
+  role             String           @default("scout") // "scout" or "admin"
+  unit             String?          // "jouwele", "mounjidet", "kechefe", "mourchidet", "jaramiz", "zaharat", "iyede"
+  tickets          Ticket[]
+  scoutSettlements CashSettlement[] @relation("ScoutSettlements")
+  adminSettlements CashSettlement[] @relation("AdminSettlements")
+  createdAt        DateTime         @default(now())
 }
 
 model Team {
@@ -40,6 +42,27 @@ model Ticket {
   paymentMethod String @default("CASH")
   whishTransactionId String?
   cashSettled Boolean @default(false)
+  winner      Winner?
+}
+
+model Winner {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int      @unique
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  prizeName String
+  drawnAt   DateTime @default(now())
+}
+
+model CashSettlement {
+  id          Int      @id @default(autoincrement())
+  scoutId     String
+  scout       Profile  @relation("ScoutSettlements", fields: [scoutId], references: [id], onDelete: Cascade)
+  adminId     String
+  admin       Profile  @relation("AdminSettlements", fields: [adminId], references: [id], onDelete: Cascade)
+  amount      Float
+  ticketCount Int
+  ticketIds   String   // Comma-separated list of ticket IDs for auditing
+  createdAt   DateTime @default(now())
 }
 
 model WhatsAppLog {

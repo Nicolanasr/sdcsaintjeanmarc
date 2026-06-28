@@ -192,6 +192,20 @@ export async function GET(request: Request) {
 
       return NextResponse.json({ tickets, nextCursor, hasMore });
     }
+    // ─────────────────────────────────────────────────────────────
+    // MODE: settlements  —  fetch recent CashSettlement logs
+    // ─────────────────────────────────────────────────────────────
+    if (mode === "settlements") {
+      const settlements = await prisma.cashSettlement.findMany({
+        include: {
+          scout: { select: { id: true, fullName: true, unit: true } },
+          admin: { select: { id: true, fullName: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      });
+      return NextResponse.json({ settlements });
+    }
 
     return NextResponse.json({ error: "Invalid mode" }, { status: 400 });
   } catch (err: any) {

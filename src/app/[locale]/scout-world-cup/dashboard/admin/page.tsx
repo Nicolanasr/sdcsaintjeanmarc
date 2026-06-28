@@ -67,6 +67,16 @@ export default function AdminDashboard() {
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [scoutsList, setScoutsList] = useState<any[]>([]);
     const [leaderboard, setLeaderboard] = useState<any[]>([]);
+    const [unitLeaderboard, setUnitLeaderboard] = useState<any[]>([]);
+    const [winnersHistory, setWinnersHistory] = useState<any[]>([]);
+    const [settlementsHistory, setSettlementsHistory] = useState<any[]>([]);
+    const [prizeNameInput, setPrizeNameInput] = useState("Grand Prize 🥇");
+    const [broadcastTeamId, setBroadcastTeamId] = useState("");
+    const [broadcastMessageText, setBroadcastMessageText] = useState(
+        "⚽ MATCH WIN! {teamName} won their match! 🥳\n\nDear {buyerName}, your {ticketsCount} ticket(s) ({ticketIds}) now have {bonusEntries} total entries in the SDC Saint Jean Marc Raffle Draw!\n\nKeep track of standings here: https://sdc-saint-jean-marc.vercel.app/"
+    );
+    const [broadcasting, setBroadcasting] = useState(false);
+    const [reportingSubTab, setReportingSubTab] = useState<"all" | "whish">("all");
 
     // Tabs & Logs state
     const [activeTab, setActiveTab] = useState<"raffle" | "teams" | "reporting" | "logs" | "users" | "leaderboard" | "treasury">("raffle");
@@ -393,11 +403,25 @@ export default function AdminDashboard() {
         checkAdmin();
     }, []);
 
+    const loadWinnersHistory = async () => {
+        try {
+            const res = await fetch("/api/admin/winners");
+            if (res.ok) {
+                const data = await res.json();
+                setWinnersHistory(data.winners || []);
+            }
+        } catch (err) {
+            console.error("Error loading winners history:", err);
+        }
+    };
+
     const loadRaffleData = async () => {
         try {
-            const [statsRes, waRes] = await Promise.all([
+            const [statsRes, waRes, teamsRes, winnersRes] = await Promise.all([
                 fetch("/api/admin/raffle-stats"),
                 fetch("/api/admin/whatsapp-settings"),
+                fetch("/api/teams"),
+                fetch("/api/admin/winners"),
             ]);
             if (statsRes.ok) {
                 const statsData = await statsRes.json();
@@ -409,6 +433,14 @@ export default function AdminDashboard() {
                 setWhatsappSettings(settings);
                 setTemplateArInput(settings.templatePurchaseAr || "");
                 setTemplateEnInput(settings.templatePurchaseEn || "");
+            }
+            if (teamsRes.ok) {
+                const teamsData = await teamsRes.json();
+                setTeams(teamsData.teams || []);
+            }
+            if (winnersRes.ok) {
+                const winnersData = await winnersRes.json();
+                setWinnersHistory(winnersData.winners || []);
             }
         } catch (err) {
             console.error("Error loading raffle data:", err);
@@ -481,6 +513,7 @@ export default function AdminDashboard() {
             if (res.ok) {
                 const data = await res.json();
                 setLeaderboard(data.leaderboard || []);
+                setUnitLeaderboard(data.unitLeaderboard || []);
             }
         } catch (err) {
             console.error("Error loading leaderboard data:", err);
@@ -490,10 +523,11 @@ export default function AdminDashboard() {
     const loadTreasuryData = async () => {
         setLoadingTreasury(true);
         try {
-            // Parallel: full financial summary + per-scout ledger (both use DB aggregations)
-            const [summaryRes, ledgerRes] = await Promise.all([
+            // Parallel: full financial summary + per-scout ledger + recent settlements
+            const [summaryRes, ledgerRes, settlementsRes] = await Promise.all([
                 fetch("/api/admin/treasury?mode=summary"),
                 fetch("/api/admin/treasury?mode=ledger"),
+                fetch("/api/admin/treasury?mode=settlements"),
             ]);
 
             if (summaryRes.ok) {
@@ -524,6 +558,11 @@ export default function AdminDashboard() {
                     const updated = ledger.find((s: any) => s.id === selectedTreasuryScout.id);
                     if (updated) setSelectedTreasuryScout(updated);
                 }
+            }
+
+            if (settlementsRes.ok) {
+                const settlementsData = await settlementsRes.json();
+                setSettlementsHistory(settlementsData.settlements || []);
             }
         } catch (err) {
             console.error("Error loading treasury data:", err);
@@ -569,6 +608,75 @@ export default function AdminDashboard() {
             alert("❌ Settlement failed: " + err.message);
         } finally {
             setSettlingCash(false);
+        }
+    };
+
+    const handleRevertSettlement = async (settlementId: number) => {
+        if (confirm(isAr ? "هل أنت متأكد من التراجع عن هذه التسوية؟ ستتم إعادة حالة البطاقات إلى 'غير مسلّمة'." : "Are you sure you want to revert this settlement? The tickets will be set back to pending handover.")) {
+            try {
+                const res = await fetch(`/api/admin/treasury/settle?id=${settlementId}`, { method: "DELETE" });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(isAr ? "تم التراجع عن التسوية بنجاح!" : "Settlement reverted successfully!");
+                    await loadTreasuryData();
+                } else {
+                    throw new Error(data.error || "Failed to revert settlement");
+                }
+            } catch (err: any) {
+                alert("❌ Error: " + err.message);
+            }
+        }
+    };
+
+    const handleDeleteWinner = async (winnerId: number) => {
+        if (confirm(isAr ? "هل أنت متأكد من إلغاء نتيجة هذا السحب؟" : "Are you sure you want to delete this draw record?")) {
+            try {
+                const res = await fetch(`/api/admin/winners?id=${winnerId}`, { method: "DELETE" });
+                if (res.ok) {
+                    alert(isAr ? "تم إلغاء السحب بنجاح!" : "Draw record deleted successfully!");
+                    await loadWinnersHistory();
+                } else {
+                    const data = await res.json();
+                    throw new Error(data.error || "Failed to delete draw");
+                }
+            } catch (err: any) {
+                alert("❌ Error: " + err.message);
+            }
+        }
+    };
+
+    const handleBroadcastGoalAlerts = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!broadcastTeamId) {
+            alert(isAr ? "الرجاء اختيار منتخب للبدء" : "Please select a team to broadcast");
+            return;
+        }
+        if (!confirm(isAr ? "هل أنت متأكد من بث هذا التنبيه لجميع مشتري بطاقات هذا المنتخب؟" : "Are you sure you want to broadcast this alert to all buyers of this team's tickets?")) {
+            return;
+        }
+
+        setBroadcasting(true);
+        try {
+            const res = await fetch("/api/admin/broadcast-goals", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    teamId: broadcastTeamId,
+                    messageText: broadcastMessageText,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(isAr
+                    ? `✅ تم بث التنبيه بنجاح! تم الإرسال إلى ${data.sentCount} من المشترين.`
+                    : `✅ Broadcast completed! Sent to ${data.sentCount} buyers successfully.`);
+            } else {
+                throw new Error(data.error || "Failed to send broadcast");
+            }
+        } catch (err: any) {
+            alert("❌ Broadcast failed: " + err.message);
+        } finally {
+            setBroadcasting(false);
         }
     };
 
@@ -679,7 +787,11 @@ export default function AdminDashboard() {
             setWinners([]);
             setAnimationRunning(true);
             try {
-                const res = await fetch("/api/draw", { method: "POST" });
+                const res = await fetch("/api/draw", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prizeName: prizeNameInput }),
+                });
                 const result = await res.json();
                 if (!res.ok) throw new Error(result.error || "Raffle draw execution failed");
 
@@ -709,9 +821,10 @@ export default function AdminDashboard() {
                         // Animation complete, stop and set the actual winner
                         setShufflingName(winner.buyerName);
                         setShufflingTicketId(winner.id);
-                        setTimeout(() => {
+                        setTimeout(async () => {
                             setAnimationRunning(false);
                             setWinners([winner]);
+                            await loadWinnersHistory();
                             alert(isAr ? `تهانينا للفائز: ${winner.buyerName}!` : `Congratulations to the winner: ${winner.buyerName}!`);
                         }, 500);
                         return;
@@ -913,14 +1026,26 @@ export default function AdminDashboard() {
                                 <h2 className="text-lg font-bold font-display text-scout-navy mb-2">
                                     {isAr ? "محرك السحب والقرعة المرجح" : "The Weighted Draw Engine"}
                                 </h2>
-                                <p className="text-xs text-scout-charcoal/70 mb-4">
+                                <p className="text-xs text-scout-charcoal/70 mb-3">
                                     {isAr
                                         ? "يقوم السحب باختيار فائز واحد عشوائي ومحمي بناءً على فرص المنتخبات المضافة للانتصارات."
                                         : "Sequentially compiles the paid ticket pool factoring team wins, selecting exactly 1 winner."}
                                 </p>
+                                <div className="space-y-2 mb-3">
+                                    <label className="block text-[10px] font-bold text-scout-navy uppercase leading-none">
+                                        {isAr ? "اسم الجائزة الجاري سحبها" : "Prize to Draw"}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={prizeNameInput}
+                                        onChange={(e) => setPrizeNameInput(e.target.value)}
+                                        placeholder={isAr ? "مثال: الجائزة الكبرى 🥇" : "e.g. Grand Prize 🥇"}
+                                        className="w-full px-3 py-2 rounded-lg border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy text-xs font-semibold text-scout-navy"
+                                    />
+                                </div>
                                 <button
                                     onClick={handleExecuteDraw}
-                                    disabled={drawing || animationRunning}
+                                    disabled={drawing || animationRunning || !prizeNameInput.trim()}
                                     className="w-full py-2.5 bg-scout-green hover:bg-scout-green-light text-white font-semibold rounded-lg shadow-md disabled:opacity-50 transition cursor-pointer text-xs"
                                 >
                                     {drawing || animationRunning ? (
@@ -1120,7 +1245,7 @@ export default function AdminDashboard() {
                                         className="w-5 h-5 rounded border-scout-beige-dark text-scout-green accent-scout-green focus:ring-scout-green cursor-pointer"
                                     />
                                     <span className="text-xs font-semibold text-scout-navy">
-                                        {isAr ? "إشعار عندما يسجل فريقهم أهدافاً" : "Notify buyer when their team scores"}
+                                        {isAr ? "إشعار عندما يفوز فريقهم بمباراة" : "Notify buyer when their team wins a match"}
                                     </span>
                                 </label>
                             </div>
@@ -1175,92 +1300,118 @@ export default function AdminDashboard() {
                             )}
                         </div>
 
-                        {/* Pending Verification Tickets */}
-                        {allTickets.some(t => t.paymentStatus === "PENDING" && t.whishTransactionId) && (
-                            <div className="glass-panel p-6 rounded-2xl shadow-md border-l-4 border-amber-500 bg-amber-500/5">
-                                <h2 className="text-lg font-bold font-display text-scout-navy mb-3 flex items-center gap-2">
-                                    <span className="text-amber-500">⏳</span>
-                                    <span>{isAr ? "تحقق من الدفعات المعلقة (Whish)" : "Pending Whish Payments Verification"}</span>
-                                </h2>
-                                <p className="text-xs text-scout-charcoal/70 mb-4">
-                                    {isAr 
-                                        ? "الرجاء مراجعة تطبيق Whish الخاص بك للتأكد من استلام المبالغ ثم اضغط على 'تأكيد الدفع' لإصدار التذاكر للمشترين وإرسالها لهم تلقائياً."
-                                        : "Please check your Whish account records to verify the funds were received, then click 'Approve Payment' to issue and send the tickets to the buyers via WhatsApp."}
-                                </p>
-                                
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-xs text-left border-collapse bg-white/70 rounded-xl">
-                                        <thead>
-                                            <tr className="border-b text-scout-navy font-bold uppercase bg-scout-beige-dark/20">
-                                                <th className="py-2.5 px-4 text-left">{isAr ? "المشتري" : "Buyer"}</th>
-                                                <th className="py-2.5 px-4 text-left">{isAr ? "رقم الهاتف" : "Phone"}</th>
-                                                <th className="py-2.5 px-4 text-left">{isAr ? "المنتخب" : "Selected Team"}</th>
-                                                <th className="py-2.5 px-4 text-center">{isAr ? "الكمية" : "Qty"}</th>
-                                                <th className="py-2.5 px-4 text-center">{isAr ? "المبلغ" : "Amount"}</th>
-                                                <th className="py-2.5 px-4 text-left font-mono">{isAr ? "رقم المعاملة" : "Transaction ID"}</th>
-                                                <th className="py-2.5 px-4 text-center">{isAr ? "إجراء" : "Actions"}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {(() => {
-                                                const pendingGroups: { [key: string]: { name: string; phone: string; teamName: string; count: number; whishTransactionId: string; ticketIds: number[] } } = {};
-                                                allTickets.filter(t => t.paymentStatus === "PENDING" && t.whishTransactionId).forEach(t => {
-                                                    const groupKey = `${t.buyerPhone}-${t.whishTransactionId}`;
-                                                    if (!pendingGroups[groupKey]) {
-                                                        pendingGroups[groupKey] = {
-                                                            name: t.buyerName,
-                                                            phone: t.buyerPhone,
-                                                            teamName: t.team?.name || t.teamId,
-                                                            count: 0,
-                                                            whishTransactionId: t.whishTransactionId,
-                                                            ticketIds: []
-                                                        };
-                                                    }
-                                                    pendingGroups[groupKey].count++;
-                                                    pendingGroups[groupKey].ticketIds.push(t.id);
-                                                });
-
-                                                return Object.values(pendingGroups).map((group, idx) => {
-                                                    const isVerifying = group.ticketIds.some(id => verifyingIds.includes(id));
-                                                    return (
-                                                        <tr key={idx} className="border-b border-scout-beige-dark/20 hover:bg-white/90 transition text-xs">
-                                                            <td className="py-3 px-4 font-bold text-scout-navy">{group.name}</td>
-                                                            <td className="py-3 px-4">{group.phone}</td>
-                                                            <td className="py-3 px-4">
-                                                                <span className="bg-scout-navy/10 text-scout-navy font-bold px-1.5 py-0.5 rounded text-[10px]">
-                                                                    {group.teamName}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4 text-center font-bold">{group.count}</td>
-                                                            <td className="py-3 px-4 text-center font-black text-scout-green-light">${(group.count * 5).toFixed(2)}</td>
-                                                            <td className="py-3 px-4 font-mono font-bold text-amber-600">{group.whishTransactionId}</td>
-                                                            <td className="py-3 px-4 text-center">
-                                                                <div className="flex items-center justify-center gap-1.5">
-                                                                    <button
-                                                                        onClick={() => handleVerifyTickets(group.ticketIds, "PAID")}
-                                                                        disabled={isVerifying}
-                                                                        className="px-2.5 py-1.5 bg-scout-green hover:bg-scout-green-light text-white text-[11px] font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm animate-pulse"
-                                                                    >
-                                                                        {isVerifying ? "..." : (isAr ? "تأكيد" : "Approve")}
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleVerifyTickets(group.ticketIds, "REJECTED")}
-                                                                        disabled={isVerifying}
-                                                                        className="px-2.5 py-1.5 bg-red-800 hover:bg-red-700 text-white text-[11px] font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm"
-                                                                    >
-                                                                        {isVerifying ? "..." : (isAr ? "رفض" : "Reject")}
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                });
-                                            })()}
-                                        </tbody>
-                                    </table>
+                        {/* WhatsApp Match Win Broadcast */}
+                        <div className="glass-panel p-6 rounded-2xl shadow-md bg-white/70">
+                            <h2 className="text-md font-bold font-display text-scout-navy mb-2 flex items-center gap-2">
+                                <span>📢</span>
+                                <span>{isAr ? "بث تنبيهات فوز المباريات (WhatsApp Broadcast)" : "Match Win WhatsApp Broadcast"}</span>
+                            </h2>
+                            <p className="text-xs text-scout-charcoal/70 mb-4">
+                                {isAr
+                                    ? "أرسل رسالة واتساب جماعية لجميع مشتري بطاقات منتخب معين لتهنئتهم بالفوز بمباراة."
+                                    : "Send a batch WhatsApp notification to all confirmed ticket holders of a specific team to celebrate a match win."}
+                            </p>
+                            <form onSubmit={handleBroadcastGoalAlerts} className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-scout-navy uppercase">
+                                            {isAr ? "اختر المنتخب الفائز" : "Select Winning Team"}
+                                        </label>
+                                        <select
+                                            value={broadcastTeamId}
+                                            onChange={(e) => setBroadcastTeamId(e.target.value)}
+                                            required
+                                            className="w-full px-3 py-2 rounded-lg border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy text-xs font-semibold text-scout-navy"
+                                        >
+                                            <option value="">{isAr ? "-- اختر المنتخب --" : "-- Select Team --"}</option>
+                                            {teams.map((t) => (
+                                                <option key={t.id} value={t.id}>
+                                                    {t.name} ({t.id}) - Wins: {t.totalWins}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="md:col-span-2 space-y-1">
+                                        <label className="block text-[10px] font-bold text-scout-navy uppercase">
+                                            {isAr ? "محتوى رسالة البث" : "Broadcast Message Content"}
+                                        </label>
+                                        <textarea
+                                            value={broadcastMessageText}
+                                            onChange={(e) => setBroadcastMessageText(e.target.value)}
+                                            required
+                                            rows={3}
+                                            className="w-full px-3 py-2 rounded-lg border border-scout-beige-dark bg-white focus:outline-none focus:border-scout-navy text-xs font-mono"
+                                            placeholder="⚽ MATCH WIN! ..."
+                                        />
+                                        <p className="text-[9px] text-scout-charcoal/50 leading-none mt-1">
+                                            Variables: {"{buyerName}"}, {"{teamName}"}, {"{ticketsCount}"}, {"{ticketIds}"}, {"{bonusEntries}"}
+                                        </p>
+                                    </div>
                                 </div>
+                                <div className="flex justify-end">
+                                    <button
+                                        type="submit"
+                                        disabled={broadcasting || !broadcastTeamId}
+                                        className="px-5 py-2.5 bg-scout-navy hover:bg-scout-navy-light text-white text-xs font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm"
+                                    >
+                                        {broadcasting ? (isAr ? "جاري الإرسال..." : "Broadcasting...") : (isAr ? "بث الرسائل الآن" : "Broadcast Message Now")}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Drawings History List */}
+                        <div className="glass-panel p-6 rounded-2xl shadow-md bg-white/70">
+                            <h2 className="text-md font-bold font-display text-scout-navy mb-4 flex items-center gap-2">
+                                <span>🏆</span>
+                                <span>{isAr ? "سجل السحوبات والفائزين" : "Raffle Draws & Winner History"}</span>
+                            </h2>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b text-scout-navy font-bold uppercase">
+                                            <th className="py-2.5 px-3">{isAr ? "الجائزة" : "Prize"}</th>
+                                            <th className="py-2.5 px-3">{isAr ? "الفائز" : "Winner"}</th>
+                                            <th className="py-2.5 px-3">{isAr ? "رقم الهاتف" : "Phone"}</th>
+                                            <th className="py-2.5 px-3 text-center">{isAr ? "بطاقة رقم" : "Ticket #"}</th>
+                                            <th className="py-2.5 px-3 text-center">{isAr ? "المنتخب" : "Team"}</th>
+                                            <th className="py-2.5 px-3 text-center">{isAr ? "التاريخ" : "Drawn At"}</th>
+                                            <th className="py-2.5 px-3 text-center w-20">{isAr ? "إجراء" : "Actions"}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {winnersHistory.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="py-6 text-center text-scout-charcoal/40">
+                                                    {isAr ? "لا توجد سحوبات مسجلة بعد." : "No draw history found."}
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            winnersHistory.map((w) => (
+                                                <tr key={w.id} className="border-b hover:bg-white/40 transition">
+                                                    <td className="py-2.5 px-3 font-bold text-scout-navy">{w.prizeName}</td>
+                                                    <td className="py-2.5 px-3 font-semibold">{w.ticket?.buyerName}</td>
+                                                    <td className="py-2.5 px-3 font-mono">{w.ticket?.buyerPhone}</td>
+                                                    <td className="py-2.5 px-3 text-center font-bold text-scout-navy">#{w.ticket?.id}</td>
+                                                    <td className="py-2.5 px-3 text-center uppercase font-semibold">{w.ticket?.team?.name || w.ticket?.teamId}</td>
+                                                    <td className="py-2.5 px-3 text-center text-scout-charcoal/60">
+                                                        {new Date(w.drawnAt).toLocaleString()}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-center">
+                                                        <button
+                                                            onClick={() => handleDeleteWinner(w.id)}
+                                                            className="px-2 py-1 bg-red-800 hover:bg-red-700 text-white rounded text-[10px] font-bold transition cursor-pointer"
+                                                        >
+                                                            {isAr ? "إلغاء" : "Revert"}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
-                        )}
+                        </div>
                     </div>
                 )}
 
@@ -1477,19 +1628,51 @@ export default function AdminDashboard() {
                         return matchesSearch && matchesMethod && matchesStatus && matchesScout && matchesTeam;
                     });
 
+                    const pendingWhishCount = allTickets.filter(t => t.paymentStatus === "PENDING" && t.whishTransactionId).length;
+
                     return (
                         <div className="space-y-6 animate-in fade-in duration-200 bg-white/70 p-6 rounded-2xl shadow-md">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-4">
-                            <div>
-                                <h2 className="text-lg font-bold font-display text-scout-navy">
-                                    {isAr ? "سجل وإحصاءات التذاكر" : "Ticket Sales & Grouping Stats"}
-                                </h2>
-                                <p className="text-xs text-scout-charcoal/60 mt-0.5">
-                                    {isAr ? "استعلم عن مبيعات التذاكر، إجمالي الفرص، وجمعها حسب الفئات" : "Analyze sales log, raffle entry counts, and group records dynamically."}
-                                </p>
+                            {/* Sub Tabs */}
+                            <div className="flex border-b border-scout-navy/10 mb-6 gap-2">
+                                <button
+                                    onClick={() => setReportingSubTab("all")}
+                                    className={`px-4 py-2 text-xs font-bold transition-all relative ${
+                                        reportingSubTab === "all"
+                                            ? "text-scout-navy border-b-2 border-scout-navy"
+                                            : "text-scout-navy/60 hover:text-scout-navy"
+                                    }`}
+                                >
+                                    📊 {isAr ? "جميع التذاكر والإحصاءات" : "All Tickets & Stats"}
+                                </button>
+                                <button
+                                    onClick={() => setReportingSubTab("whish")}
+                                    className={`px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 relative ${
+                                        reportingSubTab === "whish"
+                                            ? "text-scout-navy border-b-2 border-scout-navy"
+                                            : "text-scout-navy/60 hover:text-scout-navy"
+                                    }`}
+                                >
+                                    ⏳ {isAr ? "الدفعات المعلقة (Whish)" : "Whish Payment Approval"}
+                                    {pendingWhishCount > 0 && (
+                                        <span className="px-1.5 py-0.5 text-[9px] bg-red-600 text-white rounded-full font-black animate-pulse">
+                                            {pendingWhishCount}
+                                        </span>
+                                    )}
+                                </button>
                             </div>
 
-                        </div>
+                            {reportingSubTab === "all" && (
+                                <div className="space-y-6">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-4">
+                                        <div>
+                                            <h2 className="text-lg font-bold font-display text-scout-navy">
+                                                {isAr ? "سجل وإحصاءات التذاكر" : "Ticket Sales & Grouping Stats"}
+                                            </h2>
+                                            <p className="text-xs text-scout-charcoal/60 mt-0.5">
+                                                {isAr ? "استعلم عن مبيعات التذاكر، إجمالي الفرص، وجمعها حسب الفئات" : "Analyze sales log, raffle entry counts, and group records dynamically."}
+                                            </p>
+                                        </div>
+                                    </div>
 
                         {/* Control Panel: Search & Custom Dropdown Filter Settings */}
                         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
@@ -2218,8 +2401,107 @@ export default function AdminDashboard() {
 
                                 return null;
                             })()}
+                                </div>
+                            </div>
+                            )}
+
+                            {reportingSubTab === "whish" && (
+                                <div className="space-y-4">
+                                    <div className="border-b pb-4">
+                                        <h2 className="text-lg font-bold font-display text-scout-navy flex items-center gap-2">
+                                            <span className="text-amber-500">⏳</span>
+                                            <span>{isAr ? "تحقق من الدفعات المعلقة (Whish)" : "Pending Whish Payments Verification"}</span>
+                                        </h2>
+                                        <p className="text-xs text-scout-charcoal/70 mt-1">
+                                            {isAr 
+                                                ? "الرجاء مراجعة تطبيق Whish الخاص بك للتأكد من استلام المبالغ ثم اضغط على 'تأكيد الدفع' لإصدار التذاكر للمشترين وإرسالها لهم تلقائياً."
+                                                : "Please check your Whish account records to verify the funds were received, then click 'Approve Payment' to issue and send the tickets to the buyers via WhatsApp."}
+                                        </p>
+                                    </div>
+
+                                    {pendingWhishCount === 0 ? (
+                                        <div className="p-12 text-center text-scout-charcoal/50 rounded-2xl bg-white/50 border border-dashed">
+                                            <span className="text-4xl block mb-2">🎉</span>
+                                            <p className="text-sm font-bold">
+                                                {isAr ? "لا توجد دفعات Whish معلقة للمراجعة." : "No pending Whish payments to verify."}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs text-left border-collapse bg-white/70 rounded-xl">
+                                                <thead>
+                                                    <tr className="border-b text-scout-navy font-bold uppercase bg-scout-beige-dark/20">
+                                                        <th className="py-2.5 px-4 text-left">{isAr ? "المشتري" : "Buyer"}</th>
+                                                        <th className="py-2.5 px-4 text-left">{isAr ? "رقم الهاتف" : "Phone"}</th>
+                                                        <th className="py-2.5 px-4 text-left">{isAr ? "المنتخب" : "Selected Team"}</th>
+                                                        <th className="py-2.5 px-4 text-center">{isAr ? "الكمية" : "Qty"}</th>
+                                                        <th className="py-2.5 px-4 text-center">{isAr ? "المبلغ" : "Amount"}</th>
+                                                        <th className="py-2.5 px-4 text-left font-mono">{isAr ? "رقم المعاملة" : "Transaction ID"}</th>
+                                                        <th className="py-2.5 px-4 text-center">{isAr ? "إجراء" : "Actions"}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(() => {
+                                                        const pendingGroups: { [key: string]: any } = {};
+                                                        allTickets.filter(t => t.paymentStatus === "PENDING" && t.whishTransactionId).forEach(t => {
+                                                            const groupKey = t.buyerPhone + "-" + t.whishTransactionId;
+                                                            if (!pendingGroups[groupKey]) {
+                                                                pendingGroups[groupKey] = {
+                                                                    name: t.buyerName,
+                                                                    phone: t.buyerPhone,
+                                                                    teamName: t.team?.name || t.teamId,
+                                                                    count: 0,
+                                                                    whishTransactionId: t.whishTransactionId,
+                                                                    ticketIds: []
+                                                                };
+                                                            }
+                                                            pendingGroups[groupKey].count++;
+                                                            pendingGroups[groupKey].ticketIds.push(t.id);
+                                                        });
+
+                                                        return Object.values(pendingGroups).map((group, idx) => {
+                                                            const isVerifying = group.ticketIds.some((id: any) => verifyingIds.includes(id));
+                                                            return (
+                                                                <tr key={idx} className="border-b border-scout-beige-dark/20 hover:bg-white/90 transition text-xs">
+                                                                    <td className="py-3 px-4 font-bold text-scout-navy">{group.name}</td>
+                                                                    <td className="py-3 px-4">{group.phone}</td>
+                                                                    <td className="py-3 px-4">
+                                                                        <span className="bg-scout-navy/10 text-scout-navy font-bold px-1.5 py-0.5 rounded text-[10px]">
+                                                                            {group.teamName}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-3 px-4 text-center font-bold">{group.count}</td>
+                                                                    <td className="py-3 px-4 text-center font-black text-scout-green-light">{"$" + (group.count * TICKET_PRICE).toFixed(2)}</td>
+                                                                    <td className="py-3 px-4 font-mono font-bold text-amber-600">{group.whishTransactionId}</td>
+                                                                    <td className="py-3 px-4 text-center">
+                                                                        <div className="flex items-center justify-center gap-1.5">
+                                                                            <button
+                                                                                onClick={() => handleVerifyTickets(group.ticketIds, "PAID")}
+                                                                                disabled={isVerifying}
+                                                                                className="px-2.5 py-1.5 bg-scout-green hover:bg-scout-green-light text-white text-[11px] font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm animate-pulse"
+                                                                            >
+                                                                                {isVerifying ? "..." : (isAr ? "تأكيد" : "Approve")}
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleVerifyTickets(group.ticketIds, "REJECTED")}
+                                                                                disabled={isVerifying}
+                                                                                className="px-2.5 py-1.5 bg-red-800 hover:bg-red-700 text-white text-[11px] font-bold rounded-lg transition disabled:opacity-50 cursor-pointer shadow-sm"
+                                                                            >
+                                                                                {isVerifying ? "..." : (isAr ? "رفض" : "Reject")}
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        });
+                                                    })()}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                    </div>
                     );
                 })()}
 
@@ -2532,62 +2814,127 @@ export default function AdminDashboard() {
                         <div className="flex justify-between items-center border-b pb-4">
                             <div>
                                 <h2 className="text-lg font-bold font-display text-scout-navy">
-                                    {isAr ? "لوحة صدارة الكشافين" : "Scout Leaderboard"}
+                                    {isAr ? "لوحة صدارة الحملة" : "Fundraiser Leaderboards"}
                                 </h2>
                                 <p className="text-xs text-scout-charcoal/60 mt-0.5">
-                                    {isAr ? "ترتيب الكشافين بناءً على مبيعات التذاكر المؤكدة" : "Scout performance ranking based on confirmed ticket sales."}
+                                    {isAr ? "ترتيب الكشافين والوحدات بناءً على مبيعات التذاكر المؤكدة" : "Performance ranking for scouts and units based on confirmed ticket sales."}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b text-scout-navy font-bold uppercase">
-                                        <th className="py-3 px-4 w-16 text-center">{isAr ? "الترتيب" : "Rank"}</th>
-                                        <th className="py-3 px-4">{isAr ? "الاسم الكامل" : "Full Name"}</th>
-                                        <th className="py-3 px-4 text-center">{isAr ? "التذاكر المؤكدة المباعة" : "Confirmed Tickets Sold"}</th>
-                                        <th className="py-3 px-4 text-center">{isAr ? "المساهمة الإجمالية" : "Total Contribution"}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {leaderboard.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="py-8 text-center text-scout-charcoal/40">
-                                                {isAr ? "لا توجد بيانات حالياً." : "No leaderboard records found."}
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        leaderboard.map((item, idx) => {
-                                            const rank = idx + 1;
-                                            const rankBadge = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}`;
-                                            return (
-                                                <tr key={item.id} className="border-b hover:bg-white/40 transition">
-                                                    <td className="py-3 px-4 text-center font-bold text-sm">
-                                                        {rankBadge}
-                                                    </td>
-                                                    <td className="py-3 px-4 font-bold text-scout-navy text-xs">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span>{item.full_name}</span>
-                                                            {item.tickets_count >= 50 && <span title="Legend Scout">👑</span>}
-                                                            {item.tickets_count >= 25 && item.tickets_count < 50 && <span title="Gold Seller">🥇</span>}
-                                                            {item.tickets_count >= 10 && item.tickets_count < 25 && <span title="Silver Seller">🥈</span>}
-                                                            {item.tickets_count >= 5 && item.tickets_count < 10 && <span title="Bronze Seller">🥉</span>}
-                                                            {item.tickets_count >= 1 && item.tickets_count < 5 && <span title="Rookie Seller">🏆</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-center font-bold text-scout-charcoal">
-                                                        {item.tickets_count}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-center font-bold text-scout-green-light">
-                                                        ${item.tickets_count * TICKET_PRICE} USD
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Scout Leaderboard */}
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-bold text-scout-navy uppercase tracking-wider border-b pb-2">
+                                    👤 {isAr ? "ترتيب الكشافين" : "Scout Standings"}
+                                </h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b text-scout-navy font-bold uppercase">
+                                                <th className="py-2.5 px-3 w-16 text-center">{isAr ? "الترتيب" : "Rank"}</th>
+                                                <th className="py-2.5 px-3">{isAr ? "الاسم الكامل" : "Full Name"}</th>
+                                                <th className="py-2.5 px-3 text-center">{isAr ? "الكمية" : "Qty"}</th>
+                                                <th className="py-2.5 px-3 text-center">{isAr ? "المساهمة" : "Contribution"}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {leaderboard.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="py-8 text-center text-scout-charcoal/40">
+                                                        {isAr ? "لا توجد بيانات حالياً." : "No standings records found."}
                                                     </td>
                                                 </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
+                                            ) : (
+                                                leaderboard.map((item, idx) => {
+                                                    const rank = idx + 1;
+                                                    const rankBadge = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}`;
+                                                    return (
+                                                        <tr key={item.id} className="border-b hover:bg-white/40 transition">
+                                                            <td className="py-2.5 px-3 text-center font-bold text-sm">
+                                                                {rankBadge}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 font-bold text-scout-navy text-xs">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span>{item.full_name}</span>
+                                                                    {item.tickets_count >= 50 && <span title="Legend Scout">👑</span>}
+                                                                    {item.tickets_count >= 25 && item.tickets_count < 50 && <span title="Gold Seller">🥇</span>}
+                                                                    {item.tickets_count >= 10 && item.tickets_count < 25 && <span title="Silver Seller">🥈</span>}
+                                                                    {item.tickets_count >= 5 && item.tickets_count < 10 && <span title="Bronze Seller">🥉</span>}
+                                                                    {item.tickets_count >= 1 && item.tickets_count < 5 && <span title="Rookie Seller">🏆</span>}
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center font-bold text-scout-charcoal">
+                                                                {item.tickets_count}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center font-bold text-scout-green-light">
+                                                                ${item.tickets_count * TICKET_PRICE}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Unit Leaderboard */}
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-bold text-scout-navy uppercase tracking-wider border-b pb-2">
+                                    🎖️ {isAr ? "ترتيب الوحدات والفرق" : "Unit Leaderboard"}
+                                </h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b text-scout-navy font-bold uppercase">
+                                                <th className="py-2.5 px-3 w-16 text-center">{isAr ? "الترتيب" : "Rank"}</th>
+                                                <th className="py-2.5 px-3">{isAr ? "الوحدة" : "Unit"}</th>
+                                                <th className="py-2.5 px-3 text-center">{isAr ? "الكمية" : "Qty"}</th>
+                                                <th className="py-2.5 px-3 text-center">{isAr ? "المساهمة" : "Contribution"}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {unitLeaderboard.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="py-8 text-center text-scout-charcoal/40">
+                                                        {isAr ? "لا توجد بيانات حالياً للوحدات." : "No unit standings found."}
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                unitLeaderboard.map((item, idx) => {
+                                                    const rank = idx + 1;
+                                                    const rankBadge = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}`;
+                                                    const unitLabel = item.unit.charAt(0).toUpperCase() + item.unit.slice(1);
+                                                    return (
+                                                        <tr key={idx} className="border-b hover:bg-white/40 transition">
+                                                            <td className="py-2.5 px-3 text-center font-bold text-sm">
+                                                                {rankBadge}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 font-bold text-scout-navy text-xs uppercase">
+                                                                {isAr ? (
+                                                                    item.unit === "jouwele" ? "جوالة" :
+                                                                    item.unit === "mounjidet" ? "منجدات" :
+                                                                    item.unit === "kechefe" ? "كشافة" :
+                                                                    item.unit === "merchedet" ? "مرشدات" :
+                                                                    item.unit === "achbal" ? "أشبال" :
+                                                                    item.unit === "zahrat" ? "زهرات" : unitLabel
+                                                                ) : unitLabel}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center font-bold text-scout-charcoal">
+                                                                {item.ticketsCount}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center font-bold text-scout-green-light">
+                                                                ${item.ticketsCount * TICKET_PRICE}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -2902,6 +3249,59 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
                         )}
+
+                        {/* Cash Handovers & Settlement Audit History */}
+                        <div className="glass-panel p-6 rounded-2xl shadow-md bg-white/70 mt-6">
+                            <h2 className="text-md font-bold font-display text-scout-navy mb-4 flex items-center gap-2">
+                                <span>📜</span>
+                                <span>{isAr ? "سجل الحوالات والتسويات النقدية" : "Cash Handovers & Settlement Audit History"}</span>
+                            </h2>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b text-scout-navy font-bold uppercase bg-scout-beige-dark/10">
+                                            <th className="py-2.5 px-3">{isAr ? "الرقم" : "ID"}</th>
+                                            <th className="py-2.5 px-3">{isAr ? "الكشاف" : "Scout"}</th>
+                                            <th className="py-2.5 px-3">{isAr ? "المدقق / المسؤول" : "Admin"}</th>
+                                            <th className="py-2.5 px-3 text-center">{isAr ? "عدد التذاكر" : "Tickets"}</th>
+                                            <th className="py-2.5 px-3 text-center">{isAr ? "المبلغ المستلم" : "Amount"}</th>
+                                            <th className="py-2.5 px-3 text-center">{isAr ? "التاريخ والوقت" : "Date & Time"}</th>
+                                            <th className="py-2.5 px-3 text-center w-20">{isAr ? "إجراء" : "Actions"}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {settlementsHistory.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="py-6 text-center text-scout-charcoal/40">
+                                                    {isAr ? "لا توجد تسويات مسجلة بعد." : "No settlements recorded yet."}
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            settlementsHistory.map((s) => (
+                                                <tr key={s.id} className="border-b hover:bg-white/40 transition">
+                                                    <td className="py-2.5 px-3 font-bold text-scout-navy">#{s.id}</td>
+                                                    <td className="py-2.5 px-3 font-semibold">{s.scout?.fullName}</td>
+                                                    <td className="py-2.5 px-3 font-semibold">{s.admin?.fullName}</td>
+                                                    <td className="py-2.5 px-3 text-center font-bold">{s.ticketCount}</td>
+                                                    <td className="py-2.5 px-3 text-center font-black text-scout-green-light">${s.amount.toFixed(2)}</td>
+                                                    <td className="py-2.5 px-3 text-center text-scout-charcoal/60">
+                                                        {new Date(s.createdAt).toLocaleString()}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-center">
+                                                        <button
+                                                            onClick={() => handleRevertSettlement(s.id)}
+                                                            className="px-2.5 py-1 bg-red-800 hover:bg-red-700 text-white rounded text-[10px] font-bold transition cursor-pointer"
+                                                        >
+                                                            {isAr ? "تراجع" : "Revert"}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 )}
             </main>

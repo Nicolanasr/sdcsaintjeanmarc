@@ -34,10 +34,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Fetch all tickets and teams
+    let prizeName = "Grand Prize 🥇";
+    try {
+      const body = await request.json();
+      if (body.prizeName) prizeName = body.prizeName.trim();
+    } catch {
+      // ignore
+    }
+
+    // 2. Fetch all tickets and teams (exclude tickets that have already won a prize)
     const tickets = await prisma.ticket.findMany({
       where: {
         paymentStatus: "PAID",
+        winner: null, // Exclude past winners
       },
       select: {
         id: true,
@@ -68,7 +77,7 @@ export async function POST(request: Request) {
 
     if (rafflePool.length === 0) {
       return NextResponse.json(
-        { error: "Raffle pool is empty. Make sure teams have goals and podium finishes set." },
+        { error: "Raffle pool is empty or all paid tickets have already won prizes." },
         { status: 400 }
       );
     }
@@ -93,10 +102,35 @@ export async function POST(request: Request) {
       pool = pool.filter((t) => t.id !== candidate.id);
     }
 
+    const winner = winners[0];
+    if (!winner) {
+      return NextResponse.json({ error: "No winner chosen" }, { status: 400 });
+    }
+
+    // 5. Persist winner draw to the database
+    const createdWinner = await prisma.winner.create({
+      data: {
+        ticketId: winner.id,
+        prizeName,
+      },
+      include: {
+        ticket: {
+          select: {
+            id: true,
+            buyerName: true,
+            buyerPhone: true,
+            teamId: true,
+            scoutId: true,
+          },
+        },
+      },
+    });
+
     return NextResponse.json({
       success: true,
       poolSize: rafflePool.length,
-      winners,
+      winners: [createdWinner.ticket],
+      winnerRecord: createdWinner,
     });
   } catch (err: any) {
     return NextResponse.json(

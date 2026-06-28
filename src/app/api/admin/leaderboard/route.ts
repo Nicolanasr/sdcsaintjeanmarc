@@ -48,7 +48,32 @@ export async function GET(request: Request) {
       .filter((p) => p.tickets_count > 0)
       .sort((a, b) => b.tickets_count - a.tickets_count);
 
-    return NextResponse.json({ leaderboard });
+    // Sum ticket counts per unit
+    const unitStats: Record<string, number> = {
+      jouwele: 0,
+      mounjidet: 0,
+      kechefe: 0,
+      mourchidet: 0,
+      jaramiz: 0,
+      zaharat: 0,
+      iyede: 0,
+    };
+
+    profiles.forEach((p) => {
+      const u = p.unit?.toLowerCase().trim();
+      if (u && Object.prototype.hasOwnProperty.call(unitStats, u)) {
+        unitStats[u] += p.tickets.length;
+      }
+    });
+
+    const unitLeaderboard = Object.entries(unitStats)
+      .map(([unit, tickets_count]) => ({
+        unit,
+        tickets_count,
+      }))
+      .sort((a, b) => b.tickets_count - a.tickets_count);
+
+    return NextResponse.json({ leaderboard, unitLeaderboard });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

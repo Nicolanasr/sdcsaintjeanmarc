@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jwtVerify } from "jose";
 import { getWhatsAppSettings } from "@/lib/whatsapp-settings";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, getTeamFlagEmoji } from "@/lib/whatsapp";
 import { TICKET_PRICE } from "@/lib/constants";
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -93,6 +93,31 @@ export async function GET(request: Request) {
       });
     }
 
+    // Sum ticket counts per unit
+    const unitStats: Record<string, number> = {
+      jouwele: 0,
+      mounjidet: 0,
+      kechefe: 0,
+      mourchidet: 0,
+      jaramiz: 0,
+      zaharat: 0,
+      iyede: 0,
+    };
+
+    leaderboardData.forEach((p: any) => {
+      const u = p.unit?.toLowerCase().trim();
+      if (u && Object.prototype.hasOwnProperty.call(unitStats, u)) {
+        unitStats[u] += p.tickets.length;
+      }
+    });
+
+    const unitLeaderboard = Object.entries(unitStats)
+      .map(([unit, tickets_count]) => ({
+        unit,
+        tickets_count,
+      }))
+      .sort((a, b) => b.tickets_count - a.tickets_count);
+
     return NextResponse.json({
       stats: {
         ticketsSold,
@@ -101,6 +126,7 @@ export async function GET(request: Request) {
       },
       totalTicketsCount,
       leaderboard,
+      unitLeaderboard,
       allTickets,
       whatsAppLogs,
     });
@@ -161,11 +187,12 @@ export async function POST(request: Request) {
           const templateAr = settings.templatePurchaseAr || "شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة رقم #{ticketId} لدعم فوج مار يوحنا مرقس - كشافة الأرز! فريقك المختار هو {teamName}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذكرتك ونقاط فريقك من هنا:\n{trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/";
           const templateEn = settings.templatePurchaseEn || "Thank you for purchasing World Cup Scout Cup Draw ticket #{ticketId} supporting Scouts des Cèdres Saint Jean Marc! Your selected team is {teamName}. Every win they achieve grants you an extra entry in the final raffle! ⚽️\n\nTrack your ticket and team entries here:\n{trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/";
 
+          const flagEmoji = getTeamFlagEmoji(team.flagUrl, team.id);
           const interpolate = (tmpl: string) => {
             return tmpl
               .replace(/{ticketId}/g, String(ticket.id))
               .replace(/{buyerName}/g, buyerName)
-              .replace(/{teamName}/g, team.name)
+              .replace(/{teamName}/g, `${team.name} ${flagEmoji}`)
               .replace(/{trackingLink}/g, trackingLink);
           };
 

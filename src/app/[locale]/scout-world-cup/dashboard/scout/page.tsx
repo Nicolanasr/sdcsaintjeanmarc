@@ -31,6 +31,7 @@ export default function ScoutDashboard() {
     const [stats, setStats] = useState<ScoutStats>({ ticketsSold: 0 });
     const [teams, setTeams] = useState<Team[]>([]);
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [unitLeaderboard, setUnitLeaderboard] = useState<any[]>([]);
 
     // Form State
     const [buyerName, setBuyerName] = useState("");
@@ -83,6 +84,7 @@ export default function ScoutDashboard() {
                 const statsData = await statsRes.json();
                 setStats(statsData.stats);
                 setLeaderboard(statsData.leaderboard || []);
+                setUnitLeaderboard(statsData.unitLeaderboard || []);
             }
 
             // 2. Fetch Teams
@@ -345,6 +347,53 @@ export default function ScoutDashboard() {
                             {leaderboard.length === 0 && (
                                 <p className="text-xs text-scout-charcoal/50 text-center py-4">
                                     {isAr ? "لا توجد مبيعات مسجلة حتى الآن." : "No sales registered yet."}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Unit Standings Leaderboard */}
+                    <div className="glass-panel p-6 rounded-2xl shadow-md">
+                        <h2 className="text-lg font-bold mb-4 font-display text-scout-navy">
+                            {isAr ? "ترتيب الوحدات الكشفية" : "Unit Standings"}
+                        </h2>
+                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                            {unitLeaderboard.map((entry, index) => {
+                                const isUserUnit = entry.unit.toLowerCase() === profile?.unit?.toLowerCase();
+                                return (
+                                    <div
+                                        key={entry.unit}
+                                        className={`flex items-center justify-between p-3 rounded-lg text-sm ${isUserUnit
+                                            ? "bg-scout-gold/15 border border-scout-gold/30"
+                                            : "bg-white/50"
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-bold text-scout-navy">
+                                                #{index + 1}
+                                            </span>
+                                            <span className={isUserUnit ? "font-bold text-scout-navy uppercase" : "uppercase text-scout-navy/80"}>
+                                                {isAr ? (
+                                                    entry.unit === "jouwele" ? "جوالة" :
+                                                    entry.unit === "mounjidet" ? "منجدات" :
+                                                    entry.unit === "kechefe" ? "كشافة" :
+                                                    entry.unit === "mourchidet" ? "مرشدات" :
+                                                    entry.unit === "jaramiz" ? "جراميز" :
+                                                    entry.unit === "zaharat" ? "زهرات" :
+                                                    entry.unit === "iyede" ? "إعداد" : entry.unit
+                                                ) : entry.unit}
+                                                {isUserUnit && <span className="text-[9px] bg-scout-gold text-scout-navy font-bold px-1.5 py-0.5 rounded ml-1.5">{isAr ? "وحدتك" : "Your Unit"}</span>}
+                                            </span>
+                                        </div>
+                                        <span className="font-semibold text-scout-green-light">
+                                            {entry.tickets_count} {isAr ? "تذكرة" : "tickets"}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                            {unitLeaderboard.length === 0 && (
+                                <p className="text-xs text-scout-charcoal/50 text-center py-4">
+                                    {isAr ? "لا توجد مبيعات مسجلة للوحدات بعد." : "No unit standings available."}
                                 </p>
                             )}
                         </div>
