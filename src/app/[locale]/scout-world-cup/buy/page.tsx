@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Megaphone, Trophy, Phone, User, Globe, ChevronRight } from "lucide-react";
 import { FaFacebookF, FaInstagram, FaWhatsapp, FaTiktok } from "react-icons/fa6";
 import { TICKET_PRICE, TICKET_PRICE_DISPLAY } from "@/lib/constants";
+import WhishGuideModal from "@/components/WhishGuideModal";
 
 interface Team {
     id: string;
@@ -87,6 +88,7 @@ export default function BuyTicketPage() {
     const [quantity, setQuantity] = useState(1);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
 
     // Load teams
     useEffect(() => {
@@ -409,6 +411,14 @@ export default function BuyTicketPage() {
                         <span>{submitting ? (isAr ? "جاري التوجيه..." : "Redirecting...") : (isAr ? "ادفع بواسطة Whish Pay" : "Pay with Whish Pay")}</span>
                         <ChevronRight className="w-4 h-4" />
                     </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setIsGuideOpen(true)}
+                        className="w-full mt-3 text-center text-xs text-scout-navy hover:text-scout-gold font-bold transition flex items-center justify-center gap-1 cursor-pointer underline decoration-dotted"
+                    >
+                        {isAr ? "🤔 كيف أدفع عبر Whish؟ عرض الدليل المصوّر" : "🤔 How to pay via Whish? View Screenshot Guide"}
+                    </button>
                 </form>
 
                 {/* Social Card Footer */}
@@ -424,6 +434,8 @@ export default function BuyTicketPage() {
                     </div>
                 </div>
             </main>
+
+            <WhishGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} locale={locale} />
         </div>
     );
 }

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import WhishGuideModal from "@/components/WhishGuideModal";
 
 interface Team {
     id: string;
@@ -43,6 +44,7 @@ export default function ScoutDashboard() {
     const [copiedPhone, setCopiedPhone] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [successTicket, setSuccessTicket] = useState<any>(null);
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [teamSearch, setTeamSearch] = useState("");
     const whishPhoneNumber = "+961 79 013 907";
 
@@ -556,6 +558,13 @@ export default function ScoutDashboard() {
                                                 {copiedPhone ? (isAr ? "تم" : "Copied") : (isAr ? "نسخ" : "Copy")}
                                             </button>
                                         </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsGuideOpen(true)}
+                                            className="text-[11px] text-scout-navy hover:text-scout-gold font-bold underline cursor-pointer mt-1"
+                                        >
+                                            {isAr ? "🤔 كيف يتم الدفع؟ عرض الدليل المصوّر" : "🤔 How to pay? View Screenshot Guide"}
+                                        </button>
                                     </div>
 
                                     {/* QR Code Graphic */}
@@ -673,6 +682,8 @@ export default function ScoutDashboard() {
                     </div>
                 </div>
             )}
+            
+            <WhishGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} locale={locale} />
         </div>
     );
 }

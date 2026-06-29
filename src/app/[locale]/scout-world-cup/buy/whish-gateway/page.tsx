@@ -2,8 +2,9 @@
 
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { ShieldCheck, ArrowLeft, Landmark, Copy, Check, ExternalLink } from "lucide-react";
+import { ShieldCheck, ArrowLeft, Landmark, Copy, Check, ExternalLink, HelpCircle } from "lucide-react";
 import { TICKET_PRICE } from "@/lib/constants";
+import WhishGuideModal from "@/components/WhishGuideModal";
 
 export default function WhishGatewayPage() {
     const searchParams = useSearchParams();
@@ -23,6 +24,7 @@ export default function WhishGatewayPage() {
     const [copiedAmount, setCopiedAmount] = useState(false);
     const [transactionId, setTransactionId] = useState("");
     const [submitted, setSubmitted] = useState(false);
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
 
     // Configuration for target Whish phone number
     const whishPhoneNumber = process.env.NEXT_PUBLIC_WHISH_PHONE || "+961 79 013 907";
@@ -104,6 +106,11 @@ export default function WhishGatewayPage() {
             if (!res.ok) {
                 throw new Error(data.error || "Failed to submit transaction ID");
             }
+
+            alert(isAr 
+                ? "تم إرسال رقم العملية بنجاح! سيتم مراجعتها من قبل المسؤول وتفعيل تذاكرك قريباً." 
+                : "Your transaction has been submitted successfully! It will be reviewed by an admin and your tickets will be activated shortly."
+            );
 
             setSubmitted(true);
         } catch (err: any) {
@@ -212,9 +219,19 @@ export default function WhishGatewayPage() {
 
                     {/* Payment Steps */}
                     <div className="space-y-4">
-                        <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                            {isAr ? "خطوات الدفع عبر تطبيق Whish:" : "How to Pay via Whish App:"}
-                        </h3>
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                                {isAr ? "خطوات الدفع عبر تطبيق Whish:" : "How to Pay via Whish App:"}
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setIsGuideOpen(true)}
+                                className="flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 transition cursor-pointer underline"
+                            >
+                                <HelpCircle className="w-3.5 h-3.5" />
+                                <span>{isAr ? "عرض دليل الخطوات" : "View Step Guide"}</span>
+                            </button>
+                        </div>
 
                         {/* Step 1: Target Number Copy */}
                         <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-3">
@@ -312,6 +329,8 @@ export default function WhishGatewayPage() {
                 </div>
 
             </div>
+            
+            <WhishGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} locale={locale} />
         </div>
     );
 }
