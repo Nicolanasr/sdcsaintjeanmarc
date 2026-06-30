@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, ChevronLeft, ChevronRight, HelpCircle, Smartphone, ExternalLink, Copy, Check } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, ChevronLeft, ChevronRight, HelpCircle, Smartphone, AlertTriangle } from "lucide-react";
 
 interface WhishGuideModalProps {
     isOpen: boolean;
@@ -13,238 +13,232 @@ export default function WhishGuideModal({ isOpen, onClose, locale = "en" }: Whis
     const isAr = locale === "ar";
     const [activeStep, setActiveStep] = useState(0);
 
+    // Reset to first step when opened
+    useEffect(() => {
+        if (isOpen) setActiveStep(0);
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const steps = [
         {
-            titleEn: "Step 1: Open Whish",
-            titleAr: "الخطوة ١: فتح تطبيق Whish",
-            descEn: "Click 'Pay with Whish Pay', copy the phone number shown on the screen, and open the Whish app.",
-            descAr: "اضغط على 'ادفع بواسطة Whish'، ثم قم بنسخ رقم الهاتف المعروض على الشاشة، وافتح تطبيق Whish.",
+            titleEn: "Open Whish & Copy Number",
+            titleAr: "افتح Whish وانسخ الرقم",
+            descEn: "On the payment page, tap \"Copy Number\" to copy our Whish phone number, then tap \"Open Whish App\".",
+            descAr: "على صفحة الدفع، اضغط على \"نسخ الرقم\" لنسخ رقم هاتف Whish، ثم اضغط على \"افتح تطبيق Whish\".",
             image: "/images/WHISH-1.jpg",
         },
         {
-            titleEn: "Step 2: Transfer Section",
-            titleAr: "الخطوة ٢: قسم التحويل",
-            descEn: "On the home screen of the Whish app, click on the 'Transfer' button.",
-            descAr: "في الشاشة الرئيسية لتطبيق Whish، اضغط على زر 'التحويل (Transfer)'.",
+            titleEn: "Tap \"Transfer\"",
+            titleAr: "اضغط على \"Transfer\"",
+            descEn: "Inside the Whish app home screen, tap the \"Transfer\" button.",
+            descAr: "في الشاشة الرئيسية لتطبيق Whish، اضغط على زر \"Transfer\" (تحويل).",
             image: "/images/WHISH-2.jpg",
         },
         {
-            titleEn: "Step 3: Whish to Whish",
-            titleAr: "الخطوة ٣: تحويل Whish إلى Whish",
-            descEn: "Select the 'Whish to Whish' option from the list of transfer methods.",
-            descAr: "اختر خيار 'من Whish إلى Whish (Whish to Whish)' من قائمة طرق التحويل.",
+            titleEn: "Select \"Whish to Whish\"",
+            titleAr: "اختر \"Whish to Whish\"",
+            descEn: "From the transfer methods list, choose \"Whish to Whish\".",
+            descAr: "من قائمة طرق التحويل، اختر \"Whish to Whish\".",
             image: "/images/WHISH-3.jpg",
         },
         {
-            titleEn: "Step 4: Enter Details & Send",
-            titleAr: "الخطوة ٤: إدخال البيانات والإرسال",
-            descEn: "Enter the copied phone number and put the correct amount (this must be exactly the amount shown on the website), then click on 'Send'.",
-            descAr: "أدخل رقم الهاتف المنسوخ واكتب المبلغ المطلوب بدقة (يجب أن يكون مطابقاً تماماً للمبلغ المعروض على الموقع)، ثم اضغط على 'إرسال (Send)'.",
+            titleEn: "Enter number & exact amount, then Send",
+            titleAr: "أدخل الرقم والمبلغ بالضبط ثم أرسل",
+            descEn: "Paste the copied phone number, enter the exact amount shown on the website (no more, no less), then tap Send.",
+            descAr: "الصق رقم الهاتف المنسوخ، أدخل المبلغ المحدد على الموقع بالضبط (لا أكثر ولا أقل)، ثم اضغط \"Send\".",
             image: "/images/WHISH-4.jpg",
+            highlight: true,
         },
         {
-            titleEn: "Step 5: Go to Activity",
-            titleAr: "الخطوة ٥: الذهاب للعمليات",
-            descEn: "Click on the Menu on the bottom right, then select 'Activity / Transactions'.",
-            descAr: "اضغط على تبويب القائمة (Menu) في أسفل يمين الشاشة، ثم اختر 'النشاط / العمليات (Activity / Transactions)'.",
+            titleEn: "Go to Activity / Transactions",
+            titleAr: "اذهب إلى \"Activity / Transactions\"",
+            descEn: "Tap the Menu icon at the bottom right of the app, then select \"Activity / Transactions\".",
+            descAr: "اضغط على أيقونة القائمة (Menu) في أسفل يمين التطبيق، ثم اختر \"Activity / Transactions\".",
             image: "/images/WHISH-5.jpg",
         },
         {
-            titleEn: "Step 6: Select Transaction",
-            titleAr: "الخطوة ٦: اختيار المعاملة",
-            descEn: "Select the most recent transaction you just performed and click on it to view details.",
-            descAr: "اختر أحدث معاملة قمت بها واضغط عليها لفتح التفاصيل.",
+            titleEn: "Select your latest transaction",
+            titleAr: "اختر أحدث معاملة",
+            descEn: "Tap on the most recent transaction you just made to open its details.",
+            descAr: "اضغط على أحدث معاملة أجريتها لفتح تفاصيلها.",
             image: "/images/WHISH-6.jpg",
         },
         {
-            titleEn: "Step 7: Copy Transaction ID",
-            titleAr: "الخطوة ٧: نسخ رقم العملية",
-            descEn: "Copy the generated Transaction ID from the transaction details screen.",
-            descAr: "قم بنسخ رقم العملية (Transaction ID) المعروض في شاشة تفاصيل المعاملة.",
+            titleEn: "Copy the Transaction ID",
+            titleAr: "انسخ رقم العملية",
+            descEn: "On the transaction details screen, copy the Transaction ID (also called Reference Number).",
+            descAr: "في شاشة تفاصيل المعاملة، انسخ رقم العملية (Transaction ID أو Reference Number).",
             image: "/images/WHISH-7.jpg",
         },
         {
-            titleEn: "Step 8: Submit ID on Website",
-            titleAr: "الخطوة ٨: إدخال الرقم على الموقع",
-            descEn: "Paste the copied Transaction ID into the transaction input field on our website, then click 'Submit'.",
-            descAr: "ألصق رقم العملية المنسوخ في خانة التأكيد على الموقع، ثم اضغط على 'إرسال (Submit)'.",
+            titleEn: "Paste it on the website & Submit",
+            titleAr: "الصقه على الموقع واضغط تأكيد",
+            descEn: "Go back to our website, paste the Transaction ID into the input field, then tap \"Confirm Payment\". Done! ✅",
+            descAr: "ارجع إلى موقعنا، الصق رقم العملية في خانة الإدخال، ثم اضغط \"تأكيد الدفع\". انتهى! ✅",
             image: "/images/WHISH-8.jpg",
         },
     ];
 
-    const handleNext = () => {
-        if (activeStep < steps.length - 1) {
-            setActiveStep(activeStep + 1);
-        }
-    };
-
-    const handlePrev = () => {
-        if (activeStep > 0) {
-            setActiveStep(activeStep - 1);
-        }
-    };
-
+    const handleNext = () => { if (activeStep < steps.length - 1) setActiveStep(activeStep + 1); };
+    const handlePrev = () => { if (activeStep > 0) setActiveStep(activeStep - 1); };
     const currentStep = steps[activeStep];
+    const isLast = activeStep === steps.length - 1;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-scout-navy/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div
-                className="relative bg-white rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col md:flex-row overflow-hidden border border-scout-navy/10 animate-in zoom-in-95 duration-200"
-                style={{ maxHeight: "90vh" }}
-            >
-                {/* Sidebar Index (Desktop Only) */}
-                <div className="hidden md:flex flex-col w-72 bg-scout-navy/5 border-r border-scout-navy/10 p-5 overflow-y-auto">
-                    <div className="flex items-center gap-2 mb-4 text-scout-navy">
-                        <HelpCircle className="w-5 h-5 text-scout-gold" />
-                        <h3 className="font-extrabold text-sm uppercase tracking-wider">
-                            {isAr ? "دليل الدفع عبر Whish" : "Whish Payment Guide"}
-                        </h3>
-                    </div>
-                    <div className="space-y-1">
-                        {steps.map((s, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => setActiveStep(idx)}
-                                className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${activeStep === idx
-                                        ? "bg-scout-navy text-white shadow-md"
-                                        : "text-scout-navy/70 hover:bg-scout-navy/10"
-                                    }`}
-                            >
-                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${activeStep === idx ? "bg-scout-gold text-scout-navy" : "bg-scout-navy/10 text-scout-navy"
-                                    }`}>
-                                    {idx + 1}
-                                </span>
-                                <span className="truncate">{isAr ? s.titleAr : s.titleEn}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
+        <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div className="relative bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200" style={{ maxHeight: "95vh" }}>
 
-                {/* Content Pane */}
-                <div className="flex-1 flex flex-col min-h-0 bg-white">
-                    {/* Header */}
-                    <div className="px-6 py-4 border-b border-scout-navy/10 flex items-center justify-between">
-                        <div>
-                            <span className="text-[10px] font-bold text-scout-gold uppercase tracking-wider bg-scout-gold/10 px-2 py-0.5 rounded-full">
-                                {isAr ? `الخطوة ${activeStep + 1} من ٨` : `Step ${activeStep + 1} of 8`}
-                            </span>
-                            <h2 className="font-black text-lg text-scout-navy mt-1">
-                                {isAr ? currentStep.titleAr : currentStep.titleEn}
-                            </h2>
+                {/* ── Header ── */}
+                <div className="px-5 pt-5 pb-4 border-b border-gray-100 shrink-0">
+                    {/* Drag handle (mobile) */}
+                    <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden" />
+
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-scout-navy rounded-xl flex items-center justify-center shrink-0">
+                                <HelpCircle className="w-4 h-4 text-scout-gold" />
+                            </div>
+                            <div>
+                                <h2 className="font-black text-scout-navy text-base leading-tight">
+                                    {isAr ? "دليل الدفع عبر Whish" : "How to Pay via Whish"}
+                                </h2>
+                                <p className="text-[11px] text-gray-400">{isAr ? `الخطوة ${activeStep + 1} من ${steps.length}` : `Step ${activeStep + 1} of ${steps.length}`}</p>
+                            </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-1.5 rounded-full bg-scout-navy/5 text-scout-navy hover:bg-scout-navy/10 transition cursor-pointer"
+                            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 transition cursor-pointer shrink-0"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-4 h-4" />
                         </button>
                     </div>
 
-                    {/* Body */}
-                    <div className="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6 min-h-0">
-                        {/* Left/Top: Instructions Card */}
-                        <div className="flex-1 flex flex-col justify-between space-y-4">
-                            <div className="space-y-4">
-                                <p className="text-sm font-semibold text-scout-charcoal/90 leading-relaxed bg-scout-navy/5 p-4 rounded-2xl border-l-4 border-scout-navy">
-                                    {isAr ? currentStep.descAr : currentStep.descEn}
-                                </p>
-                            </div>
+                    {/* Progress bar */}
+                    <div className="mt-4 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-scout-gold rounded-full transition-all duration-300"
+                            style={{ width: `${((activeStep + 1) / steps.length) * 100}%` }}
+                        />
+                    </div>
+                </div>
 
-                            {/* Navigation buttons */}
-                            <div className="flex items-center justify-between pt-4 border-t">
-                                <button
-                                    onClick={handlePrev}
-                                    disabled={activeStep === 0}
-                                    className="flex items-center gap-1 px-4 py-2 text-xs font-bold text-scout-navy bg-scout-navy/5 hover:bg-scout-navy/10 rounded-xl transition disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                                >
-                                    <ChevronLeft className="w-4 h-4" />
-                                    {isAr ? "السابق" : "Previous"}
-                                </button>
-                                <div className="md:hidden flex gap-1">
-                                    {steps.map((_, idx) => (
-                                        <span
-                                            key={idx}
-                                            className={`w-1.5 h-1.5 rounded-full transition-all ${activeStep === idx ? "bg-scout-navy w-3" : "bg-scout-navy/20"
-                                                }`}
-                                        />
-                                    ))}
-                                </div>
-                                {activeStep === steps.length - 1 ? (
-                                    <button
-                                        onClick={onClose}
-                                        className="px-5 py-2.5 bg-scout-gold text-scout-navy hover:bg-scout-gold-light font-extrabold text-xs rounded-xl shadow cursor-pointer transition"
-                                    >
-                                        {isAr ? "فهمت الدليل" : "Got it, thanks!"}
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={handleNext}
-                                        className="flex items-center gap-1 px-4 py-2.5 bg-scout-navy hover:bg-scout-navy-light text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-sm"
-                                    >
-                                        {isAr ? "التالي" : "Next"}
-                                        <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                {/* ── Step pills (horizontal scroll) ── */}
+                <div className="flex gap-1.5 px-5 py-3 overflow-x-auto shrink-0 scrollbar-hide border-b border-gray-50">
+                    {steps.map((s, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setActiveStep(idx)}
+                            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition cursor-pointer ${
+                                idx === activeStep
+                                    ? "bg-scout-navy text-white"
+                                    : idx < activeStep
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : "bg-gray-50 text-gray-400 border border-gray-100"
+                            }`}
+                        >
+                            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ${
+                                idx === activeStep ? "bg-scout-gold text-scout-navy" : idx < activeStep ? "bg-emerald-500 text-white" : "bg-gray-200 text-gray-500"
+                            }`}>
+                                {idx < activeStep ? "✓" : idx + 1}
+                            </span>
+                            <span className="whitespace-nowrap">{isAr ? `${idx + 1}` : `${idx + 1}`}</span>
+                        </button>
+                    ))}
+                </div>
 
-                        {/* Right/Bottom: Screenshot Preview */}
-                        <div className="w-full lg:w-80 flex-shrink-0 flex justify-center items-center">
-                            <div className="relative w-full max-w-[280px] bg-slate-950 rounded-[3rem] p-3 shadow-xl border-4 border-slate-800 aspect-[9/19] flex items-center justify-center overflow-hidden">
-                                {/* Speaker */}
-                                <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-4 bg-slate-800 rounded-full z-20 flex items-center justify-center">
-                                    <div className="w-8 h-1 bg-slate-900 rounded-full" />
-                                </div>
+                {/* ── Body ── */}
+                <div className="flex-1 overflow-y-auto min-h-0">
+                    <div className="flex flex-col lg:flex-row">
 
-                                {/* Screen content */}
-                                <div className="relative w-full h-full bg-slate-900 rounded-[2.5rem] overflow-hidden flex items-center justify-center">
+                        {/* Screenshot */}
+                        <div className="lg:w-72 lg:shrink-0 flex justify-center items-center pt-5 pb-3 lg:py-6 lg:pl-5 lg:pr-0 bg-gray-50 lg:bg-transparent">
+                            <div className="relative w-56 sm:w-64 bg-slate-950 rounded-[2.5rem] p-2.5 shadow-xl border-4 border-slate-800 aspect-[9/19] flex items-center justify-center overflow-hidden">
+                                {/* Notch */}
+                                <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-3 bg-slate-800 rounded-full z-20" />
+                                <div className="relative w-full h-full bg-slate-900 rounded-[2rem] overflow-hidden flex items-center justify-center">
                                     <img
                                         src={currentStep.image}
                                         alt={isAr ? currentStep.titleAr : currentStep.titleEn}
                                         className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            (e.target as HTMLElement).style.display = "none";
-                                        }}
+                                        onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
                                     />
-                                    {/* Decorative phone notch */}
-                                    <div className="absolute top-0 inset-x-0 h-6 bg-slate-950 z-10 rounded-b-xl flex justify-between items-center px-6 text-[8px] text-white/50 font-bold font-sans select-none">
+                                    <div className="absolute top-0 inset-x-0 h-5 bg-slate-950 z-10 rounded-b-lg flex justify-between items-center px-4 text-[7px] text-white/40 font-bold select-none">
                                         <span>9:41</span>
                                         <div className="flex gap-1 items-center">
                                             <span>LTE</span>
-                                            <div className="w-3 h-1.5 border border-white/50 rounded-sm" />
+                                            <div className="w-3 h-1.5 border border-white/40 rounded-sm" />
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
-
-                        </div>
-                        <div className="bg-scout-gold/5 rounded-2xl p-4 border border-scout-gold/30 text-xs text-scout-navy space-y-2">
-                            <div className="font-bold flex items-center gap-1.5">
-                                <Smartphone className="w-4 h-4 text-scout-gold" />
-                                <span>{isAr ? "نصيحة مفيدة:" : "Quick Tip:"}</span>
-                            </div>
-                            <p className="text-scout-charcoal/80 leading-relaxed">
-                                {isAr
-                                    ? "تأكيد: يجب أن يكون المبلغ المحوّل مطابقاً تماماً لقيمة الفاتورة المطلوبة لتفادي أي تأخير في تفعيل بطاقتك."
-                                    : "Important: Ensure the transaction amount is exactly the total price requested to prevent verification delays."}
-                            </p>
                         </div>
 
-                        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-300 text-xs text-amber-900 space-y-1">
-                            <div className="font-bold flex items-center gap-1.5 text-amber-800">
-                                <span>⚠️ {isAr ? "ملاحظة هامة:" : "Important Note:"}</span>
+                        {/* Instructions */}
+                        <div className="flex-1 p-5 space-y-4">
+                            <div>
+                                <h3 className="font-black text-scout-navy text-lg leading-snug">
+                                    {isAr ? currentStep.titleAr : currentStep.titleEn}
+                                </h3>
+                                <p className={`mt-2 text-sm leading-relaxed rounded-xl p-3.5 ${
+                                    currentStep.highlight
+                                        ? "bg-amber-50 border border-amber-200 text-amber-900"
+                                        : "bg-scout-navy/5 border-l-4 border-scout-navy text-scout-charcoal/90"
+                                }`}>
+                                    {currentStep.highlight && <span className="font-bold block text-amber-700 mb-1">⚠️ {isAr ? "مهم جداً!" : "Very Important!"}</span>}
+                                    {isAr ? currentStep.descAr : currentStep.descEn}
+                                </p>
                             </div>
-                            <p className="leading-relaxed opacity-90">
-                                {isAr
-                                    ? "جميع عمليات تحويل Whish يتم مراجعتها والموافقة عليها يدوياً من قبل المسؤول لتأكيد التذاكر وتفعيلها."
-                                    : "All Whish transfer transactions are manually reviewed and verified by an administrator to activate your tickets."}
-                            </p>
+
+                            {/* Tip */}
+                            {activeStep === 0 && (
+                                <div className="flex items-start gap-2.5 bg-scout-gold/5 border border-scout-gold/20 rounded-xl p-3 text-xs text-scout-charcoal/80">
+                                    <Smartphone className="w-4 h-4 text-scout-gold shrink-0 mt-0.5" />
+                                    <span>{isAr ? "إذا لم يفتح التطبيق تلقائياً، افتحه يدوياً من هاتفك." : "If the app doesn't open automatically, open it manually from your phone."}</span>
+                                </div>
+                            )}
+                            {activeStep === 3 && (
+                                <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-800">
+                                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                                    <span>{isAr ? "المبلغ الخاطئ يؤدي إلى تأخير أو رفض الطلب." : "Wrong amount will cause a delay or rejection of your ticket."}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
+
+                {/* ── Footer navigation ── */}
+                <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-3 shrink-0 bg-white">
+                    <button
+                        onClick={handlePrev}
+                        disabled={activeStep === 0}
+                        className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-scout-navy bg-scout-navy/5 hover:bg-scout-navy/10 rounded-xl transition disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                        {isAr ? "السابق" : "Previous"}
+                    </button>
+
+                    {isLast ? (
+                        <button
+                            onClick={onClose}
+                            className="flex-1 py-2.5 bg-scout-gold hover:bg-amber-400 text-scout-navy font-extrabold text-xs rounded-xl shadow cursor-pointer transition text-center"
+                        >
+                            {isAr ? "✅ فهمت! أعود للدفع" : "✅ Got it! Back to payment"}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleNext}
+                            className="flex items-center gap-1.5 px-5 py-2.5 bg-scout-navy hover:bg-scout-navy-light text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-sm flex-1 justify-center"
+                        >
+                            {isAr ? "التالي" : "Next"}
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+
             </div>
         </div>
     );

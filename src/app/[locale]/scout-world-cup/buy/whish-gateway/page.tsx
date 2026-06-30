@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { ShieldCheck, ArrowLeft, Landmark, Copy, Check, ExternalLink, HelpCircle } from "lucide-react";
+import { ShieldCheck, ArrowLeft, Copy, Check, ExternalLink, HelpCircle, ChevronRight, AlertCircle } from "lucide-react";
 import { TICKET_PRICE } from "@/lib/constants";
 import WhishGuideModal from "@/components/WhishGuideModal";
 
@@ -26,7 +26,6 @@ export default function WhishGatewayPage() {
     const [submitted, setSubmitted] = useState(false);
     const [isGuideOpen, setIsGuideOpen] = useState(false);
 
-    // Configuration for target Whish phone number
     const whishPhoneNumber = process.env.NEXT_PUBLIC_WHISH_PHONE || "+961 79 013 907";
     const [whishLink, setWhishLink] = useState("https://www.whish.money/");
 
@@ -52,9 +51,7 @@ export default function WhishGatewayPage() {
             try {
                 const firstId = ticketIds[0];
                 const res = await fetch(`/api/public/ticket?query=${firstId}`);
-                if (!res.ok) {
-                    throw new Error("Failed to load ticket");
-                }
+                if (!res.ok) throw new Error("Failed to load ticket");
                 const data = await res.json();
                 if (data.type === "single" && data.ticket) {
                     setTicketDetails(data.ticket);
@@ -103,14 +100,7 @@ export default function WhishGatewayPage() {
             });
 
             const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || "Failed to submit transaction ID");
-            }
-
-            alert(isAr 
-                ? "تم إرسال رقم العملية بنجاح! سيتم مراجعتها من قبل المسؤول وتفعيل تذاكرك قريباً." 
-                : "Your transaction has been submitted successfully! It will be reviewed by an admin and your tickets will be activated shortly."
-            );
+            if (!res.ok) throw new Error(data.error || "Failed to submit transaction ID");
 
             setSubmitted(true);
         } catch (err: any) {
@@ -122,21 +112,29 @@ export default function WhishGatewayPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <span className="animate-spin border-4 border-emerald-600 border-t-transparent rounded-full w-12 h-12" />
+            <div className="min-h-screen flex items-center justify-center bg-emerald-950">
+                <div className="flex flex-col items-center gap-4 text-white">
+                    <span className="animate-spin border-4 border-emerald-400 border-t-transparent rounded-full w-12 h-12" />
+                    <span className="text-sm opacity-60">{isAr ? "جاري التحميل..." : "Loading..."}</span>
+                </div>
             </div>
         );
     }
 
     if (error && !submitted) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <div className="max-w-md w-full bg-white rounded-2xl shadow p-6 text-center space-y-4">
-                    <div className="text-red-500 font-extrabold text-2xl">⚠️ {isAr ? "خطأ" : "Error"}</div>
-                    <p className="text-sm text-gray-600">{error || (isAr ? "معلومات غير صالحة" : "Invalid request")}</p>
+            <div className="min-h-screen bg-emerald-950 flex items-center justify-center p-4">
+                <div className="max-w-sm w-full bg-slate-900 rounded-2xl shadow-2xl p-6 text-center space-y-5 border border-red-500/20">
+                    <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
+                        <AlertCircle className="w-8 h-8 text-red-400" />
+                    </div>
+                    <div>
+                        <h2 className="text-white font-bold text-lg">{isAr ? "حدث خطأ" : "Something went wrong"}</h2>
+                        <p className="text-sm text-gray-400 mt-1">{error || (isAr ? "معلومات غير صالحة" : "Invalid request")}</p>
+                    </div>
                     <button
                         onClick={() => router.push(`/${locale}/scout-world-cup/buy`)}
-                        className="px-6 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-700 transition"
+                        className="w-full px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-500 transition"
                     >
                         {isAr ? "العودة" : "Go Back"}
                     </button>
@@ -148,39 +146,42 @@ export default function WhishGatewayPage() {
     if (submitted) {
         return (
             <div className="min-h-screen bg-emerald-950 text-white flex flex-col items-center justify-center p-4 font-sans">
-                <div className="w-full max-w-md bg-slate-900 rounded-3xl p-8 border border-emerald-500/20 shadow-2xl text-center space-y-6">
-                    <div className="w-20 h-20 bg-emerald-800/50 text-emerald-400 rounded-full flex items-center justify-center mx-auto border-2 border-emerald-500/30">
-                        <ShieldCheck className="w-12 h-12" />
+                <div className="w-full max-w-sm bg-slate-900 rounded-3xl p-8 border border-emerald-500/20 shadow-2xl text-center space-y-6">
+                    <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border-2 border-emerald-500/40 shadow-lg shadow-emerald-900">
+                        <ShieldCheck className="w-10 h-10 text-emerald-400" />
                     </div>
 
                     <div className="space-y-2">
-                        <h2 className="text-2xl font-black font-display text-emerald-400">
-                            {isAr ? "تم إرسال رقم المعاملة!" : "Transaction Submitted!"}
+                        <h2 className="text-2xl font-black text-emerald-400">
+                            {isAr ? "تم الإرسال!" : "Submitted!"}
                         </h2>
-                        <p className="text-sm text-gray-300">
+                        <p className="text-sm text-gray-400">
                             {isAr
-                                ? "شكرًا لك! رقم العملية الخاصة بك قيد المراجعة حاليًا."
-                                : "Thank you! Your transaction reference is currently pending verification."}
+                                ? "رقم العملية قيد المراجعة من قبل الإدارة."
+                                : "Your transaction is pending admin review."}
                         </p>
                     </div>
 
-                    <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-left space-y-3 text-sm">
-                        <div className="flex justify-between border-b border-slate-700 pb-2">
-                            <span className="text-gray-400">{isAr ? "رقم العملية:" : "Transaction ID:"}</span>
-                            <span className="font-bold text-amber-400 font-mono">{transactionId}</span>
+                    <div className="bg-slate-800 rounded-2xl p-4 text-left space-y-3 text-sm border border-slate-700">
+                        <div className="flex justify-between items-start gap-2">
+                            <span className="text-gray-400 shrink-0">{isAr ? "رقم العملية:" : "Transaction ID:"}</span>
+                            <span className="font-bold text-amber-400 font-mono text-right break-all">{transactionId}</span>
                         </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            {isAr
-                                ? "سيقوم المسؤول بالتحقق من استلام المبلغ على تطبيق Whish والموافقة على تذاكرك قريبًا. بمجرد تأكيد الدفع، ستتلقى رسالة تأكيد رسمية مع تذاكرك ورابط التتبع عبر الواتساب."
-                                : "The admin will check the transaction on Whish and approve your tickets shortly. Once verified, you will receive an official confirmation message with your tickets and standings link via WhatsApp."}
-                        </p>
+                        <div className="border-t border-slate-700 pt-3">
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                {isAr
+                                    ? "سيتحقق المسؤول من الدفع ويفعّل تذاكرك قريباً. ستصلك رسالة واتساب بعد التأكيد."
+                                    : "The admin will verify the payment and activate your tickets shortly. You'll receive a WhatsApp confirmation once verified."}
+                            </p>
+                        </div>
                     </div>
 
                     <button
-                        onClick={() => router.push(`/${locale}/scout-world-cup/standings?phone=${encodeURIComponent(ticketDetails.buyerPhone)}`)}
-                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold rounded-xl transition text-sm cursor-pointer shadow-lg"
+                        onClick={() => router.push(`/${locale}/scout-world-cup/standings?phone=${encodeURIComponent(ticketDetails?.buyerPhone || "")}`)}
+                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold rounded-xl transition text-sm cursor-pointer shadow-lg flex items-center justify-center gap-2"
                     >
-                        {isAr ? "الذهاب إلى لوحة الترتيب والتذاكر" : "Go to Standings & Tickets"}
+                        <span>{isAr ? "تابع ترتيب الفرق وتذاكرك" : "View Standings & My Tickets"}</span>
+                        <ChevronRight className="w-4 h-4" />
                     </button>
                 </div>
             </div>
@@ -189,147 +190,171 @@ export default function WhishGatewayPage() {
 
     const totalAmount = TICKET_PRICE * ticketIds.length;
 
-    return (
-        <div className="min-h-screen bg-emerald-950 text-white flex flex-col items-center justify-center p-4 font-sans">
-            <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/20 relative flex flex-col">
-
-                {/* Whish Header Bar */}
-                <div className="bg-emerald-800 p-5 flex items-center justify-between border-b border-emerald-700">
-                    <div className="flex items-center gap-2">
-                        <Landmark className="w-6 h-6 text-amber-400" />
-                        <div>
-                            <h2 className="text-sm font-black tracking-wider text-white">WHISH TRANSFER</h2>
-                            <span className="text-[9px] uppercase tracking-widest text-emerald-300 font-bold">Manual Payment Instructions</span>
-                        </div>
+    const steps = [
+        {
+            num: "1",
+            icon: "📋",
+            titleEn: "Copy the phone number",
+            titleAr: "انسخ رقم الهاتف",
+            action: (
+                <div className="space-y-2">
+                    <div className="bg-slate-950 rounded-xl px-4 py-3 text-center select-all">
+                        <span className="text-xl font-black text-white tracking-widest">{whishPhoneNumber}</span>
                     </div>
+                    <button
+                        type="button"
+                        onClick={handleCopyPhone}
+                        className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer ${
+                            copiedPhone
+                                ? "bg-emerald-600 text-white"
+                                : "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
+                        }`}
+                    >
+                        {copiedPhone ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        <span>{copiedPhone ? (isAr ? "✓ تم النسخ!" : "✓ Copied!") : (isAr ? "نسخ الرقم" : "Copy Number")}</span>
+                    </button>
                 </div>
-
-                {/* Content Body */}
-                <div className="p-6 space-y-6 flex-grow">
-                    {/* Invoice Summary */}
-                    <div className="text-center space-y-1">
-                        <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
-                            {isAr ? "المبلغ المطلوب إرساله" : "Amount to Transfer"}
-                        </span>
-                        <div className="text-3xl font-black text-amber-400">${totalAmount.toFixed(2)}</div>
-                        <span className="text-xs text-gray-300 block">
-                            {isAr ? `تذاكر مسابقة كأس الكشافة (${ticketIds.length})` : `Scout Cup Draw Tickets (${ticketIds.length})`}
-                        </span>
-                    </div>
-
-                    {/* Payment Steps */}
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                                {isAr ? "خطوات الدفع عبر تطبيق Whish:" : "How to Pay via Whish App:"}
-                            </h3>
+            ),
+        },
+        {
+            num: "2",
+            icon: "📱",
+            titleEn: "Open Whish & Send",
+            titleAr: "افتح Whish وأرسل المبلغ",
+            action: (
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-slate-950 rounded-xl px-4 py-3">
+                        <span className="text-gray-400 text-xs">{isAr ? "المبلغ المطلوب:" : "Amount to send:"}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl font-black text-amber-400">${totalAmount.toFixed(2)}</span>
                             <button
                                 type="button"
-                                onClick={() => setIsGuideOpen(true)}
-                                className="flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 transition cursor-pointer underline"
+                                onClick={handleCopyAmount}
+                                className={`p-1.5 rounded-lg transition text-xs ${copiedAmount ? "bg-emerald-600 text-white" : "bg-slate-800 text-emerald-400 hover:bg-slate-700"}`}
                             >
-                                <HelpCircle className="w-3.5 h-3.5" />
-                                <span>{isAr ? "عرض دليل الخطوات" : "View Step Guide"}</span>
+                                {copiedAmount ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                         </div>
-
-                        {/* Step 1: Target Number Copy */}
-                        <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-3">
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-gray-400">{isAr ? "1. أرسل الأموال إلى رقم الهاتف:" : "1. Send money to this Phone:"}</span>
-                                <button
-                                    type="button"
-                                    onClick={handleCopyPhone}
-                                    className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition"
-                                >
-                                    {copiedPhone ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                                    <span>{copiedPhone ? (isAr ? "تم النسخ" : "Copied") : (isAr ? "نسخ الرقم" : "Copy Number")}</span>
-                                </button>
-                            </div>
-                            <div className="text-lg font-black text-white text-center tracking-wider py-1 select-all bg-slate-900/50 rounded-lg">
-                                {whishPhoneNumber}
-                            </div>
-                        </div>
-
-                        {/* Step 2: Open Whish App link */}
-                        <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-2 text-xs">
-                            <div className="flex justify-between items-center">
-                                <span className="text-gray-400">{isAr ? "2. افتح تطبيق Whish للمتابعة:" : "2. Open Whish app to complete:"}</span>
-                                <button
-                                    type="button"
-                                    onClick={handleCopyAmount}
-                                    className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition"
-                                >
-                                    {copiedAmount ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                                    <span>{copiedAmount ? (isAr ? "تم النسخ" : "Copied") : (isAr ? "نسخ القيمة" : "Copy Amount")}</span>
-                                </button>
-                            </div>
-                            <a
-                                href={whishLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold rounded-lg flex items-center justify-center gap-1.5 transition font-display text-xs cursor-pointer shadow-md"
-                            >
-                                <span>{isAr ? "افتح تطبيق Whish Money" : "Open Whish Money"}</span>
-                                <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                            <p className="text-[10px] text-gray-400 text-center italic mt-1">
-                                {isAr
-                                    ? "ملاحظة: تأكد من إرسال القيمة المحددة أعلاه بالضبط."
-                                    : "Note: Ensure you send the exact total amount listed above."}
-                            </p>
-                        </div>
-
-                        {/* Step 3: Input Reference Form */}
-                        <form onSubmit={handleSubmitTransaction} className="space-y-3 pt-2">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wide">
-                                    {isAr ? "3. أدخل رقم المعاملة لتأكيد الدفع (Transaction ID):" : "3. Enter Whish Transaction / Reference ID:"}
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={transactionId}
-                                    onChange={(e) => setTransactionId(e.target.value)}
-                                    placeholder={isAr ? "مثال: WSH123456789 أو الرقم المرجعي" : "e.g. WSH123456789 or Ref Number"}
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-950 text-white font-mono text-center text-base focus:border-emerald-500 focus:outline-none transition shadow-inner"
-                                />
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="w-full py-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black rounded-xl transition text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
-                            >
-                                {processing ? (
-                                    <span>{isAr ? "جاري الإرسال..." : "Submitting ID..."}</span>
-                                ) : (
-                                    <span>{isAr ? "إرسال رقم العملية للتأكيد" : "Submit Transaction Reference ID"}</span>
-                                )}
-                            </button>
-                        </form>
                     </div>
+                    <a
+                        href={whishLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition text-sm cursor-pointer shadow-md"
+                    >
+                        <span>{isAr ? "افتح تطبيق Whish" : "Open Whish App"}</span>
+                        <ExternalLink className="w-4 h-4" />
+                    </a>
+                    <p className="text-[11px] text-amber-400/80 text-center">
+                        ⚠️ {isAr ? "أرسل المبلغ المحدد أعلاه بالضبط" : "Send the exact amount shown above"}
+                    </p>
+                </div>
+            ),
+        },
+        {
+            num: "3",
+            icon: "🔑",
+            titleEn: "Paste your Transaction ID",
+            titleAr: "الصق رقم العملية",
+            action: (
+                <form onSubmit={handleSubmitTransaction} className="space-y-2">
+                    <input
+                        type="text"
+                        required
+                        value={transactionId}
+                        onChange={(e) => setTransactionId(e.target.value)}
+                        placeholder={isAr ? "مثال: WSH123456789" : "e.g. WSH123456789"}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-950 text-white font-mono text-sm text-center focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition placeholder:text-gray-600"
+                    />
+                    {error && (
+                        <p className="text-xs text-red-400 text-center bg-red-500/10 rounded-lg p-2">{error}</p>
+                    )}
+                    <button
+                        type="submit"
+                        disabled={processing || !transactionId.trim()}
+                        className="w-full py-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black rounded-xl transition text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                        {processing ? (
+                            <><span className="animate-spin border-2 border-slate-900 border-t-transparent rounded-full w-4 h-4" />{isAr ? "جاري الإرسال..." : "Submitting..."}</>
+                        ) : (
+                            <><ShieldCheck className="w-4 h-4" />{isAr ? "تأكيد الدفع" : "Confirm Payment"}</>
+                        )}
+                    </button>
+                </form>
+            ),
+        },
+    ];
+
+    return (
+        <div className="min-h-screen bg-emerald-950 text-white flex flex-col items-center justify-center p-4 font-sans">
+            <div className="w-full max-w-sm flex flex-col gap-4">
+
+                {/* Header */}
+                <div className="text-center space-y-1">
+                    <div className="inline-flex items-center gap-2 bg-emerald-800/60 border border-emerald-600/30 rounded-full px-4 py-1.5 text-xs font-bold text-emerald-300 uppercase tracking-wider">
+                        <ShieldCheck className="w-3.5 h-3.5" /> {isAr ? "دفع آمن عبر Whish" : "Secure Whish Payment"}
+                    </div>
+                    <h1 className="text-2xl font-black text-white">{isAr ? "ادفع عبر Whish" : "Pay with Whish"}</h1>
+                    <p className="text-xs text-gray-400">{isAr ? "اتبع الخطوات الثلاث أدناه" : "Follow the 3 steps below to complete your payment"}</p>
                 </div>
 
-                {/* Footer Actions */}
-                <div className="p-4 bg-slate-950 border-t border-slate-800 flex justify-between items-center text-xs">
+                {/* Total amount summary */}
+                <div className="bg-slate-900/80 border border-emerald-500/20 rounded-2xl p-5 text-center">
+                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">{isAr ? "إجمالي المبلغ" : "Total Amount"}</p>
+                    <div className="text-5xl font-black text-amber-400 leading-none">${totalAmount.toFixed(2)}</div>
+                    <p className="text-xs text-gray-400 mt-2">
+                        {ticketIds.length} {isAr ? "تذكرة" : `ticket${ticketIds.length > 1 ? "s" : ""}`} × ${TICKET_PRICE}.00
+                    </p>
+                </div>
+
+                {/* Guide CTA */}
+                <button
+                    type="button"
+                    onClick={() => setIsGuideOpen(true)}
+                    className="w-full flex items-center justify-between bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 text-sm font-bold text-amber-400 hover:bg-amber-500/20 transition cursor-pointer"
+                >
+                    <span className="flex items-center gap-2">
+                        <HelpCircle className="w-4 h-4" />
+                        {isAr ? "لا تعرف كيف؟ شاهد الدليل المصوّر" : "Don't know how? View Screenshot Guide"}
+                    </span>
+                    <ChevronRight className="w-4 h-4 opacity-60" />
+                </button>
+
+                {/* Steps */}
+                <div className="flex flex-col gap-3">
+                    {steps.map((step, idx) => (
+                        <div key={idx} className="bg-slate-900 border border-slate-700/50 rounded-2xl p-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-sm shrink-0">
+                                    {step.num}
+                                </div>
+                                <div>
+                                    <span className="text-base mr-1">{step.icon}</span>
+                                    <span className="font-bold text-sm text-white">{isAr ? step.titleAr : step.titleEn}</span>
+                                </div>
+                            </div>
+                            <div>{step.action}</div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-between items-center text-xs text-gray-500 px-1">
                     <button
                         onClick={() => router.push(`/${locale}/scout-world-cup/buy`)}
                         disabled={processing}
-                        className="flex items-center gap-1 text-gray-400 hover:text-white transition"
+                        className="flex items-center gap-1 hover:text-white transition cursor-pointer"
                     >
                         <ArrowLeft className="w-3.5 h-3.5" />
                         <span>{isAr ? "إلغاء والعودة" : "Cancel & Return"}</span>
                     </button>
-
-                    <div className="flex gap-1.5 items-center text-[10px] text-gray-500">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600/70" />
-                        <span>{isAr ? "معالجة يدوية آمنة" : "Secure Manual Verification"}</span>
+                    <div className="flex items-center gap-1 text-emerald-700">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>{isAr ? "معالجة آمنة" : "Secure & Verified"}</span>
                     </div>
                 </div>
-
             </div>
-            
+
             <WhishGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} locale={locale} />
         </div>
     );

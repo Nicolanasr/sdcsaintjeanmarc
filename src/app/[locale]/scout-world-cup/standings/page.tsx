@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { MessageCircle, Globe, Megaphone } from "lucide-react";
 import { FaFacebookF, FaInstagram, FaWhatsapp, FaTiktok } from "react-icons/fa6";
-
+import { RAFFLE_PRIZE_EN, RAFFLE_PRIZE_AR, RAFFLE_DRAW_DATE_EN, RAFFLE_DRAW_DATE_AR } from "@/lib/constants";
 interface Team {
     id: string;
     name: string;
@@ -525,16 +525,26 @@ function StandingsContent() {
                     </div>
 
                     {/* Reveal & Prize Card */}
-                    <div className="glass-panel p-4 sm:p-6 rounded-2xl shadow-md bg-white flex flex-col justify-between">
+                    <div className="glass-panel p-4 sm:p-6 rounded-2xl shadow-md bg-white flex flex-col justify-between border-l-4 border-scout-gold">
                         <div>
                             <h3 className="text-lg font-bold font-display text-scout-navy mb-3">
                                 🎁 {isAr ? "سحب وإعلان الجوائز" : "Draw & Prize Details"}
                             </h3>
-                            <p className="text-xs text-scout-charcoal/85 leading-relaxed">
-                                {isAr
-                                    ? "سيتم إجراء السحب النهائي على الجوائز القيّمة وإعلان الفائزين مباشرة بعد انتهاء بطولة كأس العالم في حفل كشفي خاص وعلى صفحاتنا الرسمية."
-                                    : "All raffle entries will be compiled at the end of the World Cup tournament. We will draw and reveal the winners live on our official pages during our scout ceremony."}
-                            </p>
+                            <div className="space-y-3 text-xs text-scout-charcoal/85 leading-relaxed">
+                                <p>
+                                    <strong>{isAr ? "🎁 الجائزة الكبرى:" : "🎁 Grand Prize:"}</strong>{" "}
+                                    <span className="text-scout-navy font-bold">{isAr ? RAFFLE_PRIZE_AR : RAFFLE_PRIZE_EN}</span>
+                                </p>
+                                <p>
+                                    <strong>{isAr ? "📅 موعد السحب:" : "📅 Draw Date:"}</strong>{" "}
+                                    <span className="text-scout-navy font-semibold">{isAr ? RAFFLE_DRAW_DATE_AR : RAFFLE_DRAW_DATE_EN}</span>
+                                </p>
+                                <p className="opacity-95">
+                                    {isAr
+                                        ? "سيتم إجراء السحب النهائي وإعلان الفائزين مباشرة بعد انتهاء البطولة في حفل كشفي خاص وعلى صفحاتنا الرسمية."
+                                        : "Raffle entries will be compiled at the end of the tournament. We will draw the winners live during our scout ceremony and publish them on our official pages."}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

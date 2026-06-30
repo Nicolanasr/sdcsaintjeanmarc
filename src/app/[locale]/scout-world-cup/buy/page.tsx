@@ -2,9 +2,9 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Megaphone, Trophy, Phone, User, Globe, ChevronRight } from "lucide-react";
+import { Megaphone, Trophy, Phone, User, Globe, ChevronRight, ChevronDown, Plane } from "lucide-react";
 import { FaFacebookF, FaInstagram, FaWhatsapp, FaTiktok } from "react-icons/fa6";
-import { TICKET_PRICE, TICKET_PRICE_DISPLAY } from "@/lib/constants";
+import { TICKET_PRICE, TICKET_PRICE_DISPLAY, RAFFLE_PRIZE_EN, RAFFLE_PRIZE_AR, RAFFLE_DRAW_DATE_EN, RAFFLE_DRAW_DATE_AR } from "@/lib/constants";
 import WhishGuideModal from "@/components/WhishGuideModal";
 
 interface Team {
@@ -89,6 +89,7 @@ export default function BuyTicketPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [isGuideOpen, setIsGuideOpen] = useState(false);
+    const [showDetails, setShowDetails] = useState(false);
 
     // Load teams
     useEffect(() => {
@@ -213,34 +214,92 @@ export default function BuyTicketPage() {
                 </div>
             </header>
 
-            <main className="max-w-xl mx-auto py-2 space-y-6">
-                {/* Intro Promo Card */}
-                <div className="glass-panel p-5 rounded-xl shadow-md bg-white border border-scout-gold/20 text-center space-y-3">
-                    <h3 className="text-base font-bold font-display text-scout-navy flex items-center justify-center gap-2">
-                        <Trophy className="w-5 h-5 text-scout-gold" />
-                        <span>{isAr ? "ادعم كشفتنا واربح!" : "Support Our Scout Group & Win!"}</span>
-                    </h3>
-                    <p className="text-xs text-scout-charcoal/80 leading-relaxed max-w-md mx-auto text-left dir-ltr">
-                        {isAr ? (
-                            <span className="block text-center space-y-1.5">
-                                <span className="block font-bold text-scout-navy">{isAr ? "احصل على تذكرتك بـ ٢ دولار فقط عبر Whish!" : `Get your ticket for only ${TICKET_PRICE_DISPLAY} via Whish!`}</span>
-                                <span className="block">🎟️ <strong className="text-scout-navy">شراء تذكرة واحدة</strong> = فرصة واحدة للدخول في السحب.</span>
-                                <span className="block">⚽ <strong className="text-scout-navy">اختر منتخباً</strong>: كلما فاز منتخبك بمباراة، تحصل على <strong className="text-scout-gold">+١ فرصة إضافية</strong> مجانية!</span>
-                                <span className="block text-[11px] text-scout-charcoal/60 border-t border-scout-gold/10 pt-1 mt-1 text-center italic">
-                                    💡 <strong>مثال:</strong> إذا فاز منتخبك بـ <strong>٠ مباربات</strong> تدخل السحب بـ <strong>فرصة واحدة</strong>. إذا فاز منتخبك بـ <strong>٥ مباريات</strong> تحصل على <strong>٦ فرص</strong> (١ تذكرة + ٥ انتصارات)!
-                                </span>
+            <main className="max-w-xl mx-auto pb-2 space-y-6">
+                {/* Prize Hero Card */}
+                <div className="overflow-hidden shadow-lg border border-scout-gold/30">
+                    {/* Hero Banner — compact */}
+                    <div className="relative bg-gradient-to-br from-scout-navy via-[#1a3a5c] to-[#0d2235] px-5 py-4 overflow-hidden">
+                        {/* Decorative circles */}
+                        <div className="absolute -top-6 -right-6 w-32 h-32 bg-scout-gold/5 rounded-full" />
+                        <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-white/3 rounded-full" />
+
+                        <div className="relative flex items-center gap-4">
+                            {/* Plane emoji */}
+                            <div className="text-4xl shrink-0">✈️</div>
+
+                            {/* Text */}
+                            <div className="flex-1 text-left">
+                                <div className="inline-flex items-center gap-1 bg-scout-gold/20 border border-scout-gold/40 rounded-full px-2 py-0.5 text-[10px] font-bold text-scout-gold uppercase tracking-wider mb-1">
+                                    <Trophy className="w-2.5 h-2.5" />
+                                    {isAr ? "الجائزة الكبرى" : "Grand Prize"}
+                                </div>
+                                <h2 className="text-xl font-black text-white leading-tight">
+                                    {isAr ? (RAFFLE_PRIZE_AR || RAFFLE_PRIZE_EN) : RAFFLE_PRIZE_EN}
+                                </h2>
+                                <p className="text-scout-gold/80 text-xs font-semibold mt-0.5">
+                                    {isAr ? "رحلة لشخص واحد!" : "A trip for 1 person!"}
+                                </p>
+                            </div>
+
+                            {/* Price pill */}
+                            <div className="shrink-0 flex flex-col items-center bg-white/10 border border-white/20 rounded-xl px-3 py-2">
+                                <span className="text-scout-gold font-black text-lg leading-none">{TICKET_PRICE_DISPLAY}</span>
+                                <span className="text-white/50 text-[10px]">{isAr ? "فقط" : "only"}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-[10px] text-white/40 mt-2 relative">
+                            <span>📅</span>
+                            <span>Draw date: {isAr ? (RAFFLE_DRAW_DATE_AR || RAFFLE_DRAW_DATE_EN) : RAFFLE_DRAW_DATE_EN}</span>
+                        </div>
+                    </div>
+
+                    {/* Collapsible details */}
+                    <div className="bg-white">
+                        <button
+                            type="button"
+                            onClick={() => setShowDetails(!showDetails)}
+                            className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-bold text-scout-navy hover:bg-scout-navy/5 transition cursor-pointer"
+                        >
+                            <span className="flex items-center gap-2">
+                                <span>{isAr ? "🤔 كيف تعمل المسابقة؟" : "How does it work?"}</span>
                             </span>
-                        ) : (
-                            <span className="block text-center space-y-1.5">
-                                <span className="block font-bold text-scout-navy">Get your ticket for only {TICKET_PRICE_DISPLAY} via Whish!</span>
-                                <span className="block">🎟️ <strong className="text-scout-navy">1 Ticket Purchased</strong> = 1 entry to win the draw.</span>
-                                <span className="block">⚽ <strong className="text-scout-navy">Pick a Team</strong>: Every time they win a match, you get <strong className="text-scout-gold">+1 bonus entry</strong>!</span>
-                                <span className="block text-[11px] text-scout-charcoal/60 border-t border-scout-gold/10 pt-1 mt-1 text-center italic">
-                                    💡 <strong>Example:</strong> If your team wins <strong>0 matches</strong> you still enter with <strong>1 entry</strong>. If your team wins <strong>5 matches</strong> you get <strong>6 entries</strong> (1 ticket + 5 wins)!
-                                </span>
-                            </span>
+                            <ChevronDown className={`w-4 h-4 text-scout-navy/50 transition-transform duration-200 ${showDetails ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {showDetails && (
+                            <div className="px-5 pb-5 border-t border-scout-navy/10 pt-4">
+                                <h4 className="text-xs font-black text-scout-navy uppercase tracking-wider mb-3">
+                                    📋 {isAr ? "قواعد السحب والمعادلة" : "Raffle Rules & Formula"}
+                                </h4>
+                                <ul className="space-y-2.5 text-xs text-scout-charcoal/80">
+                                    {[
+                                        {
+                                            en: "Every ticket you purchase guarantees you at least one (1) entry in the final draw.",
+                                            ar: "كل تذكرة تشتريها تضمن لك على الأقل فرصة واحدة (١) في السحب النهائي.",
+                                        },
+                                        {
+                                            en: "Every time the team assigned to your ticket wins a match in the World Cup, you gain one (+1) bonus entry.",
+                                            ar: "في كل مرة يفوز فيها المنتخب المخصص لتذكرتك بمباراة في كأس العالم، تحصل على فرصة إضافية (+١) في السحب.",
+                                        },
+                                        {
+                                            en: "The Simple Formula: Total Raffle Entries = 1 (Guaranteed) + Team Wins.",
+                                            ar: "المعادلة البسيطة: إجمالي الفرص = ١ (مضمونة) + عدد انتصارات المنتخب.",
+                                        },
+                                        {
+                                            en: "Teams with zero wins still retain their guaranteed entry (1 ticket) in the draw.",
+                                            ar: "المنتخبات التي لا تحقق أي فوز تحتفظ بفرصتها المضمونة (تذكرة واحدة) في السحب.",
+                                        },
+                                    ].map((rule, idx) => (
+                                        <li key={idx} className="flex items-start gap-2">
+                                            <span className="text-scout-gold font-black shrink-0">{idx + 1}.</span>
+                                            <span>{isAr ? rule.ar : rule.en}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         )}
-                    </p>
+                    </div>
                 </div>
 
                 {/* Main Purchase Form */}
@@ -411,6 +470,19 @@ export default function BuyTicketPage() {
                             <span>{isAr ? "سعر التذاكر الإجمالي:" : "Total Tickets Price:"}</span>
                             <span className="text-scout-green-light text-base">${(TICKET_PRICE * quantity).toFixed(2)}</span>
                         </div>
+                        {(() => {
+                            const selectedTeam = teams.find(t => t.id === selectedTeamId);
+                            const teamWins = selectedTeam ? selectedTeam.totalWins : 0;
+                            const totalEntries = quantity * (1 + teamWins);
+                            return (
+                                <div className="flex justify-between items-center text-xs text-scout-navy/80 border-t border-scout-gold/20 pt-2">
+                                    <span className="font-semibold">{isAr ? "إجمالي الفرص في السحب:" : "Total Raffle Entries:"}</span>
+                                    <span className="font-black text-scout-gold text-sm">
+                                        🎟️ {totalEntries} {isAr ? (totalEntries === 1 ? "فرصة" : "فرص") : (totalEntries === 1 ? "entry" : "entries")}
+                                    </span>
+                                </div>
+                            );
+                        })()}
                         <div className="text-[10px] text-scout-charcoal/70">
                             ⚡ {isAr
                                 ? "سيتم إعادة توجيهك إلى بوابة Whish Pay للدفع بشكل آمن ومباشر."

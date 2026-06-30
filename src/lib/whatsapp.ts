@@ -170,9 +170,9 @@ export async function sendMatchWinWhatsAppSummary(
     return `${flag} ${group.teamName}: عدد ${group.ticketIds.length} بطاقات (${ids}) ➔ ${entries} فرص (${group.totalWins} انتصارات)`;
   }).join("\n");
 
-  const msgAr = `المنتخب الذي شجعته (${winningTeamNamesWithFlags}) قد فاز في مباراته! ⚽️\n\nإليك ملخص لبطاقاتك النشطة وفرص السحب الخاصة بك:\n${ticketListAr}\n\nإجمالي الفرص في السحب: ${totalEntries} فرص!\n\nتابع ترتيب المنتخبات وبطاقاتك هنا:\n${finalBaseUrl}/ar/scout-world-cup/standings?phone=${buyerPhone}`;
+  const msgAr = `المنتخب الذي شجعته (${winningTeamNamesWithFlags}) قد فاز في مباراته! ⚽️\n\nإليك ملخص لبطاقاتك النشطة وفرص السحب الخاصة بك:\n${ticketListAr}\n\nإجمالي الفرص في السحب: ${totalEntries} فرص!\n\nتابع ترتيب المنتخبات وبطاقاتك هنا:\n${finalBaseUrl}/ar/scout-world-cup/standings?phone=${buyerPhone}\n\n📢 سيتم إعلان الفائزين على صفحات التواصل الاجتماعي الخاصة بنا. تابعنا لمشاهدة السحب المباشر وآخر الأخبار:\n📸 إنستغرام: https://www.instagram.com/sdc_saintjeanmarc/\n📘 فيسبوك: https://www.facebook.com/SDCGroupeSJM/\n🎵 تيك توك: https://www.tiktok.com/@sdcsaintjeanmarc`;
 
-  const msgEn = `Your supported team (${winningTeamNamesWithFlags}) has won their match! ⚽️\n\nHere is a summary of your active tickets and raffle entries:\n${ticketListEn}\n\nTotal Raffle Entries: ${totalEntries} entries!\n\nTrack team standings and your tickets here:\n${finalBaseUrl}/en/scout-world-cup/standings?phone=${buyerPhone}`;
+  const msgEn = `Your supported team (${winningTeamNamesWithFlags}) has won their match! ⚽️\n\nHere is a summary of your active tickets and raffle entries:\n${ticketListEn}\n\nTotal Raffle Entries: ${totalEntries} entries!\n\nTrack team standings and your tickets here:\n${finalBaseUrl}/en/scout-world-cup/standings?phone=${buyerPhone}\n\n📢 Winners will be announced on our social media channels. Follow us for live draws and updates:\n📸 Instagram: https://www.instagram.com/sdc_saintjeanmarc/\n📘 Facebook: https://www.facebook.com/SDCGroupeSJM/\n🎵 TikTok: https://www.tiktok.com/@sdcsaintjeanmarc`;
 
   const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import WhishGuideModal from "@/components/WhishGuideModal";
-import { TICKET_PRICE } from "@/lib/constants";
+import { TICKET_PRICE, RAFFLE_PRIZE_EN, RAFFLE_PRIZE_AR } from "@/lib/constants";
 
 interface Team {
     id: string;
@@ -180,7 +180,11 @@ export default function ScoutDashboard() {
 
         // Generate tracking link
         const trackingLink = `${window.location.origin}/${locale}/scout-world-cup/standings?phone=${encodeURIComponent(first.buyerPhone)}`;
-        const fullMsg = `${baseMsg}\n\n${isAr ? "تابع تذاكرك ونقاط فريقك من هنا:" : "Track your tickets and team entries here:"}\n${trackingLink}`;
+        const socialMsg = isAr
+            ? `\n\n📢 سيتم إعلان الفائزين على صفحات التواصل الاجتماعي الخاصة بنا. تابعنا لمشاهدة السحب المباشر وآخر الأخبار:\n📸 إنستغرام: https://www.instagram.com/sdc_saintjeanmarc/\n📘 فيسبوك: https://www.facebook.com/SDCGroupeSJM/\n🎵 تيك توك: https://www.tiktok.com/@sdcsaintjeanmarc`
+            : `\n\n📢 Winners will be announced on our social media channels. Follow us for live draws and updates:\n📸 Instagram: https://www.instagram.com/sdc_saintjeanmarc/\n📘 Facebook: https://www.facebook.com/SDCGroupeSJM/\n🎵 TikTok: https://www.tiktok.com/@sdcsaintjeanmarc`;
+
+        const fullMsg = `${baseMsg}\n\n${isAr ? "تابع تذاكرك ونقاط فريقك من هنا:" : "Track your tickets and team entries here:"}\n${trackingLink}${socialMsg}`;
 
         // Normalize phone number (strip non-digits, ensure country code)
         const cleanPhone = first.buyerPhone.replace(/\D/g, "");
@@ -282,9 +286,14 @@ export default function ScoutDashboard() {
                 <main className="max-w-2xl mx-auto p-4 md:p-6 space-y-6">
                     {/* Record New Ticket Sale form */}
                     <div className="glass-panel p-6 rounded-2xl shadow-md bg-white border border-scout-beige-dark">
-                        <h2 className="text-xl font-bold mb-4 font-display text-scout-navy border-b pb-2">
-                            {isAr ? "تسجيل تذكرة بيع جديدة" : "Record New Ticket Sale"}
-                        </h2>
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b pb-3 mb-4 gap-2">
+                            <h2 className="text-xl font-bold font-display text-scout-navy">
+                                {isAr ? "تسجيل تذكرة بيع جديدة" : "Record New Ticket Sale"}
+                            </h2>
+                            <span className="text-[11px] bg-scout-gold/25 border border-scout-gold/40 text-scout-navy font-bold px-2 py-0.5 rounded-full w-fit">
+                                🎁 {isAr ? `الجائزة: ${RAFFLE_PRIZE_AR}` : `Prize: ${RAFFLE_PRIZE_EN}`}
+                            </span>
+                        </div>
                         <form onSubmit={handleSellTicket} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
