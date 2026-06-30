@@ -105,13 +105,17 @@ export async function PATCH(request: Request) {
             }
           });
 
+          const host = request.headers.get("host") || "localhost:3000";
+          const protocol = request.headers.get("x-forwarded-proto") || "http";
+          const baseUrl = `${protocol}://${host}`;
+
           for (const [phone, name] of uniqueBuyers.entries()) {
             await sendMatchWinWhatsAppSummary(phone, name, [{
               id: team.id,
               name: team.name,
               flagUrl: team.flagUrl,
               totalWins: totalWins,
-            }]);
+            }], baseUrl);
           }
         }
       } catch (wsErr) {

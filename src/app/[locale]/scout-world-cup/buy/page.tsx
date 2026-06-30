@@ -204,10 +204,10 @@ export default function BuyTicketPage() {
                     />
                     <div>
                         <h1 className="text-xl sm:text-2xl font-bold font-display text-scout-gold tracking-tight">
-                            {isAr ? "شراء تذاكر سحب كأس الكشافة" : "Buy Scout Cup Draw Tickets - Scouts des Cèdres"}
+                            {isAr ? "شراء تذاكر سحب كأس الكشافة" : "Buy Scout Cup Draw Tickets"}
                         </h1>
                         <p className="text-xs text-white/70 mt-1 font-semibold tracking-wide">
-                            {isAr ? "فوج سان جان مارك - جبيل" : "Saint Jean Marc - Byblos"}
+                            {isAr ? "فوج سان جان مارك - جبيل" : "SDC Saint Jean Marc - Byblos"}
                         </p>
                     </div>
                 </div>
@@ -220,10 +220,26 @@ export default function BuyTicketPage() {
                         <Trophy className="w-5 h-5 text-scout-gold" />
                         <span>{isAr ? "ادعم كشفتنا واربح!" : "Support Our Scout Group & Win!"}</span>
                     </h3>
-                    <p className="text-xs text-scout-charcoal/80 leading-relaxed">
-                        {isAr
-                            ? "اشترِ تذكرتك الآن مقابل ٥ دولارات فقط (أو ما يعادلها عبر Whish Pay). كل تذكرة مضمونة للدخول في السحب النهائي ولها فرصة إضافية مع كل فوز يحققه منتخبك!"
-                            : `Get your ticket today for only ${TICKET_PRICE_DISPLAY} via Whish Pay. Each ticket guarantees you a raffle entry, plus bonus entries for every match victory your chosen team achieves!`}
+                    <p className="text-xs text-scout-charcoal/80 leading-relaxed max-w-md mx-auto text-left dir-ltr">
+                        {isAr ? (
+                            <span className="block text-center space-y-1.5">
+                                <span className="block font-bold text-scout-navy">{isAr ? "احصل على تذكرتك بـ ٢ دولار فقط عبر Whish!" : `Get your ticket for only ${TICKET_PRICE_DISPLAY} via Whish!`}</span>
+                                <span className="block">🎟️ <strong className="text-scout-navy">شراء تذكرة واحدة</strong> = فرصة واحدة للدخول في السحب.</span>
+                                <span className="block">⚽ <strong className="text-scout-navy">اختر منتخباً</strong>: كلما فاز منتخبك بمباراة، تحصل على <strong className="text-scout-gold">+١ فرصة إضافية</strong> مجانية!</span>
+                                <span className="block text-[11px] text-scout-charcoal/60 border-t border-scout-gold/10 pt-1 mt-1 text-center italic">
+                                    💡 <strong>مثال:</strong> إذا فاز منتخبك بـ <strong>٠ مباربات</strong> تدخل السحب بـ <strong>فرصة واحدة</strong>. إذا فاز منتخبك بـ <strong>٥ مباريات</strong> تحصل على <strong>٦ فرص</strong> (١ تذكرة + ٥ انتصارات)!
+                                </span>
+                            </span>
+                        ) : (
+                            <span className="block text-center space-y-1.5">
+                                <span className="block font-bold text-scout-navy">Get your ticket for only {TICKET_PRICE_DISPLAY} via Whish!</span>
+                                <span className="block">🎟️ <strong className="text-scout-navy">1 Ticket Purchased</strong> = 1 entry to win the draw.</span>
+                                <span className="block">⚽ <strong className="text-scout-navy">Pick a Team</strong>: Every time they win a match, you get <strong className="text-scout-gold">+1 bonus entry</strong>!</span>
+                                <span className="block text-[11px] text-scout-charcoal/60 border-t border-scout-gold/10 pt-1 mt-1 text-center italic">
+                                    💡 <strong>Example:</strong> If your team wins <strong>0 matches</strong> you still enter with <strong>1 entry</strong>. If your team wins <strong>5 matches</strong> you get <strong>6 entries</strong> (1 ticket + 5 wins)!
+                                </span>
+                            </span>
+                        )}
                     </p>
                 </div>
 

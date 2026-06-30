@@ -104,7 +104,8 @@ export function getTeamFlagEmoji(flagUrl: string | null | undefined, teamId: str
 export async function sendMatchWinWhatsAppSummary(
   buyerPhone: string,
   buyerName: string,
-  winningTeams: { id: string; name: string; flagUrl: string; totalWins: number }[]
+  winningTeams: { id: string; name: string; flagUrl: string; totalWins: number }[],
+  baseUrl?: string
 ): Promise<boolean> {
   const buyerTickets = await prisma.ticket.findMany({
     where: { buyerPhone, paymentStatus: "PAID" },
@@ -113,7 +114,16 @@ export async function sendMatchWinWhatsAppSummary(
 
   if (buyerTickets.length === 0) return false;
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  let finalBaseUrl = baseUrl;
+  if (!finalBaseUrl) {
+    finalBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                   process.env.SITE_URL || 
+                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) || 
+                   "http://localhost:3000";
+  }
+  if (finalBaseUrl.endsWith("/")) {
+    finalBaseUrl = finalBaseUrl.slice(0, -1);
+  }
 
   // Group by teamId
   const teamGroups: Record<string, {
@@ -160,9 +170,9 @@ export async function sendMatchWinWhatsAppSummary(
     return `${flag} ${group.teamName}: عدد ${group.ticketIds.length} بطاقات (${ids}) ➔ ${entries} فرص (${group.totalWins} انتصارات)`;
   }).join("\n");
 
-  const msgAr = `المنتخب الذي شجعته (${winningTeamNamesWithFlags}) قد فاز في مباراته! ⚽️\n\nإليك ملخص لبطاقاتك النشطة وفرص السحب الخاصة بك:\n${ticketListAr}\n\nإجمالي الفرص في السحب: ${totalEntries} فرص!\n\nتابع ترتيب المنتخبات وبطاقاتك هنا:\n${baseUrl}/ar/scout-world-cup/standings?phone=${buyerPhone}`;
+  const msgAr = `المنتخب الذي شجعته (${winningTeamNamesWithFlags}) قد فاز في مباراته! ⚽️\n\nإليك ملخص لبطاقاتك النشطة وفرص السحب الخاصة بك:\n${ticketListAr}\n\nإجمالي الفرص في السحب: ${totalEntries} فرص!\n\nتابع ترتيب المنتخبات وبطاقاتك هنا:\n${finalBaseUrl}/ar/scout-world-cup/standings?phone=${buyerPhone}`;
 
-  const msgEn = `Your supported team (${winningTeamNamesWithFlags}) has won their match! ⚽️\n\nHere is a summary of your active tickets and raffle entries:\n${ticketListEn}\n\nTotal Raffle Entries: ${totalEntries} entries!\n\nTrack team standings and your tickets here:\n${baseUrl}/en/scout-world-cup/standings?phone=${buyerPhone}`;
+  const msgEn = `Your supported team (${winningTeamNamesWithFlags}) has won their match! ⚽️\n\nHere is a summary of your active tickets and raffle entries:\n${ticketListEn}\n\nTotal Raffle Entries: ${totalEntries} entries!\n\nTrack team standings and your tickets here:\n${finalBaseUrl}/en/scout-world-cup/standings?phone=${buyerPhone}`;
 
   const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
 

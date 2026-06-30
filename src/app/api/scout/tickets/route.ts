@@ -76,7 +76,13 @@ export async function GET(request: Request) {
       .filter((item: any) => item.tickets_count > 0)
       .sort((a: any, b: any) => b.tickets_count - a.tickets_count);
 
-    // 4. Fetch all detailed tickets if user is an admin
+    // 4. Fetch all detailed tickets if user is an admin or scout's own tickets
+    const myTickets = await prisma.ticket.findMany({
+      where: { scoutId: userId },
+      include: { team: true },
+      orderBy: { createdAt: "desc" },
+    });
+
     let allTickets: any[] = [];
     let whatsAppLogs: any[] = [];
     if (userPayload.role === "admin") {
@@ -127,6 +133,7 @@ export async function GET(request: Request) {
       totalTicketsCount,
       leaderboard,
       unitLeaderboard,
+      myTickets,
       allTickets,
       whatsAppLogs,
     });
@@ -143,10 +150,15 @@ export async function POST(request: Request) {
     }
 
     const userId = userPayload.userId as string;
-    const { buyerName, buyerPhone, teamId, paymentMethod = "CASH", whishTransactionId } = await request.json();
+    const { buyerName, buyerPhone, teamId, paymentMethod = "CASH", whishTransactionId, quantity = 1 } = await request.json();
 
     if (!buyerName || !buyerPhone || !teamId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const qty = parseInt(quantity) || 1;
+    if (qty < 1 || qty > 50) {
+      return NextResponse.json({ error: "Invalid quantity" }, { status: 400 });
     }
 
     const isWhish = paymentMethod === "WHISH";
@@ -163,18 +175,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Create ticket
-    const ticket = await prisma.ticket.create({
-      data: {
-        scoutId: userId,
-        buyerName,
-        buyerPhone,
-        teamId,
-        paymentMethod: isWhish ? "WHISH" : "CASH",
-        paymentStatus: isWhish ? "PENDING" : "PAID",
-        whishTransactionId: isWhish ? whishTransactionId.trim() : null,
-      },
-    });
+    // Create tickets in a loop
+    const createdTickets = [];
+    for (let i = 0; i < qty; i++) {
+      const ticket = await prisma.ticket.create({
+        data: {
+          scoutId: userId,
+          buyerName,
+          buyerPhone,
+          teamId,
+          paymentMethod: isWhish ? "WHISH" : "CASH",
+          paymentStatus: isWhish ? "PENDING" : "PAID",
+          whishTransactionId: isWhish ? whishTransactionId.trim() : null,
+        },
+      });
+      createdTickets.push(ticket);
+    }
 
     if (!isWhish) {
       // Try sending automated WhatsApp if enabled
@@ -184,20 +200,12 @@ export async function POST(request: Request) {
           const origin = request.headers.get("origin") || new URL(request.url).origin;
           const trackingLink = `${origin}/en/scout-world-cup/standings?phone=${encodeURIComponent(buyerPhone)}`;
           
-          const templateAr = settings.templatePurchaseAr || "شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة رقم #{ticketId} لدعم فوج مار يوحنا مرقس - كشافة الأرز! فريقك المختار هو {teamName}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذكرتك ونقاط فريقك من هنا:\n{trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/";
-          const templateEn = settings.templatePurchaseEn || "Thank you for purchasing World Cup Scout Cup Draw ticket #{ticketId} supporting Scouts des Cèdres Saint Jean Marc! Your selected team is {teamName}. Every win they achieve grants you an extra entry in the final raffle! ⚽️\n\nTrack your ticket and team entries here:\n{trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/";
-
           const flagEmoji = getTeamFlagEmoji(team.flagUrl, team.id);
-          const interpolate = (tmpl: string) => {
-            return tmpl
-              .replace(/{ticketId}/g, String(ticket.id))
-              .replace(/{buyerName}/g, buyerName)
-              .replace(/{teamName}/g, `${team.name} ${flagEmoji}`)
-              .replace(/{trackingLink}/g, trackingLink);
-          };
+          const ticketIdsStr = createdTickets.map((t) => `#${t.id}`).join(", ");
+          const ticketIdsStrAr = createdTickets.map((t) => `#${t.id}`).join("، ");
 
-          const msgAr = interpolate(templateAr);
-          const msgEn = interpolate(templateEn);
+          const msgAr = `شكرًا لشرائك تذاكر مسابقة سحب كأس الكشافة (${createdTickets.length} بطاقة: ${ticketIdsStrAr}) لدعم فوج مار يوحنا مرقس - كشافة الأرز! منتخبك المختار هو ${team.name} ${flagEmoji}. كل فوز يحققه هذا المنتخب يمنحك فرصة إضافية في السحب النهائي! ⚽️\n\nتابع تذاكرك ونقاط فريقك من هنا:\n${trackingLink}\n\nسيتم إعلان الفائز على صفحتنا على إنستغرام، تأكد من متابعتنا وتفعيل التنبيهات! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
+          const msgEn = `Thank you for purchasing World Cup Scout Cup Draw ticket(s) (${createdTickets.length} ticket(s): ${ticketIdsStr}) supporting Scouts des Cèdres Saint Jean Marc! Your selected team is ${team.name} ${flagEmoji}. Every win they achieve grants you an extra entry in the final raffle! ⚽️\n\nTrack your tickets and team entries here:\n${trackingLink}\n\nWinners will be announced on our Instagram page, make sure to follow us and turn on notifications! 📲\nhttps://www.instagram.com/sdc_saintjeanmarc/`;
           
           const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
           const sent = await sendWhatsAppMessage(buyerPhone, fullMsg);
@@ -212,14 +220,14 @@ export async function POST(request: Request) {
         const origin = request.headers.get("origin") || `https://${request.headers.get("host")}`;
         const approvalLink = `${origin}/en/scout-world-cup/dashboard/admin`;
         
-        const alertMsg = `📢 New Scout Whish payment verification pending! ⏳\n\nScout: ${userPayload.fullName || "Scout"}\nBuyer: ${buyerName}\nTxID: ${whishTransactionId.trim()}\n\nApprove here:\n${approvalLink}`;
+        const alertMsg = `📢 New Scout Whish payment verification pending! ⏳\n\nScout: ${userPayload.fullName || "Scout"}\nBuyer: ${buyerName}\nQty: ${createdTickets.length} tickets\nTxID: ${whishTransactionId.trim()}\n\nApprove here:\n${approvalLink}`;
         await sendWhatsAppMessage("+96170078138", alertMsg);
       } catch (err) {
         console.error("Failed to send WhatsApp alert to admin for scout Whish payment:", err);
       }
     }
 
-    return NextResponse.json({ success: true, ticket });
+    return NextResponse.json({ success: true, count: createdTickets.length, tickets: createdTickets });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import WhishGuideModal from "@/components/WhishGuideModal";
+import { TICKET_PRICE } from "@/lib/constants";
 
 interface Team {
     id: string;
@@ -33,6 +34,8 @@ export default function ScoutDashboard() {
     const [teams, setTeams] = useState<Team[]>([]);
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [unitLeaderboard, setUnitLeaderboard] = useState<any[]>([]);
+    const [myTickets, setMyTickets] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState<"sales" | "reporting">("sales");
 
     // Form State
     const [buyerName, setBuyerName] = useState("");
@@ -45,6 +48,7 @@ export default function ScoutDashboard() {
     const [submitting, setSubmitting] = useState(false);
     const [successTicket, setSuccessTicket] = useState<any>(null);
     const [isGuideOpen, setIsGuideOpen] = useState(false);
+    const [quantity, setQuantity] = useState(1);
     const [teamSearch, setTeamSearch] = useState("");
     const whishPhoneNumber = "+961 79 013 907";
 
@@ -87,6 +91,7 @@ export default function ScoutDashboard() {
                 setStats(statsData.stats);
                 setLeaderboard(statsData.leaderboard || []);
                 setUnitLeaderboard(statsData.unitLeaderboard || []);
+                setMyTickets(statsData.myTickets || []);
             }
 
             // 2. Fetch Teams
@@ -138,19 +143,21 @@ export default function ScoutDashboard() {
                     teamId: selectedTeamId,
                     paymentMethod,
                     whishTransactionId: paymentMethod === "WHISH" ? whishTransactionId : undefined,
+                    quantity,
                 }),
             });
 
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to submit ticket sale");
 
-            setSuccessTicket(data.ticket);
+            setSuccessTicket(data.tickets);
             // Reset form
             setBuyerName("");
             setBuyerPhone("");
             setSelectedTeamId("");
             setPaymentMethod("CASH");
             setWhishTransactionId("");
+            setQuantity(1);
             // Refresh dashboard data
             await fetchDashboardData();
         } catch (err: any) {
@@ -160,19 +167,23 @@ export default function ScoutDashboard() {
         }
     };
 
-    const getWhatsAppLink = (ticket: any) => {
-        if (!ticket) return "";
-        const teamName = teams.find((t) => t.id === ticket.teamId)?.name || ticket.teamId;
+    const getWhatsAppLink = (createdTickets: any) => {
+        if (!createdTickets || !Array.isArray(createdTickets) || createdTickets.length === 0) return "";
+        const first = createdTickets[0];
+        const teamName = teams.find((t) => t.id === first.teamId)?.name || first.teamId;
+        const ticketIdsStr = createdTickets.map((t: any) => `#${t.id}`).join(", ");
+        const ticketIdsStrAr = createdTickets.map((t: any) => `#${t.id}`).join("، ");
+
         const baseMsg = isAr
-            ? `شكرًا لشرائك تذكرة مسابقة سحب كأس الكشافة رقم #${ticket.id} لدعم كشافة الأرز! فريقك المختار هو ${teamName}. كل فوز يحققه هذا الفريق يمنحك فرصة إضافية في السحب النهائي! ⚽️`
-            : `Thank you for purchasing World Cup Scout Cup Draw ticket #${ticket.id} supporting Scouts des Cèdres! Your selected team is ${teamName}. Every win they achieve grants you an extra entry in the final raffle! ⚽️`;
+            ? `شكرًا لشرائك تذاكر مسابقة سحب كأس الكشافة (${createdTickets.length} بطاقة: ${ticketIdsStrAr}) لدعم كشافة الأرز! منتخبك المختار هو ${teamName}. كل فوز يحققه هذا المنتخب يمنحك فرصة إضافية في السحب النهائي! ⚽️`
+            : `Thank you for purchasing World Cup Scout Cup Draw ticket(s) (${createdTickets.length} ticket(s): ${ticketIdsStr}) supporting Scouts des Cèdres! Your selected team is ${teamName}. Every win they achieve grants you an extra entry in the final raffle! ⚽️`;
 
         // Generate tracking link
-        const trackingLink = `${window.location.origin}/${locale}/scout-world-cup/standings?phone=${encodeURIComponent(ticket.buyerPhone)}`;
-        const fullMsg = `${baseMsg}\n\n${isAr ? "تابع تذكرتك ونقاط فريقك من هنا:" : "Track your ticket and team entries here:"}\n${trackingLink}`;
+        const trackingLink = `${window.location.origin}/${locale}/scout-world-cup/standings?phone=${encodeURIComponent(first.buyerPhone)}`;
+        const fullMsg = `${baseMsg}\n\n${isAr ? "تابع تذاكرك ونقاط فريقك من هنا:" : "Track your tickets and team entries here:"}\n${trackingLink}`;
 
         // Normalize phone number (strip non-digits, ensure country code)
-        const cleanPhone = ticket.buyerPhone.replace(/\D/g, "");
+        const cleanPhone = first.buyerPhone.replace(/\D/g, "");
         return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(fullMsg)}`;
     };
 
@@ -241,170 +252,36 @@ export default function ScoutDashboard() {
                 </div>
             </header>
 
-            <main className="max-w-6xl mx-auto md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                {/* Left Side: Summary and Leaderboard */}
-                <div className="space-y-6 lg:col-span-1 order-2 lg:order-1">
-                    {/* Summary Card */}
-                    <div className="glass-panel p-6 rounded-2xl shadow-md border-l-4 border-scout-gold">
-                        <h2 className="text-lg font-bold mb-4 font-display text-scout-navy">
-                            {isAr ? "إحصاءات المبيعات الخاصة بك" : "Your Sales Performance"}
-                        </h2>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-scout-beige-dark/50 p-4 rounded-xl text-center">
-                                <span className="block text-2xl font-extrabold text-scout-navy">
-                                    {stats.ticketsSold}
-                                </span>
-                                <span className="text-xs text-scout-charcoal/60">
-                                    {isAr ? "تذكرة مباعة" : "Tickets Sold"}
-                                </span>
-                            </div>
-                            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl text-center flex flex-col justify-center">
-                                <span className="block text-2xl font-extrabold text-amber-700">
-                                    ${(stats as any).pendingCashAmount ?? 0}
-                                </span>
-                                <span className="text-[10px] text-amber-700/80 font-bold leading-tight">
-                                    {isAr ? "كاش مستحق للتسليم" : "Pending Handover"}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Achievements Card */}
-                    <div className="glass-panel p-6 rounded-2xl shadow-md space-y-4">
-                        <h2 className="text-lg font-bold font-display text-scout-navy">
-                            {isAr ? "إنجازاتك وكؤوسك" : "Your Achievements & Milestones"}
-                        </h2>
-                        <div className="space-y-4">
-                            {milestones.map((m) => (
-                                <div key={m.id} className={`p-3 rounded-xl border transition-all ${m.unlocked
-                                        ? "bg-emerald-500/5 border-emerald-500/20"
-                                        : "bg-scout-beige-dark/20 border-scout-beige-dark/40 opacity-70"
-                                    }`}>
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h3 className={`text-xs font-bold ${m.unlocked ? "text-emerald-700" : "text-scout-navy"}`}>
-                                                {isAr ? m.nameAr : m.nameEn}
-                                            </h3>
-                                            <p className="text-[10px] text-scout-charcoal/60">
-                                                {isAr ? m.descAr : m.descEn}
-                                            </p>
-                                        </div>
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.unlocked ? "bg-emerald-100 text-emerald-800" : "bg-scout-beige-dark/40 text-scout-navy"
-                                            }`}>
-                                            {m.unlocked ? (isAr ? "مكتمل" : "Unlocked") : `${stats.ticketsSold} / ${m.target}`}
-                                        </span>
-                                    </div>
-                                    {/* Progress Bar */}
-                                    <div className="mt-2.5 space-y-1">
-                                        <div className="w-full bg-scout-beige-dark/30 h-1.5 rounded-full overflow-hidden">
-                                            <div className={`h-full rounded-full transition-all duration-500 ${m.unlocked ? "bg-emerald-500" : "bg-scout-gold"
-                                                }`} style={{ width: `${m.progress}%` }} />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Group Leaderboard */}
-                    <div className="glass-panel p-6 rounded-2xl shadow-md">
-                        <h2 className="text-lg font-bold mb-4 font-display text-scout-navy">
-                            {isAr ? "لوحة صدارة الكشافة" : "Scout Leaderboard"}
-                        </h2>
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                            {leaderboard.map((entry, index) => {
-                                const isCurrentUser = entry.id === profile?.id;
-                                return (
-                                    <div
-                                        key={entry.id}
-                                        className={`flex items-center justify-between p-3 rounded-lg text-sm ${isCurrentUser
-                                            ? "bg-scout-gold/15 border border-scout-gold/30"
-                                            : "bg-white/50"
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="font-bold text-scout-navy">
-                                                #{index + 1}
-                                            </span>
-                                            <span className={isCurrentUser ? "font-bold text-scout-navy flex flex-wrap items-center gap-1.5" : "flex flex-wrap items-center gap-1.5"}>
-                                                <span>{entry.full_name}</span>
-                                                {(entry as any).unit && (
-                                                    <span className="bg-scout-navy/10 text-scout-navy text-[9px] uppercase px-1 py-0.2 rounded font-bold">
-                                                        {(entry as any).unit}
-                                                    </span>
-                                                )}
-                                                {entry.tickets_count >= 50 && <span title="Legend Scout">👑</span>}
-                                                {entry.tickets_count >= 25 && entry.tickets_count < 50 && <span title="Gold Seller">🥇</span>}
-                                                {entry.tickets_count >= 10 && entry.tickets_count < 25 && <span title="Silver Seller">🥈</span>}
-                                                {entry.tickets_count >= 5 && entry.tickets_count < 10 && <span title="Bronze Seller">🥉</span>}
-                                                {entry.tickets_count >= 1 && entry.tickets_count < 5 && <span title="Rookie Seller">🏆</span>}
-                                            </span>
-                                        </div>
-                                        <span className="font-semibold text-scout-green-light">
-                                            {entry.tickets_count} {isAr ? "تذكرة" : "tickets"}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                            {leaderboard.length === 0 && (
-                                <p className="text-xs text-scout-charcoal/50 text-center py-4">
-                                    {isAr ? "لا توجد مبيعات مسجلة حتى الآن." : "No sales registered yet."}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Unit Standings Leaderboard */}
-                    <div className="glass-panel p-6 rounded-2xl shadow-md">
-                        <h2 className="text-lg font-bold mb-4 font-display text-scout-navy">
-                            {isAr ? "ترتيب الوحدات الكشفية" : "Unit Standings"}
-                        </h2>
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                            {unitLeaderboard.map((entry, index) => {
-                                const isUserUnit = entry.unit.toLowerCase() === profile?.unit?.toLowerCase();
-                                return (
-                                    <div
-                                        key={entry.unit}
-                                        className={`flex items-center justify-between p-3 rounded-lg text-sm ${isUserUnit
-                                            ? "bg-scout-gold/15 border border-scout-gold/30"
-                                            : "bg-white/50"
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="font-bold text-scout-navy">
-                                                #{index + 1}
-                                            </span>
-                                            <span className={isUserUnit ? "font-bold text-scout-navy uppercase" : "uppercase text-scout-navy/80"}>
-                                                {isAr ? (
-                                                    entry.unit === "jouwele" ? "جوالة" :
-                                                    entry.unit === "mounjidet" ? "منجدات" :
-                                                    entry.unit === "kechefe" ? "كشافة" :
-                                                    entry.unit === "mourchidet" ? "مرشدات" :
-                                                    entry.unit === "jaramiz" ? "جراميز" :
-                                                    entry.unit === "zaharat" ? "زهرات" :
-                                                    entry.unit === "iyede" ? "إعداد" : entry.unit
-                                                ) : entry.unit}
-                                                {isUserUnit && <span className="text-[9px] bg-scout-gold text-scout-navy font-bold px-1.5 py-0.5 rounded ml-1.5">{isAr ? "وحدتك" : "Your Unit"}</span>}
-                                            </span>
-                                        </div>
-                                        <span className="font-semibold text-scout-green-light">
-                                            {entry.tickets_count} {isAr ? "تذكرة" : "tickets"}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                            {unitLeaderboard.length === 0 && (
-                                <p className="text-xs text-scout-charcoal/50 text-center py-4">
-                                    {isAr ? "لا توجد مبيعات مسجلة للوحدات بعد." : "No unit standings available."}
-                                </p>
-                            )}
-                        </div>
-                    </div>
+            {/* Tab Switcher */}
+            <div className="max-w-6xl mx-auto px-4 md:px-6 pt-6 flex justify-center sm:justify-start">
+                <div className="flex bg-scout-navy/5 p-1 rounded-xl w-full sm:w-fit border border-scout-navy/10 gap-1">
+                    <button
+                        onClick={() => setActiveTab("sales")}
+                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-xs font-bold font-display transition duration-150 cursor-pointer ${
+                            activeTab === "sales"
+                                ? "bg-scout-navy text-white shadow-sm"
+                                : "text-scout-navy hover:bg-scout-navy/10"
+                        }`}
+                    >
+                        📋 {isAr ? "تسجيل مبيعات جديدة" : "Record New Sale"}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("reporting")}
+                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-xs font-bold font-display transition duration-150 cursor-pointer ${
+                            activeTab === "reporting"
+                                ? "bg-scout-navy text-white shadow-sm"
+                                : "text-scout-navy hover:bg-scout-navy/10"
+                        }`}
+                    >
+                        📊 {isAr ? "التقارير وسجل المبيعات" : "Reports & Sales Log"}
+                    </button>
                 </div>
+            </div>
 
-                {/* Right Side: Ticket Sales Form */}
-                <div className="lg:col-span-2 space-y-6 order-1 lg:order-2">
-                    <div className="glass-panel p-6 rounded-2xl shadow-md">
+            {activeTab === "sales" ? (
+                <main className="max-w-2xl mx-auto p-4 md:p-6 space-y-6">
+                    {/* Record New Ticket Sale form */}
+                    <div className="glass-panel p-6 rounded-2xl shadow-md bg-white border border-scout-beige-dark">
                         <h2 className="text-xl font-bold mb-4 font-display text-scout-navy border-b pb-2">
                             {isAr ? "تسجيل تذكرة بيع جديدة" : "Record New Ticket Sale"}
                         </h2>
@@ -471,7 +348,7 @@ export default function ScoutDashboard() {
                                     />
                                 </div>
 
-                                <div className="max-h-[300px] overflow-y-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                                <div className="max-h-[250px] overflow-y-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                                     {teams
                                         .filter((t) =>
                                             t.name.toLowerCase().includes(teamSearch.toLowerCase()) ||
@@ -507,6 +384,33 @@ export default function ScoutDashboard() {
                                                 : "No teams loaded in the database yet. Ask an admin to seed teams."}
                                         </p>
                                     )}
+                                </div>
+                            </div>
+
+                            {/* Quantity Selector */}
+                            <div className="border-t pt-4">
+                                <label className="block text-sm font-semibold mb-3 text-scout-navy">
+                                    {isAr ? "عدد التذاكر" : "Number of Tickets"}
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                        className="w-10 h-10 rounded-lg bg-scout-beige-dark/40 hover:bg-scout-beige-dark text-scout-navy font-bold text-lg flex items-center justify-center transition select-none cursor-pointer"
+                                    >
+                                        -
+                                    </button>
+                                    <span className="w-12 text-center text-lg font-bold text-scout-navy">{quantity}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuantity(q => Math.min(50, q + 1))}
+                                        className="w-10 h-10 rounded-lg bg-scout-beige-dark/40 hover:bg-scout-beige-dark text-scout-navy font-bold text-lg flex items-center justify-center transition select-none cursor-pointer"
+                                    >
+                                        +
+                                    </button>
+                                    <span className="text-xs text-scout-charcoal/60 ml-2">
+                                        {isAr ? `(السعر الإجمالي: $${(TICKET_PRICE * quantity).toFixed(2)})` : `(Total price: $${(TICKET_PRICE * quantity).toFixed(2)})`}
+                                    </span>
                                 </div>
                             </div>
 
@@ -608,8 +512,255 @@ export default function ScoutDashboard() {
                             </button>
                         </form>
                     </div>
-                </div>
-            </main>
+                </main>
+            ) : (
+                <main className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                        {/* Left Column: Summary and Achievements */}
+                        <div className="space-y-6 lg:col-span-1">
+                            {/* Summary Card */}
+                            <div className="glass-panel p-6 rounded-2xl shadow-md border-l-4 border-scout-gold bg-white border border-scout-beige-dark">
+                                <h2 className="text-lg font-bold mb-4 font-display text-scout-navy">
+                                    {isAr ? "إحصاءات المبيعات الخاصة بك" : "Your Sales Performance"}
+                                </h2>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-scout-beige-dark/50 p-4 rounded-xl text-center">
+                                        <span className="block text-2xl font-extrabold text-scout-navy">
+                                            {stats.ticketsSold}
+                                        </span>
+                                        <span className="text-xs text-scout-charcoal/60">
+                                            {isAr ? "تذكرة مباعة" : "Tickets Sold"}
+                                        </span>
+                                    </div>
+                                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl text-center flex flex-col justify-center">
+                                        <span className="block text-2xl font-extrabold text-amber-700">
+                                            ${(stats as any).pendingCashAmount ?? 0}
+                                        </span>
+                                        <span className="text-[10px] text-amber-700/80 font-bold leading-tight">
+                                            {isAr ? "كاش مستحق للتسليم" : "Pending Handover"}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Achievements Card */}
+                            <div className="glass-panel p-6 rounded-2xl shadow-md space-y-4 bg-white border border-scout-beige-dark">
+                                <h2 className="text-lg font-bold font-display text-scout-navy">
+                                    {isAr ? "إنجازاتك وكؤوسك" : "Your Achievements & Milestones"}
+                                </h2>
+                                <div className="space-y-4">
+                                    {milestones.map((m) => (
+                                        <div key={m.id} className={`p-3 rounded-xl border transition-all ${m.unlocked
+                                            ? "bg-emerald-500/5 border-emerald-500/20"
+                                            : "bg-scout-beige-dark/20 border-scout-beige-dark/40 opacity-70"
+                                            }`}>
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <h3 className={`text-xs font-bold ${m.unlocked ? "text-emerald-700" : "text-scout-navy"}`}>
+                                                        {isAr ? m.nameAr : m.nameEn}
+                                                    </h3>
+                                                    <p className="text-[10px] text-scout-charcoal/60">
+                                                        {isAr ? m.descAr : m.descEn}
+                                                    </p>
+                                                </div>
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.unlocked ? "bg-emerald-100 text-emerald-800" : "bg-scout-beige-dark/40 text-scout-navy"
+                                                    }`}>
+                                                    {m.unlocked ? (isAr ? "مكتمل" : "Unlocked") : `${stats.ticketsSold} / ${m.target}`}
+                                                </span>
+                                            </div>
+                                            {/* Progress Bar */}
+                                            <div className="mt-2.5 space-y-1">
+                                                <div className="w-full bg-scout-beige-dark/30 h-1.5 rounded-full overflow-hidden">
+                                                    <div className={`h-full rounded-full transition-all duration-500 ${m.unlocked ? "bg-emerald-500" : "bg-scout-gold"
+                                                        }`} style={{ width: `${m.progress}%` }} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Column: Leaderboards (Scouts + Units) */}
+                        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 align-start">
+                            {/* Group Leaderboard */}
+                            <div className="glass-panel p-6 rounded-2xl shadow-md h-fit bg-white border border-scout-beige-dark">
+                                <h2 className="text-lg font-bold mb-4 font-display text-scout-navy">
+                                    {isAr ? "لوحة صدارة الكشافة" : "Scout Leaderboard"}
+                                </h2>
+                                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                                    {leaderboard.map((entry, index) => {
+                                        const isCurrentUser = entry.id === profile?.id;
+                                        return (
+                                            <div
+                                                key={entry.id}
+                                                className={`flex items-center justify-between p-3 rounded-lg text-sm ${isCurrentUser
+                                                    ? "bg-scout-gold/15 border border-scout-gold/30"
+                                                    : "bg-white/50"
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-bold text-scout-navy">
+                                                        #{index + 1}
+                                                    </span>
+                                                    <span className={isCurrentUser ? "font-bold text-scout-navy flex flex-wrap items-center gap-1.5" : "flex flex-wrap items-center gap-1.5"}>
+                                                        <span>{entry.full_name}</span>
+                                                        {(entry as any).unit && (
+                                                            <span className="bg-scout-navy/10 text-scout-navy text-[9px] uppercase px-1 py-0.2 rounded font-bold">
+                                                                {(entry as any).unit}
+                                                            </span>
+                                                        )}
+                                                        {entry.tickets_count >= 50 && <span title="Legend Scout">👑</span>}
+                                                        {entry.tickets_count >= 25 && entry.tickets_count < 50 && <span title="Gold Seller">🥇</span>}
+                                                        {entry.tickets_count >= 10 && entry.tickets_count < 25 && <span title="Silver Seller">🥈</span>}
+                                                        {entry.tickets_count >= 5 && entry.tickets_count < 10 && <span title="Bronze Seller">🥉</span>}
+                                                        {entry.tickets_count >= 1 && entry.tickets_count < 5 && <span title="Rookie Seller">🏆</span>}
+                                                    </span>
+                                                </div>
+                                                <span className="font-semibold text-scout-green-light">
+                                                    {entry.tickets_count} {isAr ? "تذكرة" : "tickets"}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                    {leaderboard.length === 0 && (
+                                        <p className="text-xs text-scout-charcoal/50 text-center py-4">
+                                            {isAr ? "لا توجد مبيعات مسجلة حتى الآن." : "No sales registered yet."}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Unit Standings Leaderboard */}
+                            <div className="glass-panel p-6 rounded-2xl shadow-md h-fit bg-white border border-scout-beige-dark">
+                                <h2 className="text-lg font-bold mb-4 font-display text-scout-navy">
+                                    {isAr ? "ترتيب الوحدات الكشفية" : "Unit Standings"}
+                                </h2>
+                                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                                    {unitLeaderboard.map((entry, index) => {
+                                        const isUserUnit = entry.unit.toLowerCase() === profile?.unit?.toLowerCase();
+                                        return (
+                                            <div
+                                                key={entry.unit}
+                                                className={`flex items-center justify-between p-3 rounded-lg text-sm ${isUserUnit
+                                                    ? "bg-scout-gold/15 border border-scout-gold/30"
+                                                    : "bg-white/50"
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-bold text-scout-navy">
+                                                        #{index + 1}
+                                                    </span>
+                                                    <span className={isUserUnit ? "font-bold text-scout-navy uppercase" : "uppercase text-scout-navy/80"}>
+                                                        {isAr ? (
+                                                            entry.unit === "jouwele" ? "جوالة" :
+                                                                entry.unit === "mounjidet" ? "منجدات" :
+                                                                    entry.unit === "kechefe" ? "كشافة" :
+                                                                        entry.unit === "mourchidet" ? "مرشدات" :
+                                                                            entry.unit === "jaramiz" ? "جراميز" :
+                                                                                entry.unit === "zaharat" ? "زهرات" :
+                                                                                    entry.unit === "iyede" ? "إعداد" : entry.unit
+                                                        ) : entry.unit}
+                                                        {isUserUnit && <span className="text-[9px] bg-scout-gold text-scout-navy font-bold px-1.5 py-0.5 rounded ml-1.5">{isAr ? "وحدتك" : "Your Unit"}</span>}
+                                                    </span>
+                                                </div>
+                                                <span className="font-semibold text-scout-green-light">
+                                                    {entry.tickets_count} {isAr ? "تذكرة" : "tickets"}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                    {unitLeaderboard.length === 0 && (
+                                        <p className="text-xs text-scout-charcoal/50 text-center py-4">
+                                            {isAr ? "لا توجد مبيعات مسجلة للوحدات بعد." : "No unit standings available."}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Full Width Bottom: Sales Log Table */}
+                    <div className="glass-panel p-6 rounded-2xl shadow-md bg-white border border-scout-beige-dark">
+                        <h2 className="text-xl font-bold mb-4 font-display text-scout-navy border-b pb-2 flex items-center justify-between">
+                            <span>📋 {isAr ? "سجل مبيعاتك" : "My Sales Log"}</span>
+                            <span className="text-xs font-bold text-scout-charcoal/50">
+                                {myTickets.length} {isAr ? "عملية تسجيل" : "records"}
+                            </span>
+                        </h2>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="border-b border-scout-beige-dark text-scout-navy uppercase font-bold text-[10px]">
+                                        <th className="py-2.5 px-2">{isAr ? "التذكرة" : "Ticket"}</th>
+                                        <th className="py-2.5 px-2">{isAr ? "المشتري" : "Buyer"}</th>
+                                        <th className="py-2.5 px-2">{isAr ? "المنتخب" : "Team"}</th>
+                                        <th className="py-2.5 px-2 text-center">{isAr ? "طريقة الدفع" : "Method"}</th>
+                                        <th className="py-2.5 px-2 text-center">{isAr ? "الحالة" : "Status"}</th>
+                                        <th className="py-2.5 px-2 text-right">{isAr ? "التاريخ" : "Date"}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-scout-beige-dark/50">
+                                    {myTickets.map((ticket: any) => (
+                                        <tr key={ticket.id} className="hover:bg-white/40 transition-colors">
+                                            <td className="py-2.5 px-2 font-bold text-scout-navy">
+                                                #{ticket.id}
+                                            </td>
+                                            <td className="py-2.5 px-2">
+                                                <div className="font-semibold text-scout-navy">{ticket.buyerName}</div>
+                                                <div className="text-[10px] text-scout-charcoal/50">{ticket.buyerPhone}</div>
+                                            </td>
+                                            <td className="py-2.5 px-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    {ticket.team?.flagUrl && (
+                                                        <img
+                                                            src={ticket.team.flagUrl}
+                                                            alt=""
+                                                            className="w-5 h-3 object-cover rounded shadow-sm"
+                                                        />
+                                                    )}
+                                                    <span className="font-medium">{ticket.team?.name || ticket.teamId}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-2.5 px-2 text-center">
+                                                <span className="font-bold px-2 py-0.5 rounded text-[9px] uppercase bg-scout-navy/10 text-scout-navy">
+                                                    {ticket.paymentMethod}
+                                                </span>
+                                            </td>
+                                            <td className="py-2.5 px-2 text-center">
+                                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                                                    ticket.paymentStatus === "PAID"
+                                                        ? "bg-emerald-100 text-emerald-800"
+                                                        : "bg-amber-100 text-amber-800"
+                                                }`}>
+                                                    {ticket.paymentStatus === "PAID"
+                                                        ? (isAr ? "مؤكدة" : "Paid / Verified")
+                                                        : (isAr ? "بانتظار التأكيد" : "Pending Approval")}
+                                                </span>
+                                            </td>
+                                            <td className="py-2.5 px-2 text-right text-[10px] text-scout-charcoal/60">
+                                                {new Date(ticket.createdAt).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                    hour: "2-digit",
+                                                    minute: "2-digit"
+                                                })}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {myTickets.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="text-center py-6 text-scout-charcoal/50 italic">
+                                                {isAr ? "لم تقم ببيع أي تذاكر بعد." : "You haven't recorded any ticket sales yet."}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </main>
+            )}
 
             {/* Success Modal */}
             {successTicket && (
@@ -631,19 +782,19 @@ export default function ScoutDashboard() {
                                 {isAr ? "تم تسجيل البيع بنجاح!" : "Ticket Sale Registered!"}
                             </h3>
                             <p className="text-sm text-scout-charcoal/60 mt-1">
-                                {isAr ? "رقم التذكرة التسلسلي الخاص بك هو:" : "Your ticket serial number is:"}
+                                {isAr ? "أرقام التذاكر التسلسلية الخاصة بك:" : "Your ticket serial number(s):"}
                             </p>
-                            <div className="bg-scout-beige-dark/40 py-3 px-6 rounded-xl my-4 inline-block">
-                                <span className="text-3xl font-extrabold text-scout-gold">
-                                    #{successTicket.id}
+                            <div className="bg-scout-beige-dark/40 py-3 px-6 rounded-xl my-4 inline-block max-w-full overflow-hidden">
+                                <span className="text-xl font-extrabold text-scout-gold tracking-tight break-all">
+                                    {successTicket.map((t: any) => `#${t.id}`).join(", ")}
                                 </span>
                             </div>
-                            {successTicket.paymentStatus === "PENDING" ? (
+                            {successTicket[0]?.paymentStatus === "PENDING" ? (
                                 <div className="space-y-4 mb-2">
                                     <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-xs leading-relaxed text-center">
                                         ⏳ {isAr
-                                            ? "هذه التذكرة معلقة بانتظار موافقة المسؤول على عملية التحويل عبر Whish. تم إرسال إشعار للمسؤول."
-                                            : "This ticket is pending verification of the Whish transaction. The administrator has been notified."
+                                            ? "هذه التذاكر معلقة بانتظار موافقة المسؤول على عملية التحويل عبر Whish. تم إرسال إشعار للمسؤول."
+                                            : "These tickets are pending verification of the Whish transaction. The administrator has been notified."
                                         }
                                     </div>
                                     <button

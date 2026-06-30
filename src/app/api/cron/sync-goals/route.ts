@@ -129,8 +129,12 @@ export async function GET(request: Request) {
             }
           });
 
+          const host = request.headers.get("host") || "localhost:3000";
+          const protocol = request.headers.get("x-forwarded-proto") || "http";
+          const baseUrl = `${protocol}://${host}`;
+
           for (const [phone, name] of uniqueBuyers.entries()) {
-            await sendMatchWinWhatsAppSummary(phone, name, winningTeams);
+            await sendMatchWinWhatsAppSummary(phone, name, winningTeams, baseUrl);
           }
         }
       } catch (wsErr) {
