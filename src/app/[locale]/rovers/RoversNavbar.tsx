@@ -26,9 +26,9 @@ export default function RoversNavbar({ locale, isAdmin, nightNavActive }: Rovers
       disabled: false,
     },
     {
-      name: "Night_Nav",
+      name: "Live_GPS_Map",
       href: `/${locale}/rovers/nav`,
-      icon: "📡",
+      icon: "🗺️",
       disabled: !nightNavActive && !isAdmin, // lock for normal rovers if nav is disabled
     },
   ];

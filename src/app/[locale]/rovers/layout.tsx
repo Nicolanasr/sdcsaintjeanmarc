@@ -5,6 +5,7 @@ import { getRoverSession, logoutRover } from "@/app/actions/rovers";
 import { prisma } from "@/lib/prisma";
 import { Faction } from "@prisma/client";
 import RoversNavbar from "./RoversNavbar";
+import ForcePasswordChange from "./ForcePasswordChange";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,19 @@ export default async function RoversLayout({ children, params }: LayoutProps) {
   // If not authenticated, redirect to login
   if (!session) {
     redirect(`/${locale}/login`);
+  }
+
+  // If must change password, restrict entire UI view to ForcePasswordChange component
+  if (session.profile.mustChangePassword) {
+    return (
+      <div className="min-h-screen bg-black text-zinc-100 font-mono flex flex-col justify-center relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
+        <div className="pointer-events-none fixed inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,3px_100%] opacity-35" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(239,68,68,0.04)_0%,rgba(0,0,0,0)_80%)] pointer-events-none" />
+        <main className="max-w-7xl w-full mx-auto relative z-10">
+          <ForcePasswordChange locale={locale} />
+        </main>
+      </div>
+    );
   }
 
   // Load faction tallies

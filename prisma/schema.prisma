@@ -13,6 +13,8 @@ model Profile {
   fullName         String
   role             String           @default("scout") // "scout" or "admin"
   unit             String?          // "jouwele", "mounjidet", "kechefe", "mourchidet", "jaramiz", "zaharat", "iyede"
+  mustChangePassword Boolean        @default(true) @map("must_change_password")
+  lastActiveAt     DateTime?        @map("last_active_at")
   tickets          Ticket[]
   scoutSettlements CashSettlement[] @relation("ScoutSettlements")
   adminSettlements CashSettlement[] @relation("AdminSettlements")

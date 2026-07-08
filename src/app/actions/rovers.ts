@@ -56,6 +56,13 @@ export async function getRoverSession() {
 
     if (!profile) return null;
 
+    try {
+      await prisma.profile.update({
+        where: { id: userId },
+        data: { lastActiveAt: new Date() },
+      });
+    } catch (_) {}
+
     // Auto-create RoverProfile if it does not exist for the scout user
     if (!profile.roverProfile) {
       const newRoverProfile = await prisma.roverProfile.create({
@@ -463,10 +470,11 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
   }
 
   const distance = getDistanceMeters(lat, lng, node.latitude, node.longitude);
-  if (distance > node.radiusMeters) {
+  const gpsAccuracyBuffer = 35; // 35m allowance for mobile GPS drift
+  if (distance > node.radiusMeters + gpsAccuracyBuffer) {
     return {
       success: false,
-      error: `You are out of range (${Math.round(distance)}m away). Must be within ${node.radiusMeters}m of node coordinates.`,
+      error: `You are out of range (${Math.round(distance)}m away). Must be within ${node.radiusMeters + gpsAccuracyBuffer}m (includes 35m GPS drift margin).`,
     };
   }
 
@@ -837,6 +845,45 @@ export async function adminToggleNightNav(active: boolean) {
   }
 }
 
+// 14. Admin Invite User via WhatsApp
+export async function adminInviteUser(userId: string, tempPassword?: string) {
+  try {
+    await checkAdminSession();
+
+    const user = await prisma.profile.findUnique({
+      where: { id: userId },
+      include: { roverProfile: true },
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found." };
+    }
+
+    const phone = user.roverProfile?.phoneNumber;
+    if (!phone) {
+      return { success: false, error: "This user does not have a registered WhatsApp number." };
+    }
+
+    const passwordMsg = tempPassword ? `*Password:* ${tempPassword}` : `*Password:* (Use the password provided to you by your admin)`;
+    const inviteMessage = `⛺ *SDC Saint Jean Marc Portal Invitation* ⛺\n\n` +
+      `Hello *${user.fullName}*,\n` +
+      `You are invited to log in to the Rovers Portal!\n\n` +
+      `🔗 *Portal URL:* https://www.sdcsaintjeanmarc.org/login\n` +
+      `📧 *Email:* ${user.email}\n` +
+      `${passwordMsg}\n\n` +
+      `⚠️ _Note: You will be requested to change your password immediately upon your first login for security reasons._\n\n` +
+      `See you on the field! ⛺`;
+
+    await sendWhatsAppMessage(phone, inviteMessage);
+
+    await logSystemAction("ADMIN_INVITE_SENT", `Admin sent portal invitation to scout ${user.fullName} (${user.email}).`);
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to send WhatsApp invite" };
+  }
+}
+
 // 14. Admin Create Rover User
 import bcrypt from "bcryptjs";
 
@@ -903,6 +950,7 @@ export async function adminCreateQuest(data: {
   answerCode?: string;
   creditReward: number;
   unlockedAtDate: string; // ISO string
+  expiresAt?: string | null; // ISO string or null
   phase: QuestPhase;
   isReleased: boolean;
 }) {
@@ -923,6 +971,7 @@ export async function adminCreateQuest(data: {
         encryptedAnswerHash,
         creditReward: Number(data.creditReward),
         unlockedAtDate: new Date(data.unlockedAtDate),
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
         phase: data.phase,
         isReleased: data.isReleased,
       },
@@ -1053,6 +1102,7 @@ export async function adminUpdateQuest(
     answerCode?: string;
     creditReward: number;
     unlockedAtDate: string;
+    expiresAt?: string | null;
     phase: "PRE_CAMP" | "LIVE_CAMP";
     isReleased: boolean;
   }
@@ -1072,6 +1122,7 @@ export async function adminUpdateQuest(
         ...(encryptedAnswerHash ? { encryptedAnswerHash } : {}),
         creditReward: Number(data.creditReward),
         unlockedAtDate: new Date(data.unlockedAtDate),
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
         phase: data.phase,
         isReleased: data.isReleased,
       },
@@ -1333,5 +1384,241 @@ export async function adminClearHotSpots() {
     return { success: true, count: deleteRes.count };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to clear hot-spots" };
+  }
+}
+
+// 26. Change Password on First Login
+export async function changeRoverPassword(newPasswordHex: string) {
+  const session = await getRoverSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  if (newPasswordHex.length < 6) {
+    return { success: false, error: "Password must be at least 6 characters long." };
+  }
+
+  const hashedPassword = await bcrypt.hash(newPasswordHex, 10);
+
+  await prisma.profile.update({
+    where: { id: session.profile.id },
+    data: {
+      password: hashedPassword,
+      mustChangePassword: false,
+    },
+  });
+
+  revalidatePath("/rovers");
+  return { success: true };
+}
+
+// 27. Admin Batch Import/Mass Upload Profiles
+export async function adminMassUploadRovers(usersList: {
+  fullName: string;
+  email: string;
+  passwordHex: string;
+  role: "scout" | "admin";
+  unit?: string | null;
+  faction?: "ALPHA" | "BRAVO" | null;
+  phoneNumber?: string | null;
+}[]) {
+  try {
+    await checkAdminSession();
+
+    if (!Array.isArray(usersList) || usersList.length === 0) {
+      return { success: false, error: "Empty or invalid users list." };
+    }
+
+    let createdCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    for (const item of usersList) {
+      try {
+        const cleanEmail = item.email.trim().toLowerCase();
+        if (!cleanEmail || !item.fullName) {
+          skippedCount++;
+          errors.push(`Row missing email or name`);
+          continue;
+        }
+
+        const existing = await prisma.profile.findUnique({
+          where: { email: cleanEmail },
+        });
+
+        if (existing) {
+          skippedCount++;
+          errors.push(`"${cleanEmail}" already exists`);
+          continue;
+        }
+
+        // Default password if none provided is sdc123456
+        const defaultPassword = item.passwordHex || "sdc123456";
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+        const profile = await prisma.profile.create({
+          data: {
+            email: cleanEmail,
+            password: hashedPassword,
+            fullName: item.fullName.trim(),
+            role: item.role === "admin" ? "admin" : "scout",
+            unit: item.unit ? String(item.unit).trim() : null,
+            mustChangePassword: true,
+          },
+        });
+
+        if (profile.role === "scout") {
+          await prisma.roverProfile.create({
+            data: {
+              profileId: profile.id,
+              roverCredits: 0,
+              faction: item.faction || null,
+              phoneNumber: item.phoneNumber ? String(item.phoneNumber).trim() : "",
+            },
+          });
+        }
+
+        createdCount++;
+      } catch (rowErr: any) {
+        skippedCount++;
+        errors.push(`Error on "${item.email}": ${rowErr.message || "Unknown error"}`);
+      }
+    }
+
+    await logSystemAction(
+      "ADMIN_MASS_UPLOAD",
+      `Admin batch imported users. Success: ${createdCount}, Skipped/Error: ${skippedCount}.`
+    );
+
+    revalidatePath("/rovers/admin");
+    return { success: true, createdCount, skippedCount, errors };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Mass upload operation failed" };
+  }
+}
+
+// 28. Admin Batch Import Quests
+export async function adminMassUploadQuests(questsList: {
+  title: string;
+  creditReward: number;
+  description: string;
+  clueHint?: string | null;
+  verificationType: "DIGITAL_CODE" | "LEADER_SIGN_OFF";
+  answerCode?: string | null;
+  unlockedAtDate: string;
+  expiresAt?: string | null;
+}[]) {
+  try {
+    await checkAdminSession();
+
+    if (!Array.isArray(questsList) || questsList.length === 0) {
+      return { success: false, error: "Empty or invalid quests list." };
+    }
+
+    let createdCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    for (const item of questsList) {
+      try {
+        if (!item.title.trim()) {
+          skippedCount++;
+          errors.push(`Row missing title`);
+          continue;
+        }
+
+        let encryptedAnswerHash: string | null = null;
+        if (item.verificationType === "DIGITAL_CODE" && item.answerCode) {
+          encryptedAnswerHash = hashAnswer(item.answerCode);
+        }
+
+        await prisma.quest.create({
+          data: {
+            title: item.title.trim(),
+            description: item.description.trim(),
+            clueHint: item.clueHint ? item.clueHint.trim() : null,
+            verificationType: item.verificationType,
+            encryptedAnswerHash,
+            creditReward: Number(item.creditReward),
+            unlockedAtDate: new Date(item.unlockedAtDate),
+            expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+            phase: "PRE_CAMP",
+            isReleased: true,
+          },
+        });
+
+        createdCount++;
+      } catch (rowErr: any) {
+        skippedCount++;
+        errors.push(`Error on "${item.title}": ${rowErr.message || "Unknown error"}`);
+      }
+    }
+
+    await logSystemAction(
+      "ADMIN_MASS_UPLOAD_QUESTS",
+      `Admin batch imported quests. Success: ${createdCount}, Skipped: ${skippedCount}.`
+    );
+
+    revalidatePath("/rovers/admin");
+    revalidatePath("/rovers/terminal");
+    return { success: true, createdCount, skippedCount, errors };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Mass upload operation failed" };
+  }
+}
+
+// 29. Admin Batch Import Shop Items
+export async function adminMassUploadShopItems(itemsList: {
+  title: string;
+  price: number;
+  description: string;
+  type: "FIXED_PRICE" | "AUCTION";
+  stock: number;
+}[]) {
+  try {
+    await checkAdminSession();
+
+    if (!Array.isArray(itemsList) || itemsList.length === 0) {
+      return { success: false, error: "Empty or invalid shop items list." };
+    }
+
+    let createdCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    for (const item of itemsList) {
+      try {
+        if (!item.title.trim()) {
+          skippedCount++;
+          errors.push(`Row missing title`);
+          continue;
+        }
+
+        await prisma.shopItem.create({
+          data: {
+            title: item.title.trim(),
+            description: item.description.trim(),
+            priceOrCurrentBid: Number(item.price),
+            type: item.type,
+            stock: Number(item.stock),
+            isAvailable: true,
+          },
+        });
+
+        createdCount++;
+      } catch (rowErr: any) {
+        skippedCount++;
+        errors.push(`Error on "${item.title}": ${rowErr.message || "Unknown error"}`);
+      }
+    }
+
+    await logSystemAction(
+      "ADMIN_MASS_UPLOAD_SHOP_ITEMS",
+      `Admin batch imported shop items. Success: ${createdCount}, Skipped: ${skippedCount}.`
+    );
+
+    revalidatePath("/rovers/admin");
+    revalidatePath("/rovers/shop");
+    return { success: true, createdCount, skippedCount, errors };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Mass upload operation failed" };
   }
 }

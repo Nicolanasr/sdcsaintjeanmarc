@@ -18,7 +18,24 @@ import {
   adminDeleteRover,
   adminSpawnHotSpot,
   adminClearHotSpots,
+  adminMassUploadRovers,
+  adminInviteUser,
+  adminMassUploadQuests,
+  adminMassUploadShopItems,
 } from "@/app/actions/rovers";
+
+const LocalDateStr = ({ date }: { date: string | Date }) => {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <span className="opacity-0">...</span>;
+  }
+
+  return <span>{new Date(date).toLocaleString()}</span>;
+};
 
 interface Quest {
   id: string;
@@ -28,9 +45,9 @@ interface Quest {
   creditReward: number;
   isReleased: boolean;
   unlockedAtDate: Date;
+  expiresAt?: Date | string | null;
   verificationType: "DIGITAL_CODE" | "LEADER_SIGN_OFF";
   phase?: "PRE_CAMP" | "LIVE_CAMP";
-  answerCode?: string;
 }
 
 interface Rover {
@@ -39,6 +56,7 @@ interface Rover {
   email?: string;
   role?: string;
   unit: string | null;
+  lastActiveAt?: Date | string | null;
   roverProfile: {
     roverCredits: number;
     faction: "ALPHA" | "BRAVO" | null;
@@ -127,12 +145,18 @@ export default function AdminClientPage({
   const [newQuestReward, setNewQuestReward] = useState<number | "">("");
   const [newQuestPhase, setNewQuestPhase] = useState<"PRE_CAMP" | "LIVE_CAMP">("PRE_CAMP");
   const [newQuestDate, setNewQuestDate] = useState("");
+  const [newQuestExpiry, setNewQuestExpiry] = useState("");
   const [newQuestReleased, setNewQuestReleased] = useState(false);
 
   // Hot Spot form state
   const [hotspotName, setHotspotName] = useState("");
   const [hotspotLat, setHotspotLat] = useState("");
   const [hotspotLng, setHotspotLng] = useState("");
+
+  // Mass Upload form state
+  const [massUploadText, setMassUploadText] = useState("");
+  const [massUploadDelimiter, setMassUploadDelimiter] = useState(",");
+  const [massUploadResult, setMassUploadResult] = useState<{ createdCount: number; skippedCount: number; errors: string[] } | null>(null);
 
   // Edit overlays state
   const [editingRover, setEditingRover] = useState<Rover | null>(null);
@@ -151,6 +175,7 @@ export default function AdminClientPage({
   const [editQuestType, setEditQuestType] = useState<"DIGITAL_CODE" | "LEADER_SIGN_OFF">("DIGITAL_CODE");
   const [editQuestAnswer, setEditQuestAnswer] = useState("");
   const [editQuestDate, setEditQuestDate] = useState("");
+  const [editQuestExpiry, setEditQuestExpiry] = useState("");
   const [editQuestPhase, setEditQuestPhase] = useState<"PRE_CAMP" | "LIVE_CAMP">("PRE_CAMP");
   const [editQuestReleased, setEditQuestReleased] = useState(false);
 
@@ -169,6 +194,24 @@ export default function AdminClientPage({
   const [newShopPrice, setNewShopPrice] = useState<number | "">("");
   const [newShopStock, setNewShopStock] = useState<number | "">("");
   const [newShopAvailable, setNewShopAvailable] = useState(true);
+
+  // Modal creation visibility states
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showMassUploadModal, setShowMassUploadModal] = useState(false);
+  const [showAddQuestModal, setShowAddQuestModal] = useState(false);
+  const [showAddShopItemModal, setShowAddShopItemModal] = useState(false);
+  const [showSpawnHotspotModal, setShowSpawnHotspotModal] = useState(false);
+  const [invitingUser, setInvitingUser] = useState<Rover | null>(null);
+  const [inviteTempPassword, setInviteTempPassword] = useState("");
+
+  // Mass Upload states for Challenges and Shop Items
+  const [showMassUploadQuestsModal, setShowMassUploadQuestsModal] = useState(false);
+  const [massUploadQuestsText, setMassUploadQuestsText] = useState("");
+  const [massUploadQuestsDelimiter, setMassUploadQuestsDelimiter] = useState("\t");
+
+  const [showMassUploadShopItemsModal, setShowMassUploadShopItemsModal] = useState(false);
+  const [massUploadShopItemsText, setMassUploadShopItemsText] = useState("");
+  const [massUploadShopItemsDelimiter, setMassUploadShopItemsDelimiter] = useState("\t");
 
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -264,6 +307,7 @@ export default function AdminClientPage({
                 setHotspotName("");
                 setHotspotLat("");
                 setHotspotLng("");
+                setShowSpawnHotspotModal(false);
             } else {
                 setMessage({ text: `SPAWN_FAILED: ${res.error}`, type: "error" });
             }
@@ -392,17 +436,11 @@ export default function AdminClientPage({
                     type: "success",
                     text: `USER_CREATED: Account for ${newUserFullName} initialized successfully.`,
                 });
-                setNewUserEmail("");
-                setNewUserFullName("");
-                setNewUserPassword("");
-                setNewUserRole("scout");
-                setNewUserUnit("");
-                setNewUserFaction("");
-                setNewUserPhone("");
-
                 const dummyNewProfile = {
                     id: res.roverId || Math.random().toString(),
                     fullName: newUserFullName,
+                    email: newUserEmail,
+                    role: newUserRole,
                     unit: newUserUnit || null,
                     roverProfile: newUserRole === "scout" ? {
                         roverCredits: 0,
@@ -412,6 +450,15 @@ export default function AdminClientPage({
                     questCompletions: [],
                 };
                 setRovers((prev) => [...prev, dummyNewProfile].sort((a, b) => a.fullName.localeCompare(b.fullName)));
+                setShowAddUserModal(false);
+
+                setNewUserEmail("");
+                setNewUserFullName("");
+                setNewUserPassword("");
+                setNewUserRole("scout");
+                setNewUserUnit("");
+                setNewUserFaction("");
+                setNewUserPhone("");
             } else {
                 setMessage({
                     type: "error",
@@ -422,6 +469,272 @@ export default function AdminClientPage({
             setMessage({
                 type: "error",
                 text: `SYSTEM_ERROR: ${err.message || "Unexpected exception during user insertion."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const handleSendInvite = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!invitingUser) return;
+        setLoading("invite");
+        try {
+            const res = await adminInviteUser(invitingUser.id, inviteTempPassword || undefined);
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `INVITATION_SENT: WhatsApp invite sent to ${invitingUser.fullName}.`,
+                });
+                setInvitingUser(null);
+                setInviteTempPassword("");
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `INVITE_FAILED: ${res.error || "Failed to dispatch invitation."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Could not dispatch WhatsApp message."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    // Mass Upload Form Submission
+    const handleMassUpload = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!massUploadText.trim()) return;
+
+        setLoading("mass-upload");
+        setMessage(null);
+        setMassUploadResult(null);
+
+        const lines = massUploadText.split(/\r?\n/).filter(line => line.trim() !== "");
+        const parsedUsers: any[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            let parts: string[] = [];
+            if (massUploadDelimiter === ",") {
+                parts = line.split(",").map(p => p.trim());
+            } else {
+                parts = line.split("\t").map(p => p.trim());
+            }
+
+            if (parts.length < 3) continue;
+
+            const fullName = parts[0];
+            const email = parts[1];
+            const passwordHex = parts[2];
+            const factionVal = parts[3] ? parts[3].toUpperCase() : null;
+            const faction = (factionVal === "ALPHA" || factionVal === "BRAVO") ? factionVal : null;
+            const phoneNumber = parts[4] || "";
+            const unit = parts[5] || null;
+
+            parsedUsers.push({
+                fullName,
+                email,
+                passwordHex,
+                role: "scout",
+                faction,
+                phoneNumber,
+                unit,
+            });
+        }
+
+        if (parsedUsers.length === 0) {
+            setMessage({
+                type: "error",
+                text: "PARSE_ERROR: No valid user rows detected. Ensure format: Name, Email, Password, [Faction], [Phone], [Unit]",
+            });
+            setLoading(null);
+            return;
+        }
+
+        try {
+            const res = await adminMassUploadRovers(parsedUsers);
+            if (res.success) {
+                setMassUploadResult({
+                    createdCount: res.createdCount || 0,
+                    skippedCount: res.skippedCount || 0,
+                    errors: res.errors || [],
+                });
+                setMessage({
+                    type: "success",
+                    text: `MASS_UPLOAD_SUCCESS: Imported ${res.createdCount} scouts successfully.`,
+                });
+                setMassUploadText("");
+                setShowMassUploadModal(false);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `MASS_UPLOAD_FAILED: ${res.error || "Batch write operation failed."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "An exception occurred during mass upload."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const handleMassUploadQuests = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!massUploadQuestsText.trim()) return;
+
+        setLoading("mass-upload-quests");
+        setMessage(null);
+
+        const lines = massUploadQuestsText.split(/\r?\n/).filter(line => line.trim() !== "");
+        const parsedQuests: any[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            let parts: string[] = [];
+            if (massUploadQuestsDelimiter === ",") {
+                parts = line.split(",").map(p => p.trim());
+            } else {
+                parts = line.split("\t").map(p => p.trim());
+            }
+
+            if (parts.length < 3) continue;
+
+            const title = parts[0];
+            const rewardVal = Number(parts[1]);
+            const description = parts[2];
+            const clueHint = parts[3] || null;
+            const rawVerif = parts[4] ? parts[4].toUpperCase() : "";
+            const verificationType = rawVerif === "DIGITAL_CODE" ? "DIGITAL_CODE" : "LEADER_SIGN_OFF";
+            const answerCode = parts[5] || null;
+
+            const unlockedAtDate = new Date().toISOString();
+
+            parsedQuests.push({
+                title,
+                creditReward: rewardVal,
+                description,
+                clueHint,
+                verificationType,
+                answerCode,
+                unlockedAtDate,
+            });
+        }
+
+        if (parsedQuests.length === 0) {
+            setMessage({
+                type: "error",
+                text: "PARSE_ERROR: No valid challenge rows detected. Format: Title, CreditReward, Description, [ClueHint], [VerificationType: DIGITAL_CODE/LEADER_SIGN_OFF], [AnswerKey]",
+            });
+            setLoading(null);
+            return;
+        }
+
+        try {
+            const res = await adminMassUploadQuests(parsedQuests);
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `MASS_UPLOAD_SUCCESS: Imported ${res.createdCount} challenges successfully.`,
+                });
+                setMassUploadQuestsText("");
+                setShowMassUploadQuestsModal(false);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `MASS_UPLOAD_FAILED: ${res.error || "Batch write operation failed."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "An exception occurred during challenges mass upload."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const handleMassUploadShopItems = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!massUploadShopItemsText.trim()) return;
+
+        setLoading("mass-upload-shop");
+        setMessage(null);
+
+        const lines = massUploadShopItemsText.split(/\r?\n/).filter(line => line.trim() !== "");
+        const parsedItems: any[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            let parts: string[] = [];
+            if (massUploadShopItemsDelimiter === ",") {
+                parts = line.split(",").map(p => p.trim());
+            } else {
+                parts = line.split("\t").map(p => p.trim());
+            }
+
+            if (parts.length < 3) continue;
+
+            const title = parts[0];
+            const price = Number(parts[1]);
+            const description = parts[2];
+            const rawType = parts[3] ? parts[3].toUpperCase() : "";
+            const type = rawType === "AUCTION" ? "AUCTION" : "FIXED_PRICE";
+            const stock = parts[4] ? Number(parts[4]) : 999;
+
+            parsedItems.push({
+                title,
+                price,
+                description,
+                type,
+                stock,
+            });
+        }
+
+        if (parsedItems.length === 0) {
+            setMessage({
+                type: "error",
+                text: "PARSE_ERROR: No valid shop items detected. Format: Title, Price, Description, [Type: FIXED_PRICE/AUCTION], [Stock]",
+            });
+            setLoading(null);
+            return;
+        }
+
+        try {
+            const res = await adminMassUploadShopItems(parsedItems);
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `MASS_UPLOAD_SUCCESS: Imported ${res.createdCount} marketplace items successfully.`,
+                });
+                setMassUploadShopItemsText("");
+                setShowMassUploadShopItemsModal(false);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `MASS_UPLOAD_FAILED: ${res.error || "Batch write operation failed."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "An exception occurred during shop items mass upload."}`,
             });
         } finally {
             setLoading(null);
@@ -445,6 +758,7 @@ export default function AdminClientPage({
                 answerCode: newQuestType === "DIGITAL_CODE" ? newQuestAnswer : undefined,
                 creditReward: Number(newQuestReward),
                 unlockedAtDate: new Date(newQuestDate).toISOString(),
+                expiresAt: newQuestExpiry ? new Date(newQuestExpiry).toISOString() : null,
                 phase: newQuestPhase,
                 isReleased: newQuestReleased,
             });
@@ -454,6 +768,18 @@ export default function AdminClientPage({
                     type: "success",
                     text: `CHALLENGE_CREATED: '${newQuestTitle}' has been successfully scheduled.`,
                 });
+                const dummyNewQuest = {
+                    id: res.questId || Math.random().toString(),
+                    title: newQuestTitle,
+                    creditReward: Number(newQuestReward),
+                    isReleased: newQuestReleased,
+                    unlockedAtDate: new Date(newQuestDate),
+                    expiresAt: newQuestExpiry ? new Date(newQuestExpiry) : null,
+                    verificationType: newQuestType,
+                };
+                setQuests((prev) => [...prev, dummyNewQuest].sort((a, b) => new Date(a.unlockedAtDate).getTime() - new Date(b.unlockedAtDate).getTime()));
+                setShowAddQuestModal(false);
+
                 setNewQuestTitle("");
                 setNewQuestDesc("");
                 setNewQuestHint("");
@@ -462,17 +788,8 @@ export default function AdminClientPage({
                 setNewQuestReward("");
                 setNewQuestPhase("PRE_CAMP");
                 setNewQuestDate("");
+                setNewQuestExpiry("");
                 setNewQuestReleased(false);
-
-                const dummyNewQuest = {
-                    id: res.questId || Math.random().toString(),
-                    title: newQuestTitle,
-                    creditReward: Number(newQuestReward),
-                    isReleased: newQuestReleased,
-                    unlockedAtDate: new Date(newQuestDate),
-                    verificationType: newQuestType,
-                };
-                setQuests((prev) => [...prev, dummyNewQuest].sort((a, b) => new Date(a.unlockedAtDate).getTime() - new Date(b.unlockedAtDate).getTime()));
             } else {
                 setMessage({
                     type: "error",
@@ -655,7 +972,7 @@ export default function AdminClientPage({
     setEditQuestDesc(quest.description || "");
     setEditQuestHint(quest.clueHint || "");
     setEditQuestType(quest.verificationType);
-    setEditQuestAnswer(quest.answerCode || "");
+    setEditQuestAnswer("");
     setEditQuestPhase(quest.phase || "PRE_CAMP");
     setEditQuestReleased(quest.isReleased);
     
@@ -667,6 +984,15 @@ export default function AdminClientPage({
       setEditQuestDate(localISOTime);
     } else {
       setEditQuestDate("");
+    }
+
+    if (quest.expiresAt) {
+      const date = new Date(quest.expiresAt);
+      const tzOffset = date.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+      setEditQuestExpiry(localISOTime);
+    } else {
+      setEditQuestExpiry("");
     }
   };
 
@@ -686,6 +1012,7 @@ export default function AdminClientPage({
         answerCode: editQuestType === "DIGITAL_CODE" ? editQuestAnswer : undefined,
         creditReward: Number(editQuestReward),
         unlockedAtDate: new Date(editQuestDate).toISOString(),
+        expiresAt: editQuestExpiry ? new Date(editQuestExpiry).toISOString() : null,
         phase: editQuestPhase,
         isReleased: editQuestReleased,
       });
@@ -707,6 +1034,7 @@ export default function AdminClientPage({
                 verificationType: editQuestType,
                 creditReward: Number(editQuestReward),
                 unlockedAtDate: new Date(editQuestDate),
+                expiresAt: editQuestExpiry ? new Date(editQuestExpiry) : null,
                 phase: editQuestPhase,
                 isReleased: editQuestReleased,
               };
@@ -798,6 +1126,7 @@ export default function AdminClientPage({
         };
 
         setShopItems((prev) => [dummyItem, ...prev]);
+        setShowAddShopItemModal(false);
 
         // Reset fields
         setNewShopTitle("");
@@ -932,10 +1261,10 @@ export default function AdminClientPage({
                     </p>
                 </div>
 
-                {/* Night Nav Status Toggler */}
+                {/* Live GPS Map Access Toggler */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
                     <div>
-                        <div className="text-xs font-bold text-zinc-300 uppercase">📡 Night Navigation Access:</div>
+                        <div className="text-xs font-bold text-zinc-300 uppercase">🗺️ Live GPS Map Access:</div>
                         <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
                             Current state: {nightNavActive ? "ONLINE (ALL ROVERS AUTHORIZED)" : "OFFLINE (RESTRICTED TO ADMINS)"}
                         </div>
@@ -948,7 +1277,7 @@ export default function AdminClientPage({
                             : "bg-green-950/20 border border-green-500/40 text-green-500 hover:bg-green-950/40 hover:text-green-400"
                             }`}
                     >
-                        {loading === "toggle-nav" ? "PROCESSING..." : nightNavActive ? "DEACTIVATE NIGHT_NAV" : "ACTIVATE NIGHT_NAV"}
+                        {loading === "toggle-nav" ? "PROCESSING..." : nightNavActive ? "LOCK GPS MAP" : "UNLOCK GPS MAP"}
                     </button>
                 </div>
 
@@ -1017,13 +1346,30 @@ export default function AdminClientPage({
             <div className="bg-zinc-950/20 border-x border-b border-amber-500/20 p-5 rounded-b-lg shadow-[0_4px_20px_rgba(0,0,0,0.5)] min-h-[400px]">
                 {/* Tab 1: Scout Operations */}
                 {activeTab === "scouts" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        {/* Left Side: Scout list */}
-                        <div className="lg:col-span-8 flex flex-col gap-4">
-                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded w-fit">
+                    <div className="flex flex-col gap-6">
+                        {/* Tab header buttons */}
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded">
                                 📋 ROVER_MATRIX_&_SIGN_OFFS
                             </h3>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowSpawnHotspotModal(true)}
+                                    className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                >
+                                    🚨 SPAWN NEW HOT-SPOT
+                                </button>
+                                <button
+                                    onClick={handleClearHotSpots}
+                                    disabled={loading === "clear-hotspots"}
+                                    className="bg-red-950/20 hover:bg-red-500 hover:text-black border border-red-500/30 text-red-500 hover:border-red-500 font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                >
+                                    {loading === "clear-hotspots" ? "WIPING..." : "❌ WIPE HOT-SPOTS"}
+                                </button>
+                            </div>
+                        </div>
 
+                        <div className="flex flex-col gap-4">
                             <div className="flex flex-col gap-4">
                                 {rovers.length === 0 ? (
                                     <p className="text-zinc-600 text-xs py-2">No registered scouts found in database.</p>
@@ -1076,91 +1422,92 @@ export default function AdminClientPage({
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-zinc-300 font-bold">{rover.roverProfile?.phoneNumber || "UNSPECIFIED"}</span>
+                                                                <span className="text-zinc-300 font-mono">{rover.roverProfile?.phoneNumber || "NOT_SET"}</span>
                                                                 <button
                                                                     onClick={() => startEditPhone(rover.id, rover.roverProfile?.phoneNumber || "")}
-                                                                    className="text-amber-500 hover:underline text-[9px] cursor-pointer"
+                                                                    className="text-amber-500/70 hover:text-amber-400 text-[8px] font-bold underline uppercase cursor-pointer"
                                                                 >
-                                                                    [EDIT_]
+                                                                    [Edit]
                                                                 </button>
                                                             </div>
                                                         )}
                                                     </div>
-
-                                                    {/* Credits modifier */}
-                                                    {adjustingCreditsId === rover.id ? (
-                                                        <div className="mt-3 p-3 bg-black/60 border border-amber-500/20 rounded flex flex-col gap-2 max-w-sm">
-                                                            <div className="flex items-center gap-2">
-                                                                <input
-                                                                    type="number"
-                                                                    value={inlineCreditsAmount}
-                                                                    onChange={(e) => {
-                                                                        const v = e.target.value;
-                                                                        setInlineCreditsAmount(v === "" ? "" : Number(v));
-                                                                    }}
-                                                                    placeholder="e.g. 100 or -50"
-                                                                    disabled={loading === `credits-${rover.id}`}
-                                                                    className="bg-zinc-950 border border-amber-500/35 text-zinc-100 text-xs px-2.5 py-1 rounded focus:outline-none focus:border-amber-400 w-32 font-semibold"
-                                                                />
-                                                                <span className="text-[10px] text-zinc-500">Credits (use negative to deduct)</span>
-                                                            </div>
-                                                            <input
-                                                                type="text"
-                                                                value={inlineAdjustReason}
-                                                                onChange={(e) => setInlineAdjustReason(e.target.value)}
-                                                                placeholder="Reason for adjustment"
-                                                                disabled={loading === `credits-${rover.id}`}
-                                                                className="bg-zinc-950 border border-amber-500/35 text-zinc-100 text-xs px-2.5 py-1 rounded focus:outline-none focus:border-amber-400 w-full"
-                                                            />
-                                                            <div className="flex gap-2 justify-end">
-                                                                <button
-                                                                    onClick={() => handleInlineAdjustCredits(rover.id)}
-                                                                    disabled={loading === `credits-${rover.id}`}
-                                                                    className="bg-amber-500 hover:bg-amber-400 text-black text-[9px] font-extrabold px-2.5 py-1 rounded cursor-pointer"
-                                                                >
-                                                                    CONFIRM_ADJUST
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setAdjustingCreditsId(null)}
-                                                                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[9px] font-extrabold px-2.5 py-1 rounded cursor-pointer"
-                                                                >
-                                                                    CANCEL
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-[10px] uppercase flex items-center gap-2 mt-1">
-                                                            <span className="text-zinc-500">Balance:</span>
-                                                            <span className="text-amber-400 font-extrabold">{rover.roverProfile?.roverCredits || 0} CR</span>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setAdjustingCreditsId(rover.id);
-                                                                    setInlineCreditsAmount("");
-                                                                    setInlineAdjustReason("");
-                                                                }}
-                                                                className="text-amber-500 hover:underline text-[9px] cursor-pointer"
-                                                            >
-                                                                [ADJUST_BALANCE_]
-                                                            </button>
-                                                        </div>
-                                                    )}
                                                 </div>
 
-                                                {/* Pending completions approvals */}
-                                                <div className="flex flex-col gap-2 min-w-[200px] border-t md:border-t-0 md:border-l border-amber-500/10 pt-3 md:pt-0 md:pl-4">
-                                                    <div className="text-[10px] text-zinc-500 uppercase mb-1">Awaiting Sign-Offs</div>
+                                                 {/* Credits Info */}
+                                                 <div className="flex flex-col gap-2">
+                                                     {adjustingCreditsId === rover.id ? (
+                                                         <div className="p-3 bg-black/60 border border-amber-500/20 rounded flex flex-col gap-2 max-w-xs text-left">
+                                                             <div className="flex items-center gap-2">
+                                                                 <input
+                                                                     type="number"
+                                                                     value={inlineCreditsAmount}
+                                                                     onChange={(e) => {
+                                                                         const v = e.target.value;
+                                                                         setInlineCreditsAmount(v === "" ? "" : Number(v));
+                                                                     }}
+                                                                     placeholder="e.g. 100 or -50"
+                                                                     disabled={loading === `credits-${rover.id}`}
+                                                                     className="bg-zinc-950 border border-amber-500/35 text-zinc-100 text-[10px] px-2 py-1 rounded focus:outline-none w-24 font-semibold"
+                                                                 />
+                                                                 <span className="text-[8px] text-zinc-500 uppercase">Amount (+/-)</span>
+                                                             </div>
+                                                             <input
+                                                                 type="text"
+                                                                 value={inlineAdjustReason}
+                                                                 onChange={(e) => setInlineAdjustReason(e.target.value)}
+                                                                 placeholder="Adjustment reason"
+                                                                 disabled={loading === `credits-${rover.id}`}
+                                                                 className="bg-zinc-950 border border-amber-500/35 text-zinc-100 text-[10px] px-2 py-1 rounded focus:outline-none w-full"
+                                                             />
+                                                             <div className="flex gap-2 justify-end">
+                                                                 <button
+                                                                     onClick={() => handleInlineAdjustCredits(rover.id)}
+                                                                     disabled={loading === `credits-${rover.id}`}
+                                                                     className="bg-amber-500 hover:bg-amber-400 text-black text-[9px] font-extrabold px-2.5 py-1 rounded cursor-pointer"
+                                                                 >
+                                                                     OK
+                                                                 </button>
+                                                                 <button
+                                                                     onClick={() => setAdjustingCreditsId(null)}
+                                                                     className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[9px] font-extrabold px-2.5 py-1 rounded cursor-pointer"
+                                                                 >
+                                                                     CANCEL
+                                                                 </button>
+                                                             </div>
+                                                         </div>
+                                                     ) : (
+                                                         <div className="flex items-center gap-2">
+                                                             <div className="bg-amber-950/20 border border-amber-500/20 px-3 py-1 rounded flex flex-col items-center justify-center min-w-[70px]">
+                                                                 <span className="text-[8px] text-amber-500/60 uppercase">Credits</span>
+                                                                 <span className="text-amber-400 font-extrabold text-sm">{rover.roverProfile?.roverCredits || 0}</span>
+                                                             </div>
+                                                             <button
+                                                                 onClick={() => {
+                                                                     setAdjustingCreditsId(rover.id);
+                                                                     setInlineCreditsAmount("");
+                                                                     setInlineAdjustReason("");
+                                                                 }}
+                                                                 className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[9px] px-2.5 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                                             >
+                                                                 Adjust
+                                                             </button>
+                                                         </div>
+                                                     )}
+                                                 </div>
+
+                                                {/* Sign-offs Grid */}
+                                                <div className="flex flex-wrap gap-2 md:max-w-xs justify-end">
                                                     {pendingCompletions.length === 0 ? (
-                                                        <div className="text-[10px] text-zinc-600 uppercase italic">
-                                                            No pending approvals
-                                                        </div>
+                                                        <span className="text-[9px] text-zinc-600 uppercase italic">No pending milestones</span>
                                                     ) : (
                                                         pendingCompletions.map((comp) => (
                                                             <div
                                                                 key={comp.questId}
-                                                                className="flex items-center justify-between gap-3 text-xs bg-amber-950/10 border border-amber-500/15 p-2 rounded"
+                                                                className="flex items-center gap-1.5 bg-amber-950/30 border border-amber-500/20 px-2 py-1 rounded"
                                                             >
-                                                                <span className="font-semibold text-zinc-300 truncate max-w-[120px]" title={comp.quest.title}>
-                                                                    {comp.quest.title} (+{comp.quest.creditReward} CR)
+                                                                <span className="text-[8px] text-amber-500 uppercase font-bold tracking-wider max-w-[80px] truncate" title={comp.quest.title}>
+                                                                    {comp.quest.title}
                                                                 </span>
                                                                 <button
                                                                     onClick={() =>
@@ -1188,625 +1535,95 @@ export default function AdminClientPage({
                                 )}
                             </div>
                         </div>
-
-                        {/* Right Side: Hot Spot controls */}
-                        <div className="lg:col-span-4 flex flex-col gap-4">
-                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded w-fit">
-                                🚨 HOT-SPOT_MANAGEMENT
-                            </h3>
-
-                            <div className="border border-amber-500/20 bg-black/40 p-4 rounded-lg flex flex-col gap-4">
-                                <p className="text-[10px] text-zinc-400 uppercase leading-relaxed tracking-wider">
-                                    Spawns an active King-of-the-Hill coordinate blip on the map. Scouts must coordinate checking in within 20s without opposing interruption to conquer it.
-                                </p>
-
-                                <form onSubmit={handleSpawnHotSpot} className="flex flex-col gap-3">
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[9px] uppercase font-bold text-amber-500/80">Hot-Spot Name</label>
-                                        <input
-                                            type="text"
-                                            value={hotspotName}
-                                            onChange={(e) => setHotspotName(e.target.value)}
-                                            placeholder="e.g. 🚨 HOT-ZONE CHARLIE"
-                                            className="bg-black border border-amber-500/20 text-zinc-100 p-2 text-xs rounded focus:outline-none focus:border-amber-500 w-full font-mono font-semibold"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-[9px] uppercase font-bold text-amber-500/80">Latitude (Optional)</label>
-                                            <input
-                                                type="number"
-                                                step="any"
-                                                value={hotspotLat}
-                                                onChange={(e) => setHotspotLat(e.target.value)}
-                                                placeholder="e.g. 34.1205"
-                                                className="bg-black border border-amber-500/20 text-zinc-100 p-2 text-xs rounded focus:outline-none focus:border-amber-500 w-full font-mono"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-[9px] uppercase font-bold text-amber-500/80">Longitude (Optional)</label>
-                                            <input
-                                                type="number"
-                                                step="any"
-                                                value={hotspotLng}
-                                                onChange={(e) => setHotspotLng(e.target.value)}
-                                                placeholder="e.g. 35.6482"
-                                                className="bg-black border border-amber-500/20 text-zinc-100 p-2 text-xs rounded focus:outline-none focus:border-amber-500 w-full font-mono"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={loading === "spawn-hotspot"}
-                                        className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs py-2.5 rounded transition uppercase cursor-pointer mt-2"
-                                    >
-                                        {loading === "spawn-hotspot" ? "SPAWNING..." : "🚨 SPAWN HOT-SPOT"}
-                                    </button>
-                                </form>
-
-                                <div className="border-t border-amber-500/10 pt-4 flex flex-col gap-2">
-                                    <span className="text-[9px] uppercase font-extrabold text-zinc-500">Global Controls</span>
-                                    <button
-                                        type="button"
-                                        onClick={handleClearHotSpots}
-                                        disabled={loading === "clear-hotspots"}
-                                        className="w-full bg-red-950/20 border border-red-500/40 hover:bg-red-500 hover:text-black text-red-400 font-extrabold text-xs py-2 rounded transition uppercase cursor-pointer"
-                                    >
-                                        {loading === "clear-hotspots" ? "CLEARING..." : "❌ WIPE ALL HOT-SPOTS"}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 )}
 
                 {/* Tab 2: Challenge Control */}
                 {activeTab === "challenges" && (
-                    <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-                        {/* Clue dropper list */}
-                        <div className="flex-1 flex flex-col gap-4">
-                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded w-fit">
+                    <div className="flex flex-col gap-6">
+                        {/* Tab header buttons */}
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded">
                                 🔑 ACTIVE_QUESTS_&_CLUES
                             </h3>
-
-                            <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-hidden shadow-[0_0_10px_rgba(0,0,0,0.5)]">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-xs">
-                                        <thead>
-                                            <tr className="border-b border-amber-500/20 bg-black/40 text-amber-500/70 font-bold uppercase tracking-wider">
-                                                <th className="p-3.5">Quest Title</th>
-                                                <th className="p-3.5">Verify Method</th>
-                                                <th className="p-3.5">Reward</th>
-                                                <th className="p-3.5 text-center">Released</th>
-                                                <th className="p-3.5 text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-amber-500/10 text-zinc-300">
-                                            {quests.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={5} className="p-4 text-center text-zinc-500 italic">
-                                                        No challenges created yet.
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                quests.map((quest) => (
-                                                    <tr key={quest.id} className="hover:bg-amber-950/5 transition">
-                                                        <td className="p-3.5">
-                                                            <div className="font-bold text-zinc-100">{quest.title}</div>
-                                                            <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
-                                                                Scheduled: {new Date(quest.unlockedAtDate).toLocaleString()}
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-3.5 text-[10px] uppercase font-bold text-zinc-400">
-                                                            {quest.verificationType === "DIGITAL_CODE" ? "Cipher Hash" : "Leader Sign-Off"}
-                                                        </td>
-                                                        <td className="p-3.5 font-bold text-amber-300">+{quest.creditReward} CR</td>
-                                                        <td className="p-3.5 text-center">
-                                                            <button
-                                                                onClick={() => handleToggleRelease(quest.id, quest.isReleased)}
-                                                                disabled={loading === `quest-${quest.id}`}
-                                                                className={`px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide cursor-pointer transition ${quest.isReleased
-                                                                    ? "bg-green-950/30 border border-green-500/30 text-green-400 hover:bg-green-950/50"
-                                                                    : "bg-red-950/30 border-red-500/30 text-red-400 hover:bg-red-950/50"
-                                                                    }`}
-                                                            >
-                                                                {loading === `quest-${quest.id}`
-                                                                    ? "WAIT_"
-                                                                    : quest.isReleased
-                                                                        ? "ACTIVE [ON]"
-                                                                        : "LOCKED [OFF]"}
-                                                            </button>
-                                                        </td>
-                                                        <td className="p-3.5 text-right">
-                                                            <div className="flex justify-end gap-2">
-                                                                <button
-                                                                    onClick={() => handleEditQuestClick(quest)}
-                                                                    className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
-                                                                >
-                                                                    EDIT_
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteQuest(quest.id, quest.title)}
-                                                                    disabled={loading === `delete-quest-${quest.id}`}
-                                                                    className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
-                                                                >
-                                                                    {loading === `delete-quest-${quest.id}` ? "DELETING..." : "DELETE_"}
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowAddQuestModal(true)}
+                                    className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                >
+                                    + Add New Challenge
+                                </button>
+                                <button
+                                    onClick={() => setShowMassUploadQuestsModal(true)}
+                                    className="bg-zinc-800 border border-amber-500/35 hover:bg-zinc-700 text-amber-400 font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                >
+                                    📥 + Mass Import Challenges
+                                </button>
                             </div>
                         </div>
 
-                        {/* Create challenge form */}
-                        <div className="w-full lg:w-96 flex flex-col gap-4">
-                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded w-fit">
-                                🏆 CREATE_CHALLENGE
-                            </h3>
-
-                            <form
-                                onSubmit={handleAddQuest}
-                                className="bg-zinc-950/40 border border-amber-500/20 rounded-lg p-5 flex flex-col gap-4 shadow-[0_0_10px_rgba(0,0,0,0.5)] text-left"
-                            >
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Title:</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Fire Building"
-                                        value={newQuestTitle}
-                                        onChange={(e) => setNewQuestTitle(e.target.value)}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Reward (CR):</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        placeholder="e.g. 150"
-                                        value={newQuestReward}
-                                        onChange={(e) => setNewQuestReward(e.target.value === "" ? "" : Number(e.target.value))}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Instructions:</label>
-                                    <textarea
-                                        required
-                                        rows={3}
-                                        placeholder="Challenge description..."
-                                        value={newQuestDesc}
-                                        onChange={(e) => setNewQuestDesc(e.target.value)}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700 font-mono"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Verification Type:</label>
-                                    <select
-                                        value={newQuestType}
-                                        onChange={(e) => setNewQuestType(e.target.value as "DIGITAL_CODE" | "LEADER_SIGN_OFF")}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
-                                    >
-                                        <option value="DIGITAL_CODE">Digital Code Entry</option>
-                                        <option value="LEADER_SIGN_OFF">Scout Leader Sign-Off</option>
-                                    </select>
-                                </div>
-
-                                {newQuestType === "DIGITAL_CODE" && (
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] uppercase text-amber-500/60 font-bold">Cipher Answer Key:</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="e.g. SUNRISE"
-                                            value={newQuestAnswer}
-                                            onChange={(e) => setNewQuestAnswer(e.target.value)}
-                                            className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                        />
-                                    </div>
-                                )}
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Unlock Date / Time:</label>
-                                    <input
-                                        type="datetime-local"
-                                        required
-                                        value={newQuestDate}
-                                        onChange={(e) => setNewQuestDate(e.target.value)}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                    />
-                                </div>
-
-                                <div className="flex items-center gap-2 mt-2">
-                                    <input
-                                        type="checkbox"
-                                        id="newQuestReleased"
-                                        checked={newQuestReleased}
-                                        onChange={(e) => setNewQuestReleased(e.target.checked)}
-                                        className="w-4 h-4 rounded text-amber-500 bg-black border-amber-500/30 focus:ring-0 cursor-pointer"
-                                    />
-                                    <label htmlFor="newQuestReleased" className="text-xs uppercase text-zinc-300 font-bold cursor-pointer">
-                                        Release immediately
-                                    </label>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={loading === "add-quest"}
-                                    className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs py-2.5 rounded transition uppercase cursor-pointer mt-2"
-                                >
-                                    {loading === "add-quest" ? "CREATING..." : "SCHEDULE_QUEST_"}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                )}
-
-                {/* Tab 3: User Registry */}
-                {activeTab === "registry" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                        {/* Left Side: Create User Form */}
-                        <div className="lg:col-span-4 flex flex-col gap-4">
-                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded w-fit">
-                                👤 CREATE_USER_ACCOUNT
-                            </h3>
-
-                            <form
-                                onSubmit={handleAddUser}
-                                className="bg-zinc-950/40 border border-amber-500/20 rounded-lg p-5 flex flex-col gap-4 shadow-[0_0_10px_rgba(0,0,0,0.5)] text-left"
-                            >
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Full Name:</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Nicolas Nasr"
-                                        value={newUserFullName}
-                                        onChange={(e) => setNewUserFullName(e.target.value)}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Email Address:</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        placeholder="e.g. nicolas@sdc.org"
-                                        value={newUserEmail}
-                                        onChange={(e) => setNewUserEmail(e.target.value)}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Password:</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        placeholder="Password string"
-                                        value={newUserPassword}
-                                        onChange={(e) => setNewUserPassword(e.target.value)}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Role:</label>
-                                    <select
-                                        required
-                                        value={newUserRole}
-                                        onChange={(e) => setNewUserRole(e.target.value as "scout" | "admin")}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
-                                    >
-                                        <option value="scout">Scout (Normal Rover)</option>
-                                        <option value="admin">Administrator (Leader)</option>
-                                    </select>
-                                </div>
-
-                                {newUserRole === "scout" && (
-                                    <>
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-[10px] uppercase text-amber-500/60 font-bold">Faction Assignment:</label>
-                                            <select
-                                                value={newUserFaction}
-                                                onChange={(e) => setNewUserFaction(e.target.value as "ALPHA" | "BRAVO" | "")}
-                                                className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
-                                            >
-                                                <option value="">Unassigned</option>
-                                                <option value="ALPHA">ALPHA (Red Faction)</option>
-                                                <option value="BRAVO">BRAVO (Blue Faction)</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-[10px] uppercase text-amber-500/60 font-bold">WhatsApp Number:</label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. +96170123456"
-                                                value={newUserPhone}
-                                                onChange={(e) => setNewUserPhone(e.target.value)}
-                                                className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                            />
-                                        </div>
-                                    </>
-                                )}
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Unit / Section (Optional):</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Rovers Ra"
-                                        value={newUserUnit}
-                                        onChange={(e) => setNewUserUnit(e.target.value)}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                    />
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={loading === "add-user"}
-                                    className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs py-2.5 rounded transition uppercase cursor-pointer mt-2"
-                                >
-                                    {loading === "add-user" ? "REGISTERING_USER..." : "INITIALIZE_ACCOUNT_"}
-                                </button>
-                            </form>
-                        </div>
-
-                        {/* Right Side: Registered Accounts Directory */}
-                        <div className="lg:col-span-8 flex flex-col gap-4">
-                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded w-fit">
-                                👥 ACCOUNTS_DIRECTORY ({rovers.length})
-                            </h3>
-
-                            <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-x-auto shadow-[0_0_10px_rgba(0,0,0,0.5)]">
-                                <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
+                        <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-hidden shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
                                     <thead>
-                                        <tr className="border-b border-amber-500/20 bg-black/60 text-amber-500 uppercase text-[10px] tracking-wider">
-                                            <th className="p-3 bg-black/40">Name / Email</th>
-                                            <th className="p-3 bg-black/40">Role</th>
-                                            <th className="p-3 bg-black/40">Faction / Unit</th>
-                                            <th className="p-3 bg-black/40">Phone</th>
-                                            <th className="p-3 text-right bg-black/40">Actions</th>
+                                        <tr className="border-b border-amber-500/20 bg-black/40 text-amber-500/70 font-bold uppercase tracking-wider">
+                                            <th className="p-3.5">Quest Title</th>
+                                            <th className="p-3.5">Verify Method</th>
+                                            <th className="p-3.5">Reward</th>
+                                            <th className="p-3.5 text-center">Released</th>
+                                            <th className="p-3.5 text-right">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {rovers.map((r) => (
-                                            <tr key={r.id} className="border-b border-amber-500/10 hover:bg-amber-950/5">
-                                                <td className="p-3">
-                                                    <div className="font-bold text-zinc-200">{r.fullName}</div>
-                                                    <div className="text-[10px] text-zinc-500">{r.email}</div>
-                                                </td>
-                                                <td className="p-3">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                                        r.role === "admin" 
-                                                            ? "bg-purple-950/60 border border-purple-500/30 text-purple-400" 
-                                                            : "bg-zinc-900 border border-zinc-700 text-zinc-400"
-                                                    }`}>
-                                                        {r.role?.toUpperCase()}
-                                                    </span>
-                                                </td>
-                                                <td className="p-3">
-                                                    <div>
-                                                        {r.roverProfile?.faction ? (
-                                                            <span className={`font-bold ${r.roverProfile.faction === "ALPHA" ? "text-red-400" : "text-blue-400"}`}>
-                                                                {r.roverProfile.faction}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-zinc-600">-</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-[10px] text-zinc-500">{r.unit || "No unit"}</div>
-                                                </td>
-                                                <td className="p-3 font-mono">{r.roverProfile?.phoneNumber || "-"}</td>
-                                                <td className="p-3 text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <button
-                                                            onClick={() => handleEditRoverClick(r)}
-                                                            className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
-                                                        >
-                                                            EDIT_
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteRover(r.id, r.fullName)}
-                                                            disabled={loading === `delete-rover-${r.id}`}
-                                                            className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
-                                                        >
-                                                            {loading === `delete-rover-${r.id}` ? "DELETING..." : "DELETE_"}
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Tab 4: Marketplace Control */}
-                {activeTab === "marketplace" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                        {/* Left Side: Create Form */}
-                        <div className="lg:col-span-4 flex flex-col gap-4">
-                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded w-fit">
-                                🛒 ADD_MARKETPLACE_ITEM
-                            </h3>
-
-                            <form
-                                onSubmit={handleAddShopItem}
-                                className="bg-zinc-950/40 border border-amber-500/20 rounded-lg p-5 flex flex-col gap-4 shadow-[0_0_10px_rgba(0,0,0,0.5)] text-left"
-                            >
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Item Title:</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Solar Charger Pack"
-                                        value={newShopTitle}
-                                        onChange={(e) => setNewShopTitle(e.target.value)}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Description:</label>
-                                    <textarea
-                                        required
-                                        rows={3}
-                                        placeholder="Camp equipment, food perks, or hacker ciphers..."
-                                        value={newShopDesc}
-                                        onChange={(e) => setNewShopDesc(e.target.value)}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700 resize-none font-sans"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Listing Type:</label>
-                                    <select
-                                        required
-                                        value={newShopType}
-                                        onChange={(e) => setNewShopType(e.target.value as "FIXED_PRICE" | "AUCTION")}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
-                                    >
-                                        <option value="FIXED_PRICE">Fixed Price Store</option>
-                                        <option value="AUCTION">Live Bidding Auction</option>
-                                    </select>
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">
-                                        {newShopType === "FIXED_PRICE" ? "Price (Credits):" : "Starting Bid (Credits):"}
-                                    </label>
-                                    <input
-                                        type="number"
-                                        required
-                                        min={0}
-                                        placeholder="e.g. 50"
-                                        value={newShopPrice}
-                                        onChange={(e) => setNewShopPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                    />
-                                </div>
-
-                                {newShopType === "FIXED_PRICE" && (
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] uppercase text-amber-500/60 font-bold">Available Stock:</label>
-                                        <input
-                                            type="number"
-                                            required
-                                            min={1}
-                                            placeholder="e.g. 10"
-                                            value={newShopStock}
-                                            onChange={(e) => setNewShopStock(e.target.value === "" ? "" : Number(e.target.value))}
-                                            className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
-                                        />
-                                    </div>
-                                )}
-
-                                <div className="flex items-center gap-2 mt-1">
-                                    <input
-                                        type="checkbox"
-                                        id="newShopAvailable"
-                                        checked={newShopAvailable}
-                                        onChange={(e) => setNewShopAvailable(e.target.checked)}
-                                        className="accent-amber-500"
-                                    />
-                                    <label htmlFor="newShopAvailable" className="text-[10px] uppercase text-amber-500/80 font-bold cursor-pointer select-none">
-                                        Is Available for purchase / bidding
-                                    </label>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={loading === "add-shop"}
-                                    className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs py-2.5 rounded transition uppercase cursor-pointer mt-2"
-                                >
-                                    {loading === "add-shop" ? "CREATING_ITEM..." : "CREATE_SHOP_ITEM_"}
-                                </button>
-                            </form>
-                        </div>
-
-                        {/* Right Side: Catalog table */}
-                        <div className="lg:col-span-8 flex flex-col gap-4">
-                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded w-fit">
-                                🛒 CATALOG_INDEX ({shopItems.length})
-                            </h3>
-
-                            <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-x-auto shadow-[0_0_10px_rgba(0,0,0,0.5)]">
-                                <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
-                                    <thead>
-                                        <tr className="border-b border-amber-500/20 bg-black/60 text-amber-500 uppercase text-[10px] tracking-wider">
-                                            <th className="p-3 bg-black/40">Item details</th>
-                                            <th className="p-3 bg-black/40">Type</th>
-                                            <th className="p-3 bg-black/40">Value</th>
-                                            <th className="p-3 bg-black/40">Status</th>
-                                            <th className="p-3 text-right bg-black/40">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {shopItems.length === 0 ? (
+                                    <tbody className="divide-y divide-amber-500/10 text-zinc-300">
+                                        {quests.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="p-8 text-center text-zinc-600">No shop items in catalog.</td>
+                                                <td colSpan={5} className="p-4 text-center text-zinc-500 italic">
+                                                    No challenges created yet.
+                                                </td>
                                             </tr>
                                         ) : (
-                                            shopItems.map((item) => (
-                                                <tr key={item.id} className="border-b border-amber-500/10 hover:bg-amber-950/5">
-                                                    <td className="p-3">
-                                                        <div className="font-bold text-zinc-200">{item.title}</div>
-                                                        <div className="text-[10px] text-zinc-500 line-clamp-1">{item.description}</div>
+                                            quests.map((quest) => (
+                                                <tr key={quest.id} className="hover:bg-amber-950/5 transition">
+                                                    <td className="p-3.5">
+                                                        <div className="font-bold text-zinc-100">{quest.title}</div>
+                                                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                                                            Scheduled: <LocalDateStr date={quest.unlockedAtDate} />
+                                                        </div>
                                                     </td>
-                                                    <td className="p-3">
-                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                                            item.type === "AUCTION" 
-                                                                ? "bg-purple-950/50 border border-purple-500/30 text-purple-400" 
-                                                                : "bg-blue-950/50 border border-blue-500/30 text-blue-400"
-                                                        }`}>
-                                                            {item.type}
-                                                        </span>
+                                                    <td className="p-3.5 text-[10px] uppercase font-bold text-zinc-400">
+                                                        {quest.verificationType === "DIGITAL_CODE" ? "Cipher Entry" : "Leader Sign-Off"}
                                                     </td>
-                                                    <td className="p-3 font-bold text-amber-400">
-                                                        {item.priceOrCurrentBid} CR
-                                                        {item.type === "FIXED_PRICE" && <span className="text-[10px] text-zinc-500 block font-normal">Stock: {item.stock}</span>}
-                                                        {item.type === "AUCTION" && item.highestBidder && (
-                                                            <span className="text-[10px] text-purple-400 block font-normal">Bid by: {item.highestBidder.fullName}</span>
-                                                        )}
+                                                    <td className="p-3.5 font-bold text-amber-300">+{quest.creditReward} CR</td>
+                                                    <td className="p-3.5 text-center">
+                                                        <button
+                                                            onClick={() => handleToggleRelease(quest.id, quest.isReleased)}
+                                                            disabled={loading === `quest-${quest.id}`}
+                                                            className={`px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide cursor-pointer transition ${quest.isReleased
+                                                                ? "bg-green-950/30 border border-green-500/30 text-green-400 hover:bg-green-950/50"
+                                                                : "bg-red-950/30 border-red-500/30 text-red-400 hover:bg-red-950/50"
+                                                                }`}
+                                                        >
+                                                            {loading === `quest-${quest.id}`
+                                                                ? "WAIT_"
+                                                                : quest.isReleased
+                                                                    ? "ACTIVE [ON]"
+                                                                    : "LOCKED [OFF]"}
+                                                        </button>
                                                     </td>
-                                                    <td className="p-3">
-                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                                            item.isAvailable 
-                                                                ? "bg-green-950/50 border border-green-500/30 text-green-400" 
-                                                                : "bg-red-950/50 border border-red-500/30 text-red-400"
-                                                        }`}>
-                                                            {item.isAvailable ? "ACTIVE" : "LOCKED"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-3 text-right">
+                                                    <td className="p-3.5 text-right">
                                                         <div className="flex justify-end gap-2">
                                                             <button
-                                                                    onClick={() => handleEditShopClick(item)}
-                                                                    className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                                onClick={() => handleEditQuestClick(quest)}
+                                                                className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
                                                             >
                                                                 EDIT_
                                                             </button>
                                                             <button
-                                                                    onClick={() => handleDeleteShopItem(item.id, item.title)}
-                                                                    disabled={loading === `delete-shop-${item.id}`}
-                                                                    className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                                onClick={() => handleDeleteQuest(quest.id, quest.title)}
+                                                                disabled={loading === `delete-quest-${quest.id}`}
+                                                                className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
                                                             >
-                                                                {loading === `delete-shop-${item.id}` ? "DELETING..." : "DELETE_"}
+                                                                {loading === `delete-quest-${quest.id}` ? "DELETING..." : "DELETE_"}
                                                             </button>
                                                         </div>
                                                     </td>
@@ -1816,6 +1633,201 @@ export default function AdminClientPage({
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "registry" && (
+                    <div className="flex flex-col gap-6">
+                        {/* Tab header buttons */}
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded">
+                                👥 ACCOUNTS_DIRECTORY ({rovers.length})
+                            </h3>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowAddUserModal(true)}
+                                    className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                >
+                                    👤 + Add Individual Scout
+                                </button>
+                                <button
+                                    onClick={() => setShowMassUploadModal(true)}
+                                    className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                >
+                                    📥 + Mass Import Users
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-x-auto shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+                            <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
+                                <thead>
+                                    <tr className="border-b border-amber-500/20 bg-black/60 text-amber-500 uppercase text-[10px] tracking-wider">
+                                        <th className="p-3 bg-black/40">Name / Email</th>
+                                        <th className="p-3 bg-black/40">Role</th>
+                                        <th className="p-3 bg-black/40">Faction / Unit</th>
+                                        <th className="p-3 bg-black/40">Phone</th>
+                                        <th className="p-3 bg-black/40">Last Access</th>
+                                        <th className="p-3 text-right bg-black/40">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rovers.map((r) => (
+                                        <tr key={r.id} className="border-b border-amber-500/10 hover:bg-amber-950/5">
+                                            <td className="p-3">
+                                                <div className="font-bold text-zinc-200">{r.fullName}</div>
+                                                <div className="text-[10px] text-zinc-500">{r.email}</div>
+                                            </td>
+                                            <td className="p-3 flex flex-col gap-0.5">
+                                                <span className="uppercase text-[9px] text-zinc-400 font-extrabold tracking-wide">{r.role}</span>
+                                            </td>
+                                            <td className="p-3">
+                                                <div className="flex items-center gap-1.5 uppercase font-bold text-[9px]">
+                                                    {r.roverProfile?.faction === "ALPHA" ? (
+                                                        <span className="text-red-400">ALPHA</span>
+                                                    ) : r.roverProfile?.faction === "BRAVO" ? (
+                                                        <span className="text-blue-400">BRAVO</span>
+                                                    ) : (
+                                                        <span className="text-zinc-600">-</span>
+                                                    )}
+                                                </div>
+                                                <div className="text-[10px] text-zinc-500">{r.unit || "No unit"}</div>
+                                            </td>
+                                            <td className="p-3 font-mono">{r.roverProfile?.phoneNumber || "-"}</td>
+                                            <td className="p-3 font-mono text-[10px] text-zinc-400">
+                                                {r.lastActiveAt ? <LocalDateStr date={r.lastActiveAt} /> : "Never"}
+                                            </td>
+                                            <td className="p-3 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setInvitingUser(r);
+                                                            setInviteTempPassword("");
+                                                        }}
+                                                        disabled={!r.roverProfile?.phoneNumber}
+                                                        title={!r.roverProfile?.phoneNumber ? "WhatsApp number is required to invite" : "Invite user via WhatsApp"}
+                                                        className="px-2 py-1 rounded bg-green-950/30 border border-green-500/30 text-green-400 hover:bg-green-500 hover:text-black disabled:opacity-30 disabled:hover:bg-green-950/30 disabled:hover:text-green-400 transition cursor-pointer text-[10px]"
+                                                    >
+                                                        INVITE_
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleEditRoverClick(r)}
+                                                        className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                    >
+                                                        EDIT_
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteRover(r.id, r.fullName)}
+                                                        disabled={loading === `delete-rover-${r.id}`}
+                                                        className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                    >
+                                                        {loading === `delete-rover-${r.id}` ? "DELETING..." : "DELETE_"}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Tab 4: Marketplace Control */}
+                {activeTab === "marketplace" && (
+                    <div className="flex flex-col gap-6">
+                        {/* Tab header buttons */}
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded">
+                                🛒 CATALOG_INDEX ({shopItems.length})
+                            </h3>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowAddShopItemModal(true)}
+                                    className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                >
+                                    + Add New Shop Item
+                                </button>
+                                <button
+                                    onClick={() => setShowMassUploadShopItemsModal(true)}
+                                    className="bg-zinc-800 border border-amber-500/35 hover:bg-zinc-700 text-amber-400 font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                >
+                                    📥 + Mass Import Items
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-x-auto shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+                            <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
+                                <thead>
+                                    <tr className="border-b border-amber-500/20 bg-black/60 text-amber-500 uppercase text-[10px] tracking-wider">
+                                        <th className="p-3 bg-black/40">Item details</th>
+                                        <th className="p-3 bg-black/40">Type</th>
+                                        <th className="p-3 bg-black/40">Value</th>
+                                        <th className="p-3 bg-black/40">Status</th>
+                                        <th className="p-3 text-right bg-black/40">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {shopItems.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-8 text-center text-zinc-600">No shop items in catalog.</td>
+                                        </tr>
+                                    ) : (
+                                        shopItems.map((item) => (
+                                            <tr key={item.id} className="border-b border-amber-500/10 hover:bg-amber-950/5">
+                                                <td className="p-3">
+                                                    <div className="font-bold text-zinc-200">{item.title}</div>
+                                                    <div className="text-[10px] text-zinc-500 line-clamp-1">{item.description}</div>
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                        item.type === "AUCTION" 
+                                                            ? "bg-purple-950/50 border border-purple-500/30 text-purple-400" 
+                                                            : "bg-blue-950/50 border border-blue-500/30 text-blue-400"
+                                                    }`}>
+                                                        {item.type}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 font-bold text-amber-400">
+                                                    {item.priceOrCurrentBid} CR
+                                                    {item.type === "FIXED_PRICE" && <span className="text-[10px] text-zinc-500 block font-normal">Stock: {item.stock}</span>}
+                                                    {item.type === "AUCTION" && item.highestBidder && (
+                                                        <span className="text-[10px] text-purple-400 block font-normal">Bid by: {item.highestBidder.fullName}</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                        item.isAvailable 
+                                                            ? "bg-green-950/50 border border-green-500/30 text-green-400" 
+                                                            : "bg-red-950/50 border border-red-500/30 text-red-400"
+                                                    }`}>
+                                                        {item.isAvailable ? "ACTIVE" : "LOCKED"}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                                onClick={() => handleEditShopClick(item)}
+                                                                className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                        >
+                                                            EDIT_
+                                                        </button>
+                                                        <button
+                                                                onClick={() => handleDeleteShopItem(item.id, item.title)}
+                                                                disabled={loading === `delete-shop-${item.id}`}
+                                                                className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                        >
+                                                            {loading === `delete-shop-${item.id}` ? "DELETING..." : "DELETE_"}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 )}
@@ -1874,7 +1886,7 @@ export default function AdminClientPage({
                                         logs.map((log) => (
                                             <tr key={log.id} className="border-b border-amber-500/10 hover:bg-amber-950/5 align-top">
                                                 <td className="p-3 text-[10px] text-zinc-500 whitespace-nowrap">
-                                                    {new Date(log.createdAt).toLocaleString()}
+                                                    <LocalDateStr date={log.createdAt} />
                                                 </td>
                                                 <td className="p-3">
                                                     <div className={`text-[10px] font-bold tracking-wide uppercase ${
@@ -2122,6 +2134,16 @@ export default function AdminClientPage({
                                 </div>
                             </div>
 
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Expiry Date & Time (Optional):</label>
+                                <input
+                                    type="datetime-local"
+                                    value={editQuestExpiry}
+                                    onChange={(e) => setEditQuestExpiry(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                />
+                            </div>
+
                             <div className="flex items-center gap-2 mt-1">
                                 <input
                                     type="checkbox"
@@ -2254,6 +2276,669 @@ export default function AdminClientPage({
                                     className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
                                 >
                                     {loading === `edit-shop-${editingShopItem.id}` ? "SAVING..." : "SAVE_CHANGES_"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Spawn Hotspot */}
+            {showSpawnHotspotModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-amber-500/40 rounded-lg max-w-md w-full p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] text-left font-mono my-8">
+                        <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest border-b border-amber-500/20 pb-2 mb-4">
+                            🚨 SPAWN NEW HOT-SPOT
+                        </h3>
+                        <p className="text-[10px] text-zinc-400 uppercase leading-relaxed tracking-wider mb-4 font-sans">
+                            Spawns an active King-of-the-Hill coordinate blip on the map. Scouts must coordinate checking in within 20s without opposing interruption to conquer it.
+                        </p>
+                        <form onSubmit={handleSpawnHotSpot} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase font-bold text-amber-500/80">Hot-Spot Name</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={hotspotName}
+                                    onChange={(e) => setHotspotName(e.target.value)}
+                                    placeholder="e.g. 🚨 HOT-ZONE CHARLIE"
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase font-bold text-amber-500/80">Latitude (Optional)</label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        value={hotspotLat}
+                                        onChange={(e) => setHotspotLat(e.target.value)}
+                                        placeholder="e.g. 34.1205"
+                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold font-mono"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase font-bold text-amber-500/80">Longitude (Optional)</label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        value={hotspotLng}
+                                        onChange={(e) => setHotspotLng(e.target.value)}
+                                        placeholder="e.g. 35.6482"
+                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold font-mono"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSpawnHotspotModal(false)}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL_
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === "spawn-hotspot"}
+                                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === "spawn-hotspot" ? "SPAWNING..." : "🚨 SPAWN HOT-SPOT"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Add Challenge */}
+            {showAddQuestModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-amber-500/40 rounded-lg max-w-lg w-full p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] text-left font-mono my-8">
+                        <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest border-b border-amber-500/20 pb-2 mb-4">
+                            🏆 CREATE_NEW_CHALLENGE
+                        </h3>
+
+                        <form onSubmit={handleAddQuest} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Title:</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Fire Building"
+                                    value={newQuestTitle}
+                                    onChange={(e) => setNewQuestTitle(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Reward (CR):</label>
+                                <input
+                                    type="number"
+                                    required
+                                    placeholder="e.g. 150"
+                                    value={newQuestReward}
+                                    onChange={(e) => setNewQuestReward(e.target.value === "" ? "" : Number(e.target.value))}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Instructions:</label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    placeholder="Challenge description..."
+                                    value={newQuestDesc}
+                                    onChange={(e) => setNewQuestDesc(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold font-mono"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Clue / Hint (Optional):</label>
+                                <input
+                                    type="text"
+                                    value={newQuestHint}
+                                    onChange={(e) => setNewQuestHint(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                    placeholder="Location key clue hint"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Verification Type:</label>
+                                <select
+                                    value={newQuestType}
+                                    onChange={(e) => setNewQuestType(e.target.value as "DIGITAL_CODE" | "LEADER_SIGN_OFF")}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                >
+                                    <option value="DIGITAL_CODE">Digital Code Entry</option>
+                                    <option value="LEADER_SIGN_OFF">Scout Leader Sign-Off</option>
+                                </select>
+                            </div>
+
+                            {newQuestType === "DIGITAL_CODE" && (
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Cipher Answer Key:</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. SUNRISE"
+                                        value={newQuestAnswer}
+                                        onChange={(e) => setNewQuestAnswer(e.target.value)}
+                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Unlock Date / Time:</label>
+                                <input
+                                    type="datetime-local"
+                                    required
+                                    value={newQuestDate}
+                                    onChange={(e) => setNewQuestDate(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Expiry Date / Time (Optional):</label>
+                                <input
+                                    type="datetime-local"
+                                    value={newQuestExpiry}
+                                    onChange={(e) => setNewQuestExpiry(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-1">
+                                <input
+                                    type="checkbox"
+                                    id="newQuestReleased"
+                                    checked={newQuestReleased}
+                                    onChange={(e) => setNewQuestReleased(e.target.checked)}
+                                    className="w-4 h-4 rounded text-amber-500 bg-black border-amber-500/30 focus:ring-0 cursor-pointer"
+                                />
+                                <label htmlFor="newQuestReleased" className="text-xs uppercase text-zinc-300 font-bold cursor-pointer">
+                                    Release immediately
+                                </label>
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddQuestModal(false)}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL_
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === "add-quest"}
+                                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === "add-quest" ? "CREATING..." : "SCHEDULE_CHALLENGE"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Add Individual User */}
+            {showAddUserModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-amber-500/40 rounded-lg max-w-md w-full p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] text-left font-mono my-8">
+                        <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest border-b border-amber-500/20 pb-2 mb-4">
+                            👤 CREATE USER ACCOUNT
+                        </h3>
+
+                        <form onSubmit={handleAddUser} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Full Name:</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Nicolas Nasr"
+                                    value={newUserFullName}
+                                    onChange={(e) => setNewUserFullName(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Email Address:</label>
+                                <input
+                                    type="email"
+                                    required
+                                    placeholder="e.g. nicolas@sdc.org"
+                                    value={newUserEmail}
+                                    onChange={(e) => setNewUserEmail(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Password:</label>
+                                <input
+                                    type="password"
+                                    required
+                                    placeholder="Password string"
+                                    value={newUserPassword}
+                                    onChange={(e) => setNewUserPassword(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Role:</label>
+                                <select
+                                    required
+                                    value={newUserRole}
+                                    onChange={(e) => setNewUserRole(e.target.value as "scout" | "admin")}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                >
+                                    <option value="scout">Scout (Normal Rover)</option>
+                                    <option value="admin">Administrator (Leader)</option>
+                                </select>
+                            </div>
+
+                            {newUserRole === "scout" && (
+                                <>
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] uppercase text-amber-500/60 font-bold">Faction Assignment:</label>
+                                        <select
+                                            value={newUserFaction}
+                                            onChange={(e) => setNewUserFaction(e.target.value as "ALPHA" | "BRAVO" | "")}
+                                            className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                        >
+                                            <option value="">Unassigned</option>
+                                            <option value="ALPHA">ALPHA (Red Faction)</option>
+                                            <option value="BRAVO">BRAVO (Blue Faction)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] uppercase text-amber-500/60 font-bold">WhatsApp Number:</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. +96170123456"
+                                            value={newUserPhone}
+                                            onChange={(e) => setNewUserPhone(e.target.value)}
+                                            className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Unit / Section (Optional):</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Rovers Ra"
+                                    value={newUserUnit}
+                                    onChange={(e) => setNewUserUnit(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddUserModal(false)}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL_
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === "add-user"}
+                                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === "add-user" ? "REGISTERING..." : "CREATE_ACCOUNT"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Mass Upload */}
+            {showMassUploadModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-amber-500/40 rounded-lg max-w-lg w-full p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] text-left font-mono my-8">
+                        <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest border-b border-amber-500/20 pb-2 mb-4">
+                            📥 BATCH_MASS_IMPORT
+                        </h3>
+                        <p className="text-[10px] text-zinc-400 uppercase leading-relaxed tracking-wider mb-4 font-sans">
+                            Copy-paste rows directly from Excel or Google Sheets. Delimit values using Tabs or Commas. <br/>
+                            <strong>Columns:</strong> Name, Email, Password, [Faction: ALPHA/BRAVO], [Phone], [Unit]
+                        </p>
+
+                        <form onSubmit={handleMassUpload} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Delimiter Mode:</label>
+                                <select
+                                    value={massUploadDelimiter}
+                                    onChange={(e) => setMassUploadDelimiter(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                >
+                                    <option value="\t">Tab Delimited (Copy-Paste from Excel)</option>
+                                    <option value=",">Comma Delimited (CSV)</option>
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Raw Batch Data:</label>
+                                <textarea
+                                    rows={8}
+                                    required
+                                    placeholder="Nicolas Nasr&#9;nicolas@sdc.org&#9;password123&#9;ALPHA&#9;+96170123456&#9;Rovers"
+                                    value={massUploadText}
+                                    onChange={(e) => setMassUploadText(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold font-mono placeholder:text-zinc-700 resize-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowMassUploadModal(false)}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL_
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === "mass-upload"}
+                                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === "mass-upload" ? "UPLOADING..." : "RUN_BATCH_IMPORT"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Add Shop Item */}
+            {showAddShopItemModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-amber-500/40 rounded-lg max-w-md w-full p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] text-left font-mono my-8">
+                        <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest border-b border-amber-500/20 pb-2 mb-4">
+                            🛒 ADD MARKETPLACE ITEM
+                        </h3>
+
+                        <form onSubmit={handleAddShopItem} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Item Title:</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Solar Charger Pack"
+                                    value={newShopTitle}
+                                    onChange={(e) => setNewShopTitle(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold placeholder:text-zinc-700"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Description:</label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    placeholder="Camp perk description..."
+                                    value={newShopDesc}
+                                    onChange={(e) => setNewShopDesc(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold resize-none font-sans"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Listing Type:</label>
+                                <select
+                                    required
+                                    value={newShopType}
+                                    onChange={(e) => setNewShopType(e.target.value as "FIXED_PRICE" | "AUCTION")}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                >
+                                    <option value="FIXED_PRICE">Fixed Price Store Item</option>
+                                    <option value="AUCTION">Live Bidding Auction</option>
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">
+                                    {newShopType === "FIXED_PRICE" ? "Price (Credits):" : "Starting Bid (Credits):"}
+                                </label>
+                                <input
+                                    type="number"
+                                    required
+                                    min={0}
+                                    placeholder="e.g. 50"
+                                    value={newShopPrice}
+                                    onChange={(e) => setNewShopPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                />
+                            </div>
+
+                            {newShopType === "FIXED_PRICE" && (
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase text-amber-500/60 font-bold">Available Stock:</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min={1}
+                                        placeholder="e.g. 10"
+                                        value={newShopStock}
+                                        onChange={(e) => setNewShopStock(e.target.value === "" ? "" : Number(e.target.value))}
+                                        className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex items-center gap-2 mt-1">
+                                <input
+                                    type="checkbox"
+                                    id="newShopAvailable"
+                                    checked={newShopAvailable}
+                                    onChange={(e) => setNewShopAvailable(e.target.checked)}
+                                    className="accent-amber-500"
+                                />
+                                <label htmlFor="newShopAvailable" className="text-[10px] uppercase text-amber-500/80 font-bold cursor-pointer select-none">
+                                    Is Available for purchase / bidding
+                                </label>
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddShopItemModal(false)}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL_
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === "add-shop"}
+                                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === "add-shop" ? "CREATING..." : "CREATE_ITEM"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Invite User */}
+            {invitingUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-green-500/40 rounded-lg max-w-md w-full p-6 shadow-[0_0_50px_rgba(34,197,94,0.15)] text-left font-mono my-8">
+                        <h3 className="text-sm font-bold text-green-400 uppercase tracking-widest border-b border-green-500/20 pb-2 mb-4">
+                            💬 SEND WHATSAPP PORTAL INVITE
+                        </h3>
+                        <p className="text-[10px] text-zinc-400 uppercase leading-relaxed tracking-wider mb-4 font-sans">
+                            Dispatches a custom invitation message to <strong>{invitingUser.fullName}</strong> ({invitingUser.roverProfile?.phoneNumber}) with their portal credentials and login link.
+                        </p>
+
+                        <form onSubmit={handleSendInvite} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[9px] uppercase text-zinc-500 font-bold">Email to Send:</span>
+                                <span className="text-xs text-zinc-200 font-semibold">{invitingUser.email}</span>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-green-500/80 font-bold">Temporary Password (Optional):</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. TempPass123"
+                                    value={inviteTempPassword}
+                                    onChange={(e) => setInviteTempPassword(e.target.value)}
+                                    className="bg-black border border-green-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-green-400 font-semibold placeholder:text-zinc-700"
+                                />
+                                <span className="text-[8px] text-zinc-500 uppercase leading-normal">
+                                    Include the password you configured for them. If empty, a reminder placeholder is sent.
+                                </span>
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setInvitingUser(null);
+                                        setInviteTempPassword("");
+                                    }}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL_
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === "invite"}
+                                    className="px-4 py-2 bg-green-500 hover:bg-green-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === "invite" ? "DISPATCHING..." : "💬 SEND INVITE"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Mass Upload Challenges */}
+            {showMassUploadQuestsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-amber-500/40 rounded-lg max-w-lg w-full p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] text-left font-mono my-8">
+                        <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest border-b border-amber-500/20 pb-2 mb-4">
+                            🏆 BATCH_IMPORT_CHALLENGES
+                        </h3>
+                        <p className="text-[10px] text-zinc-400 uppercase leading-relaxed tracking-wider mb-4 font-sans">
+                            Copy-paste rows directly from spreadsheets. Delimit values using Tabs or Commas. <br/>
+                            <strong>Columns:</strong> Title, CreditReward, Description, [ClueHint], [VerificationType: DIGITAL_CODE/LEADER_SIGN_OFF], [AnswerKey]
+                        </p>
+
+                        <form onSubmit={handleMassUploadQuests} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Delimiter Mode:</label>
+                                <select
+                                    value={massUploadQuestsDelimiter}
+                                    onChange={(e) => setMassUploadQuestsDelimiter(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                >
+                                    <option value="\t">Tab Delimited (Copy-Paste from Excel)</option>
+                                    <option value=",">Comma Delimited (CSV)</option>
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Raw Batch Data:</label>
+                                <textarea
+                                    rows={8}
+                                    required
+                                    placeholder="Fire Building&#9;150&#9;Build a fire with 3 matches.&#9;Firepit A&#9;LEADER_SIGN_OFF"
+                                    value={massUploadQuestsText}
+                                    onChange={(e) => setMassUploadQuestsText(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold font-mono placeholder:text-zinc-700 resize-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowMassUploadQuestsModal(false)}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL_
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === "mass-upload-quests"}
+                                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === "mass-upload-quests" ? "UPLOADING..." : "RUN_BATCH_IMPORT"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Mass Upload Shop Items */}
+            {showMassUploadShopItemsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-amber-500/40 rounded-lg max-w-lg w-full p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] text-left font-mono my-8">
+                        <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest border-b border-amber-500/20 pb-2 mb-4">
+                            🛒 BATCH_IMPORT_MARKETPLACE
+                        </h3>
+                        <p className="text-[10px] text-zinc-400 uppercase leading-relaxed tracking-wider mb-4 font-sans">
+                            Copy-paste rows directly from spreadsheets. Delimit values using Tabs or Commas. <br/>
+                            <strong>Columns:</strong> Title, Price, Description, [Type: FIXED_PRICE/AUCTION], [Stock]
+                        </p>
+
+                        <form onSubmit={handleMassUploadShopItems} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Delimiter Mode:</label>
+                                <select
+                                    value={massUploadShopItemsDelimiter}
+                                    onChange={(e) => setMassUploadShopItemsDelimiter(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                >
+                                    <option value="\t">Tab Delimited (Copy-Paste from Excel)</option>
+                                    <option value=",">Comma Delimited (CSV)</option>
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">Raw Batch Data:</label>
+                                <textarea
+                                    rows={8}
+                                    required
+                                    placeholder="Solar Charger Pack&#9;50&#9;Charges phones using sunlight.&#9;FIXED_PRICE&#9;10"
+                                    value={massUploadShopItemsText}
+                                    onChange={(e) => setMassUploadShopItemsText(e.target.value)}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold font-mono placeholder:text-zinc-700 resize-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowMassUploadShopItemsModal(false)}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL_
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === "mass-upload-shop"}
+                                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === "mass-upload-shop" ? "UPLOADING..." : "RUN_BATCH_IMPORT"}
                                 </button>
                             </div>
                         </form>

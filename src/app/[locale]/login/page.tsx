@@ -41,7 +41,7 @@ export default function LoginPage() {
                         : "Account created successfully! Redirecting..."
                 );
                 setTimeout(() => {
-                    router.replace(`/${locale}/scout-world-cup/dashboard/scout`);
+                    router.replace(`/${locale}/rovers/terminal`);
                 }, 1500);
             } else {
                 const res = await fetch("/api/auth/login", {
@@ -53,7 +53,7 @@ export default function LoginPage() {
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || "Login failed");
 
-                router.replace(`/${locale}/scout-world-cup/dashboard/scout`);
+                router.replace(`/${locale}/rovers/terminal`);
             }
         } catch (err: any) {
             setErrorMsg(err.message || "An error occurred");

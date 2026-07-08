@@ -11,6 +11,7 @@ interface QuestCardProps {
     clueHint: string | null;
     verificationType: "DIGITAL_CODE" | "LEADER_SIGN_OFF";
     creditReward: number;
+    expiresAt?: Date | string | null;
   };
   completion: {
     isVerified: boolean;
@@ -83,6 +84,7 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
 
   const isCompleted = completion?.isVerified === true;
   const isAwaiting = completion && completion.isVerified === false;
+  const isExpired = quest.expiresAt ? new Date() > new Date(quest.expiresAt) : false;
 
   return (
     <div className="bg-zinc-950/60 border border-amber-500/20 rounded-lg p-5 hover:border-amber-500/40 transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group shadow-[0_0_15px_rgba(0,0,0,0.5)]">
@@ -98,6 +100,20 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
           <div className="text-[10px] text-amber-500/50 uppercase mt-0.5">
             Type: {quest.verificationType === "DIGITAL_CODE" ? "Digital cipher" : "Scout Milestone"}
           </div>
+          {quest.expiresAt && (
+            <div className={`text-[9px] uppercase font-bold mt-1.5 flex items-center gap-1 ${isExpired ? "text-red-500 animate-pulse" : "text-amber-500/60"}`}>
+              <span>🕒</span>
+              <span>
+                {isExpired ? "EXPIRED_AT: " : "EXPIRES: "}
+                {new Date(quest.expiresAt).toLocaleString(locale === "ar" ? "ar-LB" : "en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+          )}
         </div>
         <div className="bg-amber-950/30 text-amber-400 border border-amber-500/30 text-xs px-2.5 py-1 rounded font-bold whitespace-nowrap">
           +{quest.creditReward} CR
@@ -110,7 +126,7 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
       </p>
 
       {/* Clue Hint */}
-      {quest.clueHint && !isCompleted && (
+      {quest.clueHint && !isCompleted && !isExpired && (
         <div className="bg-amber-950/10 border border-amber-500/10 rounded p-2.5 text-[11px] text-amber-500/80">
           <span className="font-bold text-amber-400">🔍 CLUE HINT:</span> {quest.clueHint}
         </div>
@@ -118,7 +134,11 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
 
       {/* Status Badges & Controls */}
       <div className="mt-auto pt-2 flex flex-col gap-3">
-        {quest.verificationType === "DIGITAL_CODE" ? (
+        {isExpired && !isCompleted ? (
+          <div className="bg-red-950/20 border border-red-500/40 text-red-500 text-xs font-bold py-2.5 rounded text-center uppercase tracking-wider animate-pulse flex items-center justify-center gap-2">
+            <span>🚨</span> CHALLENGE EXPIRED - SUBMISSION CLOSED
+          </div>
+        ) : quest.verificationType === "DIGITAL_CODE" ? (
           <div>
             {isCompleted ? (
               <div className="bg-green-950/30 border border-green-500/40 text-green-400 text-xs font-bold px-3 py-2 rounded text-center uppercase tracking-wider">
