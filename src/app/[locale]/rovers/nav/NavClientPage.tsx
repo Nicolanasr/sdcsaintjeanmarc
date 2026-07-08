@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import NodeCard from "./NodeCard";
 
 interface NavClientPageProps {
@@ -21,6 +21,11 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
+
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const circlesRef = useRef<any[]>([]);
+  const userMarkerRef = useRef<any>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -87,45 +92,52 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
     // Inject script
     const scriptId = "leaflet-js";
     let script = document.getElementById(scriptId) as HTMLScriptElement | null;
-    let mapInstance: any = null;
 
     const initMap = () => {
       const L = (window as any).L;
       if (!L) return;
 
-      const mapEl = document.getElementById("leaflet-map");
-      if (mapEl) {
-        (mapEl as any)._leaflet_id = null;
+      if (!mapRef.current) {
+        // Default center is camp coordinates: 34.1220, 35.6482 (Jaj camp area)
+        let centerLat = 34.122;
+        let centerLng = 35.648;
+
+        if (nodes.length > 0) {
+          centerLat = nodes[0].latitude;
+          centerLng = nodes[0].longitude;
+        } else if (coords) {
+          centerLat = coords.latitude;
+          centerLng = coords.longitude;
+        }
+
+        mapRef.current = L.map("leaflet-map", {
+          zoomControl: true,
+          attributionControl: false,
+          dragging: true,
+          touchZoom: true,
+          scrollWheelZoom: true,
+          doubleClickZoom: true,
+          boxZoom: true,
+          keyboard: true,
+          tap: false
+        }).setView([centerLat, centerLng], 14);
+
+        // CartoDB Dark Matter tile layer
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          maxZoom: 20
+        }).addTo(mapRef.current);
       }
 
-      // Default center is camp coordinates: 34.1220, 35.6482 (Jaj camp area)
-      let centerLat = 34.122;
-      let centerLng = 35.648;
+      // Clear previous markers
+      markersRef.current.forEach((m) => mapRef.current.removeLayer(m));
+      markersRef.current = [];
+      circlesRef.current.forEach((c) => mapRef.current.removeLayer(c));
+      circlesRef.current = [];
 
-      if (nodes.length > 0) {
-        centerLat = nodes[0].latitude;
-        centerLng = nodes[0].longitude;
-      } else if (coords) {
-        centerLat = coords.latitude;
-        centerLng = coords.longitude;
+      if (userMarkerRef.current) {
+        mapRef.current.removeLayer(userMarkerRef.current);
+        userMarkerRef.current = null;
       }
-
-      mapInstance = L.map("leaflet-map", {
-        zoomControl: true,
-        attributionControl: false,
-        dragging: true,
-        touchZoom: true,
-        scrollWheelZoom: true,
-        doubleClickZoom: true,
-        boxZoom: true,
-        keyboard: true,
-        tap: false
-      }).setView([centerLat, centerLng], 14);
-
-      // CartoDB Dark Matter tile layer
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        maxZoom: 20
-      }).addTo(mapInstance);
 
       // Draw active node range circles & blips
       nodes.forEach((node) => {
@@ -143,13 +155,14 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
         }
 
         // Draw node control bounds
-        L.circle([node.latitude, node.longitude], {
+        const circle = L.circle([node.latitude, node.longitude], {
           color: color,
           fillColor: color,
           fillOpacity: node.isHotSpot ? 0.35 : 0.15,
           radius: node.radiusMeters,
           weight: node.isHotSpot ? 3 : 1.5
-        }).addTo(mapInstance);
+        }).addTo(mapRef.current);
+        circlesRef.current.push(circle);
 
         // Blip design marker
         const blipIcon = L.divIcon({
@@ -161,7 +174,8 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
           iconAnchor: [12, 12]
         });
 
-        const marker = L.marker([node.latitude, node.longitude], { icon: blipIcon }).addTo(mapInstance);
+        const marker = L.marker([node.latitude, node.longitude], { icon: blipIcon }).addTo(mapRef.current);
+        markersRef.current.push(marker);
 
         // Popup content markup with focus actions
         const popupContent = `
@@ -178,12 +192,6 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
 
       // Draw user position
       if (coords) {
-        // Center view to user if they are near camp bounds
-        const dist = getDistanceMeters(coords.latitude, coords.longitude, 34.122, 35.648);
-        if (dist < 15000) {
-          mapInstance.setView([coords.latitude, coords.longitude], 15);
-        }
-
         const liveIcon = L.divIcon({
           className: "user-leaflet-blip",
           html: `<div class="relative flex items-center justify-center w-6 h-6">
@@ -194,8 +202,8 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
           iconAnchor: [12, 12]
         });
 
-        L.marker([coords.latitude, coords.longitude], { icon: liveIcon })
-          .addTo(mapInstance)
+        userMarkerRef.current = L.marker([coords.latitude, coords.longitude], { icon: liveIcon })
+          .addTo(mapRef.current)
           .bindPopup("<strong style='color:#22c55e; font-family:monospace;'>YOUR POSITION</strong>");
       }
     };
@@ -222,9 +230,6 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
     }
 
     return () => {
-      if (mapInstance) {
-        mapInstance.remove();
-      }
       if (script) {
         script.removeEventListener("load", initMap);
       }

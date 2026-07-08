@@ -83,6 +83,10 @@ export async function submitQuestCode(questId: string, answerCode: string) {
   const quest = await prisma.quest.findUnique({ where: { id: questId } });
   if (!quest) return { success: false, error: "Quest not found" };
   if (!quest.isReleased) return { success: false, error: "Quest is locked" };
+  if (quest.expiresAt && new Date() > new Date(quest.expiresAt)) {
+    return { success: false, error: "Challenge has expired. Submission closed." };
+  }
+
   if (quest.verificationType !== VerificationType.DIGITAL_CODE) {
     return { success: false, error: "Quest requires leader sign-off verification" };
   }
@@ -155,6 +159,10 @@ export async function requestQuestLeaderSignOff(questId: string) {
   const quest = await prisma.quest.findUnique({ where: { id: questId } });
   if (!quest) return { success: false, error: "Quest not found" };
   if (!quest.isReleased) return { success: false, error: "Quest is locked" };
+  if (quest.expiresAt && new Date() > new Date(quest.expiresAt)) {
+    return { success: false, error: "Challenge has expired. Submission closed." };
+  }
+
   if (quest.verificationType !== VerificationType.LEADER_SIGN_OFF) {
     return { success: false, error: "Quest evaluates answers via digital code ciphers" };
   }

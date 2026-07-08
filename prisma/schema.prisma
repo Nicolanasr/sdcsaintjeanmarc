@@ -120,6 +120,7 @@ model Quest {
   creditReward        Int               @map("credit_reward")
   isReleased          Boolean           @default(false) @map("is_released")
   unlockedAtDate      DateTime          @map("unlocked_at_date")
+  expiresAt           DateTime?         @map("expires_at")
   phase               QuestPhase
   completions         QuestCompletion[]
   createdAt           DateTime          @default(now())
