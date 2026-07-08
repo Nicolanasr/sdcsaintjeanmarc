@@ -25,6 +25,23 @@ export function formatWhatsAppChatId(phone: string): string {
 }
 
 export async function sendWhatsAppMessage(phone: string, text: string): Promise<boolean> {
+  if (!phone || !phone.trim()) {
+    try {
+      await prisma.whatsAppLog.create({
+        data: {
+          phone: "UNSPECIFIED",
+          body: text,
+          status: "FAILED",
+          error: "PHONE_EMPTY: Destination phone number is missing",
+        },
+      });
+      console.log("[WAHA] Logged unsent message to database: Missing destination phone number");
+    } catch (dbErr) {
+      console.error("[WAHA] Failed to write WhatsApp log to database:", dbErr);
+    }
+    return false;
+  }
+
   const chatId = formatWhatsAppChatId(phone);
   const wahaUrl = "https://waha.nicolasnasr.space/api/sendText";
   const apiKey = "scout_world_cup_2026_secret_key";
@@ -47,6 +64,7 @@ export async function sendWhatsAppMessage(phone: string, text: string): Promise<
         text,
         session: "default",
       }),
+      cache: "no-store",
     });
 
     const resText = await res.text();
@@ -174,8 +192,112 @@ export async function sendMatchWinWhatsAppSummary(
 
   const msgEn = `Your supported team (${winningTeamNamesWithFlags}) has won their match! ⚽️\n\nHere is a summary of your active tickets and raffle entries:\n${ticketListEn}\n\nTotal Raffle Entries: ${totalEntries} entries!\n\nTrack team standings and your tickets here:\n${finalBaseUrl}/en/scout-world-cup/standings?phone=${buyerPhone}\n\n📢 Winners will be announced on our social media channels. Follow us for live draws and updates:\n📸 Instagram: https://www.instagram.com/sdc_saintjeanmarc/\n📘 Facebook: https://www.facebook.com/SDCGroupeSJM/\n🎵 TikTok: https://www.tiktok.com/@sdcsaintjeanmarc`;
 
-  const fullMsg = `${msgAr}\n\n-----------------\n\n${msgEn}`;
+  const fullMsg = `${msgEn}\n\n-----------------\n\n${msgAr}`;
 
   return await sendWhatsAppMessage(buyerPhone, fullMsg);
+}
+
+/**
+ * Broadcasts an alert to all Rovers when a new quest is released
+ */
+export async function broadcastQuestReleaseNotification(
+  questTitle: string,
+  reward: number,
+  clueHint?: string | null
+): Promise<number> {
+  try {
+    const rovers = await prisma.roverProfile.findMany({
+      select: { phoneNumber: true }
+    });
+
+    if (rovers.length === 0) return 0;
+
+    const message = `☀️ *PROJECT HELIOS: NEW QUEST RELEASED* ☀️\n\n📢 Quest: "${questTitle}" is now active!\n💰 Reward: ${reward} Credits\n${clueHint ? `🔍 Clue Hint: ${clueHint}\n` : ""}\nLog in to your Helios Terminal: https://sdcsaintjeanmarc.org/en/rovers/terminal`;
+
+    let successCount = 0;
+    for (const r of rovers) {
+      if (r.phoneNumber && r.phoneNumber.trim()) {
+        const success = await sendWhatsAppMessage(r.phoneNumber, message);
+        if (success) successCount++;
+      } else {
+        // Log failed attempt for rovers without a number so it's always recorded
+        try {
+          await prisma.whatsAppLog.create({
+            data: {
+              phone: "MISSING",
+              body: message,
+              status: "FAILED",
+              error: "SKIPPED_NO_PHONE: Rover profile has no phone number registered",
+            },
+          });
+        } catch (dbErr) {
+          console.error("[WAHA] Failed to log skipped message:", dbErr);
+        }
+      }
+    }
+    return successCount;
+  } catch (err) {
+    console.error("[WAHA] Failed to broadcast quest release notification:", err);
+    return 0;
+  }
+}
+
+/**
+ * Notifies a specific rover that they have been outbid on an active auction item
+ */
+export async function sendOutbidNotification(
+  phone: string,
+  itemTitle: string,
+  newBidAmount: number
+): Promise<boolean> {
+  const message = `🚨 *HELIOS MARKETPLACE: OUTBID ALERT* 🚨\n\n⚠️ You have been outbid on the auction item: "${itemTitle}"!\n💸 Current High Bid: ${newBidAmount} Credits\n\nQuick! Go place a higher bid to win the perk: https://sdcsaintjeanmarc.org/en/rovers/shop`;
+  return await sendWhatsAppMessage(phone, message);
+}
+
+/**
+ * Alerts all Rovers when a GeoNode territory changes control
+ */
+export async function broadcastNodeCaptureNotification(
+  capturedByName: string,
+  nodeName: string,
+  faction: string,
+  alphaCount: number,
+  bravoCount: number
+): Promise<number> {
+  try {
+    const rovers = await prisma.roverProfile.findMany({
+      select: { phoneNumber: true }
+    });
+
+    if (rovers.length === 0) return 0;
+
+    const message = `🗺️ *HELIOS NIGHT NAV: TERRITORY UPDATE* 🗺️\n\n🛡️ Node Captured: "${nodeName}" has been successfully hacked by Rover *${capturedByName}* for Faction *${faction}*!\n\n📊 Grid Control Status:\n🔴 ALPHA: ${alphaCount} Nodes\n🔵 BRAVO: ${bravoCount} Nodes\n\nCheck active nodes map coordinates here: https://sdcsaintjeanmarc.org/en/rovers/nav`;
+
+    let successCount = 0;
+    for (const r of rovers) {
+      if (r.phoneNumber && r.phoneNumber.trim()) {
+        const success = await sendWhatsAppMessage(r.phoneNumber, message);
+        if (success) successCount++;
+      } else {
+        // Log failed attempt for rovers without a number so it's always recorded
+        try {
+          await prisma.whatsAppLog.create({
+            data: {
+              phone: "MISSING",
+              body: message,
+              status: "FAILED",
+              error: "SKIPPED_NO_PHONE: Rover profile has no phone number registered",
+            },
+          });
+        } catch (dbErr) {
+          console.error("[WAHA] Failed to log skipped message:", dbErr);
+        }
+      }
+    }
+    return successCount;
+  } catch (err) {
+    console.error("[WAHA] Failed to broadcast node capture notification:", err);
+    return 0;
+  }
 }
 

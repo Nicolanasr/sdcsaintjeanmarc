@@ -181,8 +181,8 @@ export default function ScoutDashboard() {
         // Generate tracking link
         const trackingLink = `${window.location.origin}/${locale}/scout-world-cup/standings?phone=${encodeURIComponent(first.buyerPhone)}`;
         const socialMsg = isAr
-            ? `\n\n📢 سيتم إعلان الفائزين على صفحات التواصل الاجتماعي الخاصة بنا. تابعنا لمشاهدة السحب المباشر وآخر الأخبار:\n📸 إنستغرام: https://www.instagram.com/sdc_saintjeanmarc/\n📘 فيسبوك: https://www.facebook.com/SDCGroupeSJM/\n🎵 تيك توك: https://www.tiktok.com/@sdcsaintjeanmarc`
-            : `\n\n📢 Winners will be announced on our social media channels. Follow us for live draws and updates:\n📸 Instagram: https://www.instagram.com/sdc_saintjeanmarc/\n📘 Facebook: https://www.facebook.com/SDCGroupeSJM/\n🎵 TikTok: https://www.tiktok.com/@sdcsaintjeanmarc`;
+            ? `\n\n📢 سيتم إعلان الفائزين على صفحات التواصل الاجتماعي الخاصة بنا. تابعنا لمشاهدة السحب المباشر وآخر الأخبار:\n📸 إنستغرام: https://www.instagram.com/sdc_saintjeanmarc/`
+            : `\n\n📢 Winners will be announced on our social media channels. Follow us for live draws and updates:\n📸 Instagram: https://www.instagram.com/sdc_saintjeanmarc/`;
 
         const fullMsg = `${baseMsg}\n\n${isAr ? "تابع تذاكرك ونقاط فريقك من هنا:" : "Track your tickets and team entries here:"}\n${trackingLink}${socialMsg}`;
 
@@ -261,21 +261,19 @@ export default function ScoutDashboard() {
                 <div className="flex bg-scout-navy/5 p-1 rounded-xl w-full sm:w-fit border border-scout-navy/10 gap-1">
                     <button
                         onClick={() => setActiveTab("sales")}
-                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-xs font-bold font-display transition duration-150 cursor-pointer ${
-                            activeTab === "sales"
+                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-xs font-bold font-display transition duration-150 cursor-pointer ${activeTab === "sales"
                                 ? "bg-scout-navy text-white shadow-sm"
                                 : "text-scout-navy hover:bg-scout-navy/10"
-                        }`}
+                            }`}
                     >
                         📋 {isAr ? "تسجيل مبيعات جديدة" : "Record New Sale"}
                     </button>
                     <button
                         onClick={() => setActiveTab("reporting")}
-                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-xs font-bold font-display transition duration-150 cursor-pointer ${
-                            activeTab === "reporting"
+                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-xs font-bold font-display transition duration-150 cursor-pointer ${activeTab === "reporting"
                                 ? "bg-scout-navy text-white shadow-sm"
                                 : "text-scout-navy hover:bg-scout-navy/10"
-                        }`}
+                            }`}
                     >
                         📊 {isAr ? "التقارير وسجل المبيعات" : "Reports & Sales Log"}
                     </button>
@@ -737,11 +735,10 @@ export default function ScoutDashboard() {
                                                 </span>
                                             </td>
                                             <td className="py-2.5 px-2 text-center">
-                                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
-                                                    ticket.paymentStatus === "PAID"
+                                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${ticket.paymentStatus === "PAID"
                                                         ? "bg-emerald-100 text-emerald-800"
                                                         : "bg-amber-100 text-amber-800"
-                                                }`}>
+                                                    }`}>
                                                     {ticket.paymentStatus === "PAID"
                                                         ? (isAr ? "مؤكدة" : "Paid / Verified")
                                                         : (isAr ? "بانتظار التأكيد" : "Pending Approval")}
@@ -842,7 +839,7 @@ export default function ScoutDashboard() {
                     </div>
                 </div>
             )}
-            
+
             <WhishGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} locale={locale} />
         </div>
     );

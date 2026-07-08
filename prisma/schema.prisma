@@ -17,6 +17,11 @@ model Profile {
   scoutSettlements CashSettlement[] @relation("ScoutSettlements")
   adminSettlements CashSettlement[] @relation("AdminSettlements")
   createdAt        DateTime         @default(now())
+
+  // Rovers camp portal fields
+  roverProfile     RoverProfile?
+  questCompletions QuestCompletion[]
+  bids             ShopItem[]       @relation("HighestBidder")
 }
 
 model Team {
@@ -77,4 +82,98 @@ model WhatsAppLog {
 model SystemSetting {
   key   String @id
   value String
+}
+
+enum Faction {
+  ALPHA
+  BRAVO
+}
+
+enum VerificationType {
+  DIGITAL_CODE
+  LEADER_SIGN_OFF
+}
+
+enum QuestPhase {
+  PRE_CAMP
+  LIVE_CAMP
+}
+
+model RoverProfile {
+  id           String   @id @default(uuid())
+  profileId    String   @unique
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  roverCredits Int      @default(0) @map("rover_credits")
+  faction      Faction?
+  phoneNumber  String   @map("phone_number")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Quest {
+  id                  String            @id @default(uuid())
+  title               String
+  description         String            // Markdown text
+  clueHint            String?           @map("clue_hint")
+  verificationType    VerificationType  @map("verification_type")
+  encryptedAnswerHash String?           @map("encrypted_answer_hash")
+  creditReward        Int               @map("credit_reward")
+  isReleased          Boolean           @default(false) @map("is_released")
+  unlockedAtDate      DateTime          @map("unlocked_at_date")
+  phase               QuestPhase
+  completions         QuestCompletion[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+model QuestCompletion {
+  id          String   @id @default(uuid())
+  roverId     String   @map("rover_id")
+  rover       Profile  @relation(fields: [roverId], references: [id], onDelete: Cascade)
+  questId     String   @map("quest_id")
+  quest       Quest    @relation(fields: [questId], references: [id], onDelete: Cascade)
+  isVerified  Boolean  @default(true) @map("is_verified")
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  @@unique([roverId, questId])
+}
+
+enum ShopItemType {
+  FIXED_PRICE
+  AUCTION
+}
+
+model ShopItem {
+  id                String       @id @default(uuid())
+  title             String
+  description       String
+  type              ShopItemType
+  priceOrCurrentBid Int          @map("price_or_current_bid")
+  highestBidderId   String?      @map("highest_bidder_id")
+  highestBidder     Profile?     @relation("HighestBidder", fields: [highestBidderId], references: [id], onDelete: SetNull)
+  isAvailable       Boolean      @default(true) @map("is_available")
+  stock             Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model GeoNode {
+  id                 String   @id @default(uuid())
+  name               String
+  latitude           Float
+  longitude          Float
+  radiusMeters       Int      @default(20) @map("radius_meters")
+  secretPasscode     String   @map("secret_passcode")
+  controllingFaction Faction? @map("controlling_faction")
+  isHotSpot          Boolean  @default(false) @map("is_hot_spot")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model NodeCheckIn {
+  id        String   @id @default(uuid())
+  nodeId    String   @map("node_id")
+  roverId   String   @map("rover_id")
+  faction   Faction  @map("faction")
+  createdAt DateTime @default(now()) @map("created_at")
 }

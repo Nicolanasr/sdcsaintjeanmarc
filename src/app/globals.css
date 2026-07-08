@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+
 @import "tailwindcss";
 
 @theme {
@@ -21,6 +23,8 @@
   --color-sec-orange: #f97316;
 
   /* Fonts overrides */
+  --font-outfit: 'Outfit', sans-serif;
+  --font-cairo: 'Cairo', sans-serif;
   --font-sans: var(--font-outfit), system-ui, sans-serif;
   --font-display: var(--font-outfit), system-ui, sans-serif;
   --font-arabic: var(--font-cairo), system-ui, sans-serif;

@@ -1,0 +1,361 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import NodeCard from "./NodeCard";
+
+interface NavClientPageProps {
+  nodes: {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    radiusMeters: number;
+    controllingFaction: "ALPHA" | "BRAVO" | null;
+    isHotSpot: boolean;
+  }[];
+  userFaction: string;
+  locale: string;
+}
+
+export default function NavClientPage({ nodes, userFaction, locale }: NavClientPageProps) {
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [watchId, setWatchId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGpsError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    // High accuracy watch position to support real-time navigation
+    const id = navigator.geolocation.watchPosition(
+      (position) => {
+        setCoords({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setGpsError(null);
+      },
+      (err) => {
+        console.error("GPS Watch Position Error:", err);
+        setGpsError(`GPS Lock Error: ${err.message || "Coordinates unavailable."}`);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+
+    setWatchId(id);
+
+    return () => {
+      if (id !== null) {
+        navigator.geolocation.clearWatch(id);
+      }
+    };
+  }, []);
+
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  // Client-side Haversine helper
+  function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371000;
+    const phi1 = (lat1 * Math.PI) / 180;
+    const phi2 = (lat2 * Math.PI) / 180;
+    const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+    const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Inject stylesheet
+    const cssId = "leaflet-css";
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement("link");
+      link.id = cssId;
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // Inject script
+    const scriptId = "leaflet-js";
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+    let mapInstance: any = null;
+
+    const initMap = () => {
+      const L = (window as any).L;
+      if (!L) return;
+
+      const mapEl = document.getElementById("leaflet-map");
+      if (mapEl) {
+        (mapEl as any)._leaflet_id = null;
+      }
+
+      // Default center is camp coordinates: 34.1220, 35.6482 (Jaj camp area)
+      let centerLat = 34.122;
+      let centerLng = 35.648;
+
+      if (nodes.length > 0) {
+        centerLat = nodes[0].latitude;
+        centerLng = nodes[0].longitude;
+      } else if (coords) {
+        centerLat = coords.latitude;
+        centerLng = coords.longitude;
+      }
+
+      mapInstance = L.map("leaflet-map", {
+        zoomControl: true,
+        attributionControl: false,
+        dragging: true,
+        touchZoom: true,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        boxZoom: true,
+        keyboard: true,
+        tap: false
+      }).setView([centerLat, centerLng], 14);
+
+      // CartoDB Dark Matter tile layer
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 20
+      }).addTo(mapInstance);
+
+      // Draw active node range circles & blips
+      nodes.forEach((node) => {
+        let color = "#71717a"; // Neutral gray
+        let factionText = "Neutral Node";
+        if (node.isHotSpot) {
+          color = "#eab308"; // Amber
+          factionText = "🚨 CONTENDED HOT-ZONE";
+        } else if (node.controllingFaction === "ALPHA") {
+          color = "#3b82f6"; // Blue
+          factionText = "FACTION ALPHA (BLUE) CONTROLLED";
+        } else if (node.controllingFaction === "BRAVO") {
+          color = "#ef4444"; // Red
+          factionText = "FACTION BRAVO (RED) CONTROLLED";
+        }
+
+        // Draw node control bounds
+        L.circle([node.latitude, node.longitude], {
+          color: color,
+          fillColor: color,
+          fillOpacity: node.isHotSpot ? 0.35 : 0.15,
+          radius: node.radiusMeters,
+          weight: node.isHotSpot ? 3 : 1.5
+        }).addTo(mapInstance);
+
+        // Blip design marker
+        const blipIcon = L.divIcon({
+          className: "custom-leaflet-blip",
+          html: `<div class="w-6 h-6 rounded-full border-2 flex items-center justify-center font-extrabold text-[8px] text-white shadow-lg animate-pulse" style="background:${color}; border-color:#fff;">
+            ${node.isHotSpot ? "🚨" : node.name.split(" ").pop()?.substring(0, 2) || "ND"}
+          </div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+
+        const marker = L.marker([node.latitude, node.longitude], { icon: blipIcon }).addTo(mapInstance);
+
+        // Popup content markup with focus actions
+        const popupContent = `
+          <div style="font-family:monospace; background:#09090b; padding:8px; border:1px solid rgba(245,158,11,0.3); border-radius:4px; min-width:130px; text-transform:uppercase;">
+            <strong style="color:#fff; font-size:11px;">${node.name}</strong><br/>
+            <span style="color:${color}; font-size:9px; font-weight:bold;">${factionText}</span><br/>
+            <span style="color:#71717a; font-size:8px;">LAT: ${node.latitude.toFixed(6)}</span><br/>
+            <span style="color:#71717a; font-size:8px;">LNG: ${node.longitude.toFixed(6)}</span><br/>
+            <button onclick="window.focusNodeCard('${node.id}')" style="margin-top:6px; background:#f59e0b; color:#000; border:none; padding:4px 6px; font-size:9px; font-weight:bold; border-radius:2px; cursor:pointer; width:100%;">Focus Sector</button>
+          </div>
+        `;
+        marker.bindPopup(popupContent, { closeButton: false });
+      });
+
+      // Draw user position
+      if (coords) {
+        // Center view to user if they are near camp bounds
+        const dist = getDistanceMeters(coords.latitude, coords.longitude, 34.122, 35.648);
+        if (dist < 15000) {
+          mapInstance.setView([coords.latitude, coords.longitude], 15);
+        }
+
+        const liveIcon = L.divIcon({
+          className: "user-leaflet-blip",
+          html: `<div class="relative flex items-center justify-center w-6 h-6">
+            <span class="absolute w-6 h-6 border-2 border-green-500 rounded-full animate-ping"></span>
+            <span class="w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-[0_0_10px_#22c55e]"></span>
+          </div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+
+        L.marker([coords.latitude, coords.longitude], { icon: liveIcon })
+          .addTo(mapInstance)
+          .bindPopup("<strong style='color:#22c55e; font-family:monospace;'>YOUR POSITION</strong>");
+      }
+    };
+
+    (window as any).focusNodeCard = (id: string) => {
+      setSelectedNodeId(id);
+      const el = document.getElementById(`node-card-${id}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+
+    if (!script) {
+      script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.async = true;
+      script.onload = initMap;
+      document.head.appendChild(script);
+    } else {
+      if ((window as any).L) {
+        initMap();
+      } else {
+        script.addEventListener("load", initMap);
+      }
+    }
+
+    return () => {
+      if (mapInstance) {
+        mapInstance.remove();
+      }
+      if (script) {
+        script.removeEventListener("load", initMap);
+      }
+    };
+  }, [nodes, coords]);
+
+  return (
+    <div className="flex flex-col gap-6 pb-12">
+      {/* GPS Status Dashboard */}
+      <section className="bg-zinc-950/40 border border-amber-500/20 rounded-lg p-5 shadow-[0_0_15px_rgba(0,0,0,0.6)]">
+        <h2 className="text-xl font-bold tracking-widest text-amber-400 uppercase">
+          HELIOS_TACTICAL_MAP_
+        </h2>
+        
+        {/* GPS Coordinate Monitor */}
+        <div className="mt-4 p-3 bg-black/60 border border-amber-500/10 rounded flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${coords ? "bg-green-500 animate-pulse" : "bg-red-500 animate-pulse"}`} />
+            <span className="text-amber-500/60 uppercase">GPS Gateway Status:</span>
+            <span className={coords ? "text-green-400 font-bold" : "text-red-500 font-bold"}>
+              {coords ? "LOCKED" : "ACQUIRING_SAT_LINK..."}
+            </span>
+          </div>
+
+          <div className="font-mono text-zinc-400">
+            {coords ? (
+              <>
+                LAT: <span className="text-amber-400">{coords.latitude.toFixed(6)}</span> // LNG:{" "}
+                <span className="text-amber-400">{coords.longitude.toFixed(6)}</span>
+              </>
+            ) : gpsError ? (
+              <span className="text-red-400">{gpsError}</span>
+            ) : (
+              <span className="text-zinc-600">WAITING_FOR_SATELLITE_LOCK_</span>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Visual Radar Map Section */}
+      <section className="bg-zinc-950/40 border border-amber-500/20 rounded-lg p-5 flex flex-col items-center gap-4">
+        <div className="w-full flex justify-between items-center text-xs border-b border-amber-500/25 pb-2">
+          <span className="text-amber-400 font-bold tracking-widest">📡 LIVE SECTOR CONQUEST RADAR</span>
+          <span className="text-zinc-500 font-mono">GRID: 500m x 500m</span>
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap justify-center gap-4 text-[10px] uppercase font-bold tracking-wider mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" />
+            <span className="text-blue-400">Faction Alpha (Blue)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
+            <span className="text-red-400">Faction Bravo (Red)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-zinc-600 shadow-[0_0_8px_#52525b]" />
+            <span className="text-zinc-400">Neutral Node</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-amber-500 animate-ping" />
+            <span className="text-amber-400">🚨 Active Hot-Spot</span>
+          </div>
+        </div>
+
+        {/* The Leaflet Container */}
+        <div className="w-full max-w-[650px] aspect-[4/3] relative border border-amber-500/30 rounded-lg overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.8)] z-10 pointer-events-auto">
+          <div id="leaflet-map" className="w-full h-full bg-zinc-950" />
+        </div>
+
+        {/* Dark map overrides */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          .leaflet-popup-content-wrapper {
+            background: #09090b !important;
+            border: 1px solid rgba(245, 158, 11, 0.3) !important;
+            border-radius: 6px !important;
+            padding: 0 !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+          }
+          .leaflet-popup-content {
+            margin: 0 !important;
+          }
+          .leaflet-popup-tip {
+            background: #09090b !important;
+            border-left: 1px solid rgba(245, 158, 11, 0.3) !important;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.3) !important;
+          }
+          .leaflet-bar {
+            border: 1px solid rgba(245, 158, 11, 0.3) !important;
+            background: #09090b !important;
+          }
+          .leaflet-bar a {
+            background: #09090b !important;
+            color: #f59e0b !important;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.2) !important;
+          }
+          .leaflet-bar a:hover {
+            background: rgba(245, 158, 11, 0.1) !important;
+          }
+        `}} />
+      </section>
+
+      {/* Grid Node list */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded">
+            📡 SECTOR_NODES_IN_RANGE
+          </h3>
+          <div className="h-[1px] bg-amber-500/10 flex-grow" />
+        </div>
+
+        {nodes.length === 0 ? (
+          <p className="text-zinc-500 text-xs py-8 text-center border border-dashed border-amber-500/20 rounded-lg">
+            No active sector nodes found. Grid control initialized.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {nodes.map((node) => (
+              <div key={node.id} id={`node-card-${node.id}`}>
+                <NodeCard
+                  node={node}
+                  userFaction={userFaction}
+                  userCoords={coords}
+                  locale={locale}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
