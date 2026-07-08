@@ -876,6 +876,52 @@ export async function adminApproveSignOff(roverId: string, questId: string) {
   }
 }
 
+// 9.5 Admin Decline Leader Sign-Off
+export async function adminDeclineSignOff(roverId: string, questId: string, message: string) {
+  try {
+    await checkAdminSession();
+
+    const quest = await prisma.quest.findUnique({ where: { id: questId } });
+    if (!quest) throw new Error("Quest not found");
+
+    // Delete the pending completion record
+    await prisma.questCompletion.delete({
+      where: {
+        roverId_questId: {
+          roverId,
+          questId,
+        },
+      },
+    });
+
+    revalidatePath("/rovers/admin");
+    revalidatePath("/rovers/terminal");
+
+    // Fetch rover details to get phone number
+    const rover = await prisma.profile.findUnique({
+      where: { id: roverId },
+      include: { roverProfile: true },
+    });
+
+    console.log(`[AuditLog] Admin declined sign-off for Rover "${rover?.fullName}" (${roverId}) for quest "${quest.title}".`);
+    await logSystemAction("ADMIN_QUEST_DECLINED", `Admin declined sign-off for Rover "${rover?.fullName || roverId}" on quest "${quest.title}". Reason: "${message}".`);
+
+    // Notify the rover via WhatsApp
+    if (rover?.roverProfile?.phoneNumber) {
+      try {
+        const alertMessage = `❌ *HELIOS MISSION STATUS: DECLINED* ❌\n\n⚠️ Your Milestone sign-off request for *"${quest.title}"* was declined by a troop leader.\n\n📝 *Feedback / Reason*:\n"${message}"\n\nYou can address the leader's comments and submit your request again in your terminal: https://sdcsaintjeanmarc.org/en/rovers/terminal`;
+        await sendWhatsAppMessage(rover.roverProfile.phoneNumber, alertMessage);
+      } catch (waErr) {
+        console.error("[WAHA] Failed to send decline message to rover:", waErr);
+      }
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to decline sign-off" };
+  }
+}
+
 // 10. Admin Adjust Credits Manually
 export async function adminAdjustCredits(roverId: string, amount: number, reason: string) {
   try {
@@ -1366,20 +1412,28 @@ export async function adminUpdateRover(
     unit?: string | null;
     faction?: "ALPHA" | "BRAVO" | null;
     phoneNumber?: string;
+    password?: string;
   }
 ) {
   try {
     await checkAdminSession();
 
+    const updateData: any = {
+      fullName: data.fullName.trim(),
+      email: data.email.trim(),
+      role: data.role,
+      unit: data.unit ? data.unit.trim() : null,
+    };
+
+    if (data.password && data.password.trim() !== "") {
+      updateData.password = await bcrypt.hash(data.password.trim(), 10);
+      updateData.mustChangePassword = true;
+    }
+
     // 1. Update Profile (auth record)
     await prisma.profile.update({
       where: { id: userId },
-      data: {
-        fullName: data.fullName.trim(),
-        email: data.email.trim(),
-        role: data.role,
-        unit: data.unit ? data.unit.trim() : null,
-      },
+      data: updateData,
     });
 
     // 2. Update RoverProfile details if they exist and user is scout

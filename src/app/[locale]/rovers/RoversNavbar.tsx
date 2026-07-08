@@ -31,6 +31,12 @@ export default function RoversNavbar({ locale, isAdmin, nightNavActive }: Rovers
       icon: "🗺️",
       disabled: !nightNavActive && !isAdmin, // lock for normal rovers if nav is disabled
     },
+    {
+      name: "Leaderboard",
+      href: `/${locale}/rovers/leaderboard`,
+      icon: "🏆",
+      disabled: false,
+    },
   ];
 
   return (

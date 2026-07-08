@@ -22,6 +22,7 @@ import {
   adminInviteUser,
   adminMassUploadQuests,
   adminMassUploadShopItems,
+  adminDeclineSignOff,
 } from "@/app/actions/rovers";
 
 const LocalDateStr = ({ date }: { date: string | Date }) => {
@@ -166,6 +167,7 @@ export default function AdminClientPage({
   const [editRoverUnit, setEditRoverUnit] = useState("");
   const [editRoverFaction, setEditRoverFaction] = useState<"ALPHA" | "BRAVO" | "">("");
   const [editRoverPhone, setEditRoverPhone] = useState("");
+  const [editRoverPassword, setEditRoverPassword] = useState("");
 
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
   const [editQuestTitle, setEditQuestTitle] = useState("");
@@ -178,6 +180,9 @@ export default function AdminClientPage({
   const [editQuestExpiry, setEditQuestExpiry] = useState("");
   const [editQuestPhase, setEditQuestPhase] = useState<"PRE_CAMP" | "LIVE_CAMP">("PRE_CAMP");
   const [editQuestReleased, setEditQuestReleased] = useState(false);
+
+  const [decliningSignOff, setDecliningSignOff] = useState<{ roverId: string; questId: string; questTitle: string; roverName: string } | null>(null);
+  const [declineReasonText, setDeclineReasonText] = useState("");
 
   const [editingShopItem, setEditingShopItem] = useState<ShopItem | null>(null);
   const [editShopTitle, setEditShopTitle] = useState("");
@@ -378,6 +383,52 @@ export default function AdminClientPage({
                     text: `APPROVAL_FAILED: ${res.error || "Could not verify milestone."}`,
                 });
             }
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const handleDeclineSignOffSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!decliningSignOff || !declineReasonText.trim()) return;
+
+        const { roverId, questId, questTitle, roverName } = decliningSignOff;
+        setLoading(`decline-${roverId}-${questId}`);
+        setMessage(null);
+
+        try {
+            const res = await adminDeclineSignOff(roverId, questId, declineReasonText.trim());
+            if (res.success) {
+                setRovers((prev) =>
+                    prev.map((r) => {
+                        if (r.id === roverId) {
+                            return {
+                                ...r,
+                                questCompletions: r.questCompletions.filter((c) => c.questId !== questId),
+                            };
+                        }
+                        return r;
+                    })
+                );
+
+                setMessage({
+                    type: "success",
+                    text: `MILESTONE_DECLINED: "${questTitle}" rejected for ${roverName}. Feedback sent.`,
+                });
+
+                setDecliningSignOff(null);
+                setDeclineReasonText("");
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `DECLINE_FAILED: ${res.error || "Could not decline milestone."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to contact gateway."}`,
+            });
         } finally {
             setLoading(null);
         }
@@ -872,6 +923,7 @@ export default function AdminClientPage({
     setEditRoverUnit(rover.unit || "");
     setEditRoverFaction(rover.roverProfile?.faction || "");
     setEditRoverPhone(rover.roverProfile?.phoneNumber || "");
+    setEditRoverPassword("");
   };
 
   const handleEditRoverSubmit = async (e: React.FormEvent) => {
@@ -889,6 +941,7 @@ export default function AdminClientPage({
         unit: editRoverUnit || null,
         faction: editRoverRole === "scout" && editRoverFaction !== "" ? editRoverFaction : null,
         phoneNumber: editRoverRole === "scout" ? editRoverPhone : undefined,
+        password: editRoverPassword || undefined,
       });
 
       if (res.success) {
@@ -918,6 +971,7 @@ export default function AdminClientPage({
         );
 
         setEditingRover(null);
+        setEditRoverPassword("");
       } else {
         setMessage({
           type: "error",
@@ -1496,35 +1550,53 @@ export default function AdminClientPage({
                                                      )}
                                                  </div>
 
-                                                {/* Sign-offs Grid */}
-                                                <div className="flex flex-wrap gap-2 md:max-w-xs justify-end">
+                                                {/* Pending Milestones Actions Card List */}
+                                                <div className="flex flex-col gap-2 min-w-[220px] md:max-w-xs items-end">
                                                     {pendingCompletions.length === 0 ? (
-                                                        <span className="text-[9px] text-zinc-600 uppercase italic">No pending milestones</span>
+                                                        <span className="text-[9px] text-zinc-600 uppercase tracking-wider font-extrabold italic bg-zinc-950/20 border border-zinc-800/40 px-2.5 py-1 rounded">No pending milestones</span>
                                                     ) : (
                                                         pendingCompletions.map((comp) => (
                                                             <div
                                                                 key={comp.questId}
-                                                                className="flex items-center gap-1.5 bg-amber-950/30 border border-amber-500/20 px-2 py-1 rounded"
+                                                                className="flex flex-col gap-2 bg-amber-950/25 border border-amber-500/20 p-2.5 rounded-lg w-full text-left"
                                                             >
-                                                                <span className="text-[8px] text-amber-500 uppercase font-bold tracking-wider max-w-[80px] truncate" title={comp.quest.title}>
-                                                                    {comp.quest.title}
-                                                                </span>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleApproveSignOff(
-                                                                            rover.id,
-                                                                            comp.questId,
-                                                                            comp.quest.title,
-                                                                            rover.fullName
-                                                                        )
-                                                                    }
-                                                                    disabled={loading === `approve-${rover.id}-${comp.questId}`}
-                                                                    className="bg-amber-500 hover:bg-amber-400 text-black text-[9px] font-extrabold px-2.5 py-1 rounded cursor-pointer transition uppercase whitespace-nowrap"
-                                                                >
-                                                                    {loading === `approve-${rover.id}-${comp.questId}`
-                                                                        ? "VERIFYING..."
-                                                                        : "APPROVE_"}
-                                                                </button>
+                                                                <div className="flex justify-between items-center gap-2 border-b border-amber-500/10 pb-1.5">
+                                                                    <span className="text-[10px] text-amber-400 uppercase font-black tracking-wider truncate" title={comp.quest.title}>
+                                                                        🎖️ {comp.quest.title}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            handleApproveSignOff(
+                                                                                rover.id,
+                                                                                comp.questId,
+                                                                                comp.quest.title,
+                                                                                rover.fullName
+                                                                            )
+                                                                        }
+                                                                        disabled={!!loading}
+                                                                        className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-black text-[9px] font-black px-2 py-1 rounded cursor-pointer transition uppercase whitespace-nowrap text-center shadow-[0_0_8px_rgba(16,185,129,0.2)]"
+                                                                    >
+                                                                        {loading === `approve-${rover.id}-${comp.questId}`
+                                                                            ? "VERIFYING..."
+                                                                            : "✓ APPROVE"}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            setDecliningSignOff({
+                                                                                roverId: rover.id,
+                                                                                questId: comp.questId,
+                                                                                questTitle: comp.quest.title,
+                                                                                roverName: rover.fullName
+                                                                            })
+                                                                        }
+                                                                        disabled={!!loading}
+                                                                        className="flex-1 bg-red-950/40 hover:bg-red-500 border border-red-500/30 hover:text-black text-red-500 text-[9px] font-black px-2 py-1 rounded cursor-pointer transition uppercase whitespace-nowrap text-center"
+                                                                    >
+                                                                        ✕ DECLINE
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         ))
                                                     )}
@@ -1997,6 +2069,17 @@ export default function AdminClientPage({
                                     </div>
                                 </>
                             )}
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">New Password (Leave blank to keep current):</label>
+                                <input
+                                    type="password"
+                                    value={editRoverPassword}
+                                    onChange={(e) => setEditRoverPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                />
+                            </div>
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-[10px] uppercase text-amber-500/60 font-bold">Unit / Section (Optional):</label>
@@ -2939,6 +3022,55 @@ export default function AdminClientPage({
                                     className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
                                 >
                                     {loading === "mass-upload-shop" ? "UPLOADING..." : "RUN_BATCH_IMPORT"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Decline Sign-off Feedback */}
+            {decliningSignOff && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border border-red-500/30 rounded-xl p-6 w-full max-w-md shadow-[0_0_50px_rgba(239,68,68,0.15)] relative">
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
+                        
+                        <h2 className="text-zinc-100 font-extrabold text-lg uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <span>✕</span> Decline Sign-off
+                        </h2>
+                        <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
+                            Provide decline feedback/reason for <strong className="text-zinc-200">{decliningSignOff.roverName}</strong>&apos;s milestone <strong className="text-amber-400">&quot;{decliningSignOff.questTitle}&quot;</strong>. A WhatsApp message notification containing this feedback will be sent automatically.
+                        </p>
+
+                        <form onSubmit={handleDeclineSignOffSubmit} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-red-500/60 font-bold">Feedback message:</label>
+                                <textarea
+                                    required
+                                    value={declineReasonText}
+                                    onChange={(e) => setDeclineReasonText(e.target.value)}
+                                    placeholder="e.g., Please complete the physical check-in or verify the tasks with your unit leader."
+                                    className="bg-black border border-red-500/20 focus:border-red-500/60 text-zinc-200 p-3 text-xs rounded focus:outline-none font-semibold h-24 resize-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setDecliningSignOff(null);
+                                        setDeclineReasonText("");
+                                    }}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === `decline-${decliningSignOff.roverId}-${decliningSignOff.questId}`}
+                                    className="px-4 py-2 bg-red-500 hover:bg-red-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === `decline-${decliningSignOff.roverId}-${decliningSignOff.questId}` ? "DECLINING..." : "CONFIRM_DECLINE"}
                                 </button>
                             </div>
                         </form>

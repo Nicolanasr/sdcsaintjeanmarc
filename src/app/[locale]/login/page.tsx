@@ -73,11 +73,6 @@ export default function LoginPage() {
                     <h1 className="text-3xl font-bold font-display tracking-tight text-scout-gold">
                         {isAr ? "بوابة كشافة الأرز" : "Scouts des Cèdres Portal"}
                     </h1>
-                    <p className="text-white/60 mt-2 text-sm">
-                        {isAr
-                            ? "مسابقة سحب كأس الكشافة - كأس العالم ٢٠٢٦"
-                            : "World Cup 2026 Scout Cup Draw Fundraising"}
-                    </p>
                 </div>
 
                 {errorMsg && (
@@ -186,14 +181,6 @@ export default function LoginPage() {
                         </>
                     ) : (
                         <>
-                            {isAr ? "ليس لديك حساب كشاف؟ " : "Don't have a scout account? "}
-                            {/* <button
-                type="button"
-                onClick={() => setIsSignUp(true)}
-                className="text-scout-gold hover:underline"
-              >
-                {isAr ? "سجل الآن" : "Register Now"}
-              </button> */}
                         </>
                     )}
                 </div>
