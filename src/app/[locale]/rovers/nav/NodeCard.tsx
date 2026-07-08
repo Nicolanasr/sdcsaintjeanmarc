@@ -12,6 +12,10 @@ interface NodeCardProps {
     radiusMeters: number;
     controllingFaction: "ALPHA" | "BRAVO" | null;
     isHotSpot?: boolean;
+    activeFaction?: "ALPHA" | "BRAVO" | null;
+    activeCount?: number;
+    requiredCount?: number;
+    remainingSeconds?: number;
   };
   userFaction: string;
   userCoords: { latitude: number; longitude: number } | null;
@@ -60,11 +64,24 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
     e.preventDefault();
     if (!passcode.trim()) return;
 
+    if (!userCoords) {
+      setMessage({
+        type: "error",
+        text: "GPS_ERROR: Location coordinates required to verify physical presence.",
+      });
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
     try {
-      const res = await captureNodeByPasscode(node.id, passcode);
+      const res = await captureNodeByPasscode(
+        node.id,
+        passcode,
+        userCoords.latitude,
+        userCoords.longitude
+      );
       if (res.success) {
         setMessage({
           type: "success",
@@ -166,11 +183,28 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
         </div>
       </div>
 
+      {node.isHotSpot && node.activeFaction && (
+        <div className="text-xs bg-amber-500/10 border border-amber-500/35 p-3 rounded flex flex-col gap-1.5 animate-pulse">
+          <div className="flex justify-between items-center border-b border-amber-500/20 pb-1.5 mb-0.5">
+            <span className="text-amber-400 font-extrabold uppercase">🚨 FACTION HACKING ACTIVE:</span>
+            <span className="bg-amber-500 text-black px-1.5 py-0.5 rounded text-[10px] font-black">{node.activeFaction}</span>
+          </div>
+          <div className="flex justify-between font-mono">
+            <span className="text-zinc-400 uppercase text-[10px]">CONVERGED MEMBERS:</span>
+            <span className="text-zinc-200 font-bold">{node.activeCount} / {node.requiredCount}</span>
+          </div>
+          <div className="flex justify-between font-mono">
+            <span className="text-zinc-400 uppercase text-[10px]">TIME REMAINING:</span>
+            <span className="text-red-400 font-extrabold">{node.remainingSeconds}s</span>
+          </div>
+        </div>
+      )}
+
       {/* Live Coordinates Radar / Range */}
       <div className="text-xs bg-black/40 border border-amber-500/10 p-3 rounded flex flex-col gap-1">
         <div className="flex justify-between">
           <span className="text-amber-500/60 uppercase">Target Range:</span>
-          <span className="text-amber-400 font-bold">{node.radiusMeters} Meters</span>
+          <span className="text-amber-400 font-bold">{node.radiusMeters} Meters (+35m GPS buffer)</span>
         </div>
         <div className="flex justify-between">
           <span className="text-amber-500/60 uppercase">Current Distance:</span>
@@ -178,7 +212,7 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
             className={`font-bold ${
               distance === null
                 ? "text-zinc-500"
-                : distance <= node.radiusMeters
+                : distance <= (node.radiusMeters + 35)
                 ? "text-green-400 animate-pulse"
                 : "text-red-500"
             }`}
@@ -186,7 +220,7 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
             {distance === null
               ? "WAITING_GPS_"
               : `${Math.round(distance)} meters ${
-                  distance <= node.radiusMeters ? "(IN_RANGE)" : "(OUT_OF_RANGE)"
+                  distance <= (node.radiusMeters + 35) ? "(IN_RANGE)" : "(OUT_OF_RANGE)"
                 }`}
           </span>
         </div>
@@ -198,40 +232,36 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
           {/* Method 1: GPS Verify Hack */}
           <button
             onClick={handleGPSCapture}
-            disabled={loading || distance === null || distance > node.radiusMeters}
+            disabled={loading || distance === null || distance > (node.radiusMeters + 35)}
             className="w-full bg-amber-500 text-black hover:bg-amber-400 disabled:opacity-30 font-extrabold text-xs py-2.5 rounded transition cursor-pointer uppercase tracking-wider"
           >
             {loading ? "CHECKING IN..." : node.isHotSpot ? "🚨 CHECK IN TO HOT-ZONE_" : "CAPTURE_VIA_GPS_GATEWAY_"}
           </button>
 
-          {!node.isHotSpot && (
-            <>
-              <div className="flex items-center gap-2">
-                <div className="h-[1px] bg-amber-500/10 flex-grow" />
-                <span className="text-[9px] text-amber-500/40 uppercase">OR</span>
-                <div className="h-[1px] bg-amber-500/10 flex-grow" />
-              </div>
+          <div className="flex items-center gap-2">
+            <div className="h-[1px] bg-amber-500/10 flex-grow" />
+            <span className="text-[9px] text-amber-500/40 uppercase">OR</span>
+            <div className="h-[1px] bg-amber-500/10 flex-grow" />
+          </div>
 
-              {/* Method 2: Passcode Submit */}
-              <form onSubmit={handlePasscodeCapture} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="INPUT_PHYSICAL_PASSCODE_"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  disabled={loading}
-                  className="bg-black border border-amber-500/30 focus:border-amber-400 text-zinc-200 placeholder-zinc-700 text-xs px-3 py-2 rounded focus:outline-none transition w-full uppercase tracking-wider font-semibold disabled:opacity-50"
-                />
-                <button
-                  type="submit"
-                  disabled={loading || !passcode.trim()}
-                  className="bg-amber-500/15 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400 font-extrabold text-xs px-4 py-2 rounded transition cursor-pointer uppercase"
-                >
-                  {loading ? "SUBMITTING..." : "SUBMIT_"}
-                </button>
-              </form>
-            </>
-          )}
+          {/* Method 2: Passcode Submit */}
+          <form onSubmit={handlePasscodeCapture} className="flex gap-2">
+            <input
+              type="text"
+              placeholder="INPUT_PHYSICAL_PASSCODE_"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              disabled={loading}
+              className="bg-black border border-amber-500/30 focus:border-amber-400 text-zinc-200 placeholder-zinc-700 text-xs px-3 py-2 rounded focus:outline-none transition w-full uppercase tracking-wider font-semibold disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={loading || !passcode.trim()}
+              className="bg-amber-500/15 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400 font-extrabold text-xs px-4 py-2 rounded transition cursor-pointer uppercase"
+            >
+              {loading ? "SUBMITTING..." : "SUBMIT_"}
+            </button>
+          </form>
         </div>
       ) : (
         <div className="mt-auto pt-2 text-center">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import NodeCard from "./NodeCard";
+import { getLiveGeoNodes } from "@/app/actions/rovers";
 
 interface NavClientPageProps {
   nodes: {
@@ -17,10 +18,27 @@ interface NavClientPageProps {
   locale: string;
 }
 
-export default function NavClientPage({ nodes, userFaction, locale }: NavClientPageProps) {
+export default function NavClientPage({ nodes: initialNodes, userFaction, locale }: NavClientPageProps) {
+  const [nodes, setNodes] = useState(initialNodes);
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
+
+  // Poll nodes every 3 seconds to update coordinate status in real-time
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await getLiveGeoNodes();
+        if (res.success && res.nodes) {
+          setNodes(res.nodes as any);
+        }
+      } catch (err) {
+        console.error("Failed to poll live nodes:", err);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -63,6 +81,8 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
   }, []);
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [mapMode, setMapMode] = useState<"dark" | "satellite">("satellite");
+  const tileLayerRef = useRef<any>(null);
 
   // Client-side Haversine helper
   function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -122,8 +142,11 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
           tap: false
         }).setView([centerLat, centerLng], 14);
 
-        // CartoDB Dark Matter tile layer
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        const initialUrl = mapMode === "satellite"
+          ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+
+        tileLayerRef.current = L.tileLayer(initialUrl, {
           maxZoom: 20
         }).addTo(mapRef.current);
       }
@@ -236,6 +259,18 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
     };
   }, [nodes, coords]);
 
+  useEffect(() => {
+    if (mapRef.current && tileLayerRef.current) {
+      const L = (window as any).L;
+      if (L) {
+        const newUrl = mapMode === "satellite"
+          ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+        tileLayerRef.current.setUrl(newUrl);
+      }
+    }
+  }, [mapMode]);
+
   return (
     <div className="flex flex-col gap-6 pb-12">
       {/* GPS Status Dashboard */}
@@ -267,6 +302,20 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
             )}
           </div>
         </div>
+
+        {gpsError && (
+          <div className="mt-4 p-4 bg-red-950/20 border-2 border-red-500/30 rounded-lg text-xs text-red-400 tracking-wider">
+            <p className="font-extrabold uppercase mb-1.5 flex items-center gap-1.5">
+              <span>⚠️</span> GPS TELEMETRY_LOCK_FAILED_
+            </p>
+            <ul className="list-disc list-inside text-[11px] text-zinc-400 font-sans leading-relaxed space-y-1">
+              <li>Ensure <strong>Location Services</strong> are enabled in your device settings.</li>
+              <li>Verify that your browser has <strong>Location permissions</strong> allowed for this website.</li>
+              <li>If you are indoors or under heavy tree cover, step into a clearer area to acquire a lock.</li>
+              <li>Try refreshing the page to restart the satellite acquisition loop.</li>
+            </ul>
+          </div>
+        )}
       </section>
 
       {/* Visual Radar Map Section */}
@@ -298,6 +347,30 @@ export default function NavClientPage({ nodes, userFaction, locale }: NavClientP
 
         {/* The Leaflet Container */}
         <div className="w-full max-w-[650px] aspect-[4/3] relative border border-amber-500/30 rounded-lg overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.8)] z-10 pointer-events-auto">
+          {/* Map Layer Mode Toggler */}
+          <div className="absolute top-3 right-3 z-[1000] flex gap-1 bg-black/80 backdrop-blur-md border border-amber-500/30 p-1.5 rounded-lg shadow-lg">
+            <button
+              onClick={() => setMapMode("satellite")}
+              className={`px-2.5 py-1 text-[10px] uppercase font-extrabold tracking-wider rounded transition-all cursor-pointer ${
+                mapMode === "satellite"
+                  ? "bg-amber-500 text-black font-extrabold"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              🛰️ Satellite
+            </button>
+            <button
+              onClick={() => setMapMode("dark")}
+              className={`px-2.5 py-1 text-[10px] uppercase font-extrabold tracking-wider rounded transition-all cursor-pointer ${
+                mapMode === "dark"
+                  ? "bg-amber-500 text-black font-extrabold"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              🌑 Dark Vector
+            </button>
+          </div>
+
           <div id="leaflet-map" className="w-full h-full bg-zinc-950" />
         </div>
 

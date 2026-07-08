@@ -391,7 +391,7 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 // 6. Capture Node by Passcode
-export async function captureNodeByPasscode(nodeId: string, passcode: string) {
+export async function captureNodeByPasscode(nodeId: string, passcode: string, lat?: number, lng?: number) {
   const session = await getRoverSession();
   if (!session) return { success: false, error: "Unauthorized" };
 
@@ -403,12 +403,144 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string) {
   const node = await prisma.geoNode.findUnique({ where: { id: nodeId } });
   if (!node) return { success: false, error: "Node not found" };
 
+  if (lat === undefined || lng === undefined) {
+    return { success: false, error: "GPS coordinates are required to verify physical presence." };
+  }
+
+  const distance = getDistanceMeters(lat, lng, node.latitude, node.longitude);
+  if (distance > 200) {
+    return {
+      success: false,
+      error: `You are too far away (${Math.round(distance)}m). You must be physically near the node (within 200m) to check in.`,
+    };
+  }
+
   if (node.secretPasscode.trim().toLowerCase() !== passcode.trim().toLowerCase()) {
-    return { success: false, error: "Incorrect secret passcode for this node coordinates location." };
+    return { success: false, error: "Incorrect secret passcode for this node location." };
   }
 
   if (node.controllingFaction === faction) {
     return { success: false, error: `This node is already controlled by your faction (${faction})` };
+  }
+
+  if (node.isHotSpot) {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const now = new Date();
+        const windowStart = new Date(now.getTime() - 20000); // 20 seconds ago
+
+        // 1. Wipe check-ins older than 20 seconds at this node
+        await tx.nodeCheckIn.deleteMany({
+          where: {
+            nodeId,
+            createdAt: { lt: windowStart }
+          }
+        });
+
+        // 2. Fetch all active check-ins at this node in the last 20 seconds
+        const activeCheckIns = await tx.nodeCheckIn.findMany({
+          where: { nodeId }
+        });
+
+        // 3. Check for interruption (opposing team presence)
+        const opposingCheckIn = activeCheckIns.find(c => c.faction !== faction);
+        if (opposingCheckIn) {
+          // Reset capture queue for this node
+          await tx.nodeCheckIn.deleteMany({ where: { nodeId } });
+          
+          // Add current scout as starting point
+          await tx.nodeCheckIn.create({
+            data: { nodeId, roverId: session.profile.id, faction }
+          });
+
+          return {
+            status: "INTERRUPTED",
+            message: "⚠️ Opposing team presence detected in range! Capture progress has been reset."
+          };
+        }
+
+        // 4. Create check-in if not already present
+        const alreadyCheckedIn = activeCheckIns.some(c => c.roverId === session.profile.id);
+        if (!alreadyCheckedIn) {
+          await tx.nodeCheckIn.create({
+            data: { nodeId, roverId: session.profile.id, faction }
+          });
+        }
+
+        // 5. Query active unique check-ins again (including this one)
+        const updatedCheckIns = await tx.nodeCheckIn.findMany({
+          where: { nodeId, faction },
+          distinct: ['roverId']
+        });
+
+        // 6. Query total scouts assigned to this faction
+        const totalFactionScouts = await tx.roverProfile.count({
+          where: { faction }
+        });
+
+        const activeUniqueScouts = updatedCheckIns.length;
+        const requiredCount = Math.max(1, totalFactionScouts);
+
+        if (activeUniqueScouts >= requiredCount) {
+          // VICTORY! Conquer the Hotspot
+          await tx.geoNode.update({
+            where: { id: nodeId },
+            data: {
+              controllingFaction: faction,
+              isHotSpot: false,
+            }
+          });
+
+          // Award credits (+150 CR) to all participating members in transaction
+          const participatingIds = updatedCheckIns.map(c => c.roverId);
+          await tx.roverProfile.updateMany({
+            where: { profileId: { in: participatingIds } },
+            data: { roverCredits: { increment: 150 } }
+          });
+
+          // Wipe check-ins
+          await tx.nodeCheckIn.deleteMany({ where: { nodeId } });
+
+          return {
+            status: "CAPTURED",
+            message: `🎉 Success! Your team secured Hot-Spot "${node.name}"!`
+          };
+        }
+
+        return {
+          status: "PROGRESSING",
+          message: `📡 Secured check-in. Faction: ${activeUniqueScouts}/${requiredCount} Scouts. Stay in range!`
+        };
+      }, { timeout: 15000 });
+
+      revalidatePath("/rovers/nav");
+      revalidatePath("/rovers/admin");
+
+      if (result.status === "CAPTURED") {
+        await logSystemAction("GEONODE_HOTSPOT_CONQUERED", `Faction ${faction} conquered Hot-Spot "${node.name}".`);
+        try {
+          const alertMessage = `🎉 *HELIOS TACTICAL UPDATE: SECTOR CONQUERED!* 🎉\n\nFaction *${faction}* has successfully conquered the active Hot-Spot *"${node.name}"*!\n\nAll participating team members have been awarded +150 Credits.`;
+          await broadcastNodeCaptureNotification(
+            session.profile.fullName,
+            node.name,
+            faction,
+            0,
+            0
+          );
+          await sendWhatsAppMessage("+961700078138", alertMessage);
+        } catch (waErr) {
+          console.error("[WAHA] Failed to broadcast node conquer notification:", waErr);
+        }
+      }
+
+      return {
+        success: result.status === "CAPTURED" || result.status === "PROGRESSING",
+        message: result.message
+      };
+
+    } catch (err: any) {
+      return { success: false, error: err.message || "Failed to check in to Hot-Spot." };
+    }
   }
 
   try {
@@ -529,11 +661,8 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
         });
 
         // 6. Query total scouts assigned to this faction
-        const totalFactionScouts = await tx.profile.count({
-          where: {
-            role: "scout",
-            roverProfile: { faction }
-          }
+        const totalFactionScouts = await tx.roverProfile.count({
+          where: { faction }
         });
 
         const activeUniqueScouts = updatedCheckIns.length;
@@ -1620,5 +1749,82 @@ export async function adminMassUploadShopItems(itemsList: {
     return { success: true, createdCount, skippedCount, errors };
   } catch (err: any) {
     return { success: false, error: err.message || "Mass upload operation failed" };
+  }
+}
+
+// 12. Fetch Live Coordinates & Countdown Status
+export async function getLiveGeoNodes() {
+  const session = await getRoverSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - 20000); // 20s window
+
+  try {
+    // Wipe expired check-ins older than 20 seconds
+    await prisma.nodeCheckIn.deleteMany({
+      where: {
+        createdAt: { lt: windowStart }
+      }
+    });
+
+    const nodes = await prisma.geoNode.findMany({
+      orderBy: { name: "asc" },
+    });
+
+    // Get all active check-ins
+    const allCheckIns = await prisma.nodeCheckIn.findMany({
+      orderBy: { createdAt: "asc" }
+    });
+
+    const alphaScouts = await prisma.roverProfile.count({
+      where: { faction: "ALPHA" }
+    });
+    const bravoScouts = await prisma.roverProfile.count({
+      where: { faction: "BRAVO" }
+    });
+
+    const nodesWithStatus = nodes.map(node => {
+      const nodeCheckIns = allCheckIns.filter(c => c.nodeId === node.id);
+      
+      let activeFaction: string | null = null;
+      let activeCount = 0;
+      let remainingSeconds = 0;
+      const requiredCount = nodeCheckIns[0]?.faction === "ALPHA" ? Math.max(1, alphaScouts) : Math.max(1, bravoScouts);
+
+      if (nodeCheckIns.length > 0) {
+        activeFaction = nodeCheckIns[0].faction;
+        const factionCheckIns = nodeCheckIns.filter(c => c.faction === activeFaction);
+        activeCount = new Set(factionCheckIns.map(c => c.roverId)).size;
+        
+        const oldestCheckInTime = nodeCheckIns[0].createdAt.getTime();
+        const elapsed = now.getTime() - oldestCheckInTime;
+        remainingSeconds = Math.max(0, Math.ceil((20000 - elapsed) / 1000));
+      }
+
+      return {
+        id: node.id,
+        name: node.name,
+        latitude: node.latitude,
+        longitude: node.longitude,
+        radiusMeters: node.radiusMeters,
+        controllingFaction: node.controllingFaction,
+        isHotSpot: node.isHotSpot,
+        secretPasscode: node.secretPasscode,
+        activeFaction,
+        activeCount,
+        requiredCount,
+        remainingSeconds
+      };
+    });
+
+    return {
+      success: true,
+      nodes: nodesWithStatus,
+      alphaScouts,
+      bravoScouts
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch live nodes" };
   }
 }

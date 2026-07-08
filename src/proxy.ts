@@ -58,9 +58,9 @@ export async function proxy(request: NextRequest) {
     // Role-based authorization
     if (subpath.startsWith("/admin")) {
       if (userPayload.role !== "admin") {
-        // Redirect non-admins to scout dashboard
+        // Redirect non-admins to rovers terminal
         return NextResponse.redirect(
-          new URL(`/${locale}/scout-world-cup/dashboard/scout`, request.url)
+          new URL(`/${locale}/rovers/terminal`, request.url)
         );
       }
     }
@@ -71,7 +71,7 @@ export async function proxy(request: NextRequest) {
   if (loginMatch && userPayload) {
     const locale = loginMatch[1];
     return NextResponse.redirect(
-      new URL(`/${locale}/scout-world-cup/dashboard/scout`, request.url)
+      new URL(`/${locale}/rovers/terminal`, request.url)
     );
   }
 
