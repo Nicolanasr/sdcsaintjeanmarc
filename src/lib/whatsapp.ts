@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 
 export function formatWhatsAppChatId(phone: string): string {
   const trimmed = phone.trim();
+  if (trimmed.endsWith("@g.us") || trimmed.endsWith("@c.us")) {
+    return trimmed;
+  }
   if (trimmed.startsWith("+")) {
     return `${trimmed.replace(/\D/g, "")}@c.us`;
   }
@@ -197,6 +200,17 @@ export async function sendMatchWinWhatsAppSummary(
   return await sendWhatsAppMessage(buyerPhone, fullMsg);
 }
 
+export async function getOperationHeliosGroupId(): Promise<string> {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: "operation_helios_group_id" },
+    });
+    return setting?.value || "120363410563591186@g.us";
+  } catch {
+    return "120363410563591186@g.us";
+  }
+}
+
 /**
  * Broadcasts an alert to all Rovers when a new quest is released
  */
@@ -210,9 +224,13 @@ export async function broadcastQuestReleaseNotification(
       select: { phoneNumber: true }
     });
 
-    if (rovers.length === 0) return 0;
-
     const message = `☀️ *PROJECT HELIOS: NEW QUEST RELEASED* ☀️\n\n📢 Quest: "${questTitle}" is now active!\n💰 Reward: ${reward} Credits\n${clueHint ? `🔍 Clue Hint: ${clueHint}\n` : ""}\nLog in to your Helios Terminal: https://sdcsaintjeanmarc.org/en/rovers/terminal`;
+
+    // Also send to the WhatsApp Group JID
+    const groupId = await getOperationHeliosGroupId();
+    await sendWhatsAppMessage(groupId, message);
+
+    if (rovers.length === 0) return 0;
 
     let successCount = 0;
     for (const r of rovers) {
@@ -269,9 +287,13 @@ export async function broadcastNodeCaptureNotification(
       select: { phoneNumber: true }
     });
 
-    if (rovers.length === 0) return 0;
-
     const message = `🗺️ *HELIOS NIGHT NAV: TERRITORY UPDATE* 🗺️\n\n🛡️ Node Captured: "${nodeName}" has been successfully hacked by Rover *${capturedByName}* for Faction *${faction}*!\n\n📊 Grid Control Status:\n🔴 ALPHA: ${alphaCount} Nodes\n🔵 BRAVO: ${bravoCount} Nodes\n\nCheck active nodes map coordinates here: https://sdcsaintjeanmarc.org/en/rovers/nav`;
+
+    // Also send to the WhatsApp Group JID
+    const groupId = await getOperationHeliosGroupId();
+    await sendWhatsAppMessage(groupId, message);
+
+    if (rovers.length === 0) return 0;
 
     let successCount = 0;
     for (const r of rovers) {

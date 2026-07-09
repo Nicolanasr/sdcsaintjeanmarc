@@ -76,20 +76,21 @@ export default async function AdminPage({ params }: PageProps) {
   });
   const nightNavActive = navSetting?.value === "true";
 
-  // Load all logs (last 200 entries)
-  const logs = await prisma.whatsAppLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 200,
+  // Load system setting for Hotspot threshold override
+  const thresholdSetting = await prisma.systemSetting.findUnique({
+    where: { key: "hotspot_scout_threshold" },
   });
+  const hotspotThreshold = thresholdSetting ? parseInt(thresholdSetting.value, 10) : null;
 
   return (
     <AdminClientPage
       initialQuests={quests}
       initialRovers={usersList}
       initialShopItems={shopItems}
-      initialLogs={logs}
+      initialLogs={[]}
       locale={locale}
       initialNightNavActive={nightNavActive}
+      initialHotspotThreshold={hotspotThreshold}
     />
   );
 }

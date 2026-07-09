@@ -39,6 +39,7 @@ export default async function NavPage({ params }: PageProps) {
       nodes={nodes}
       userFaction={userFaction}
       locale={locale}
+      userId={session.profile.id}
     />
   );
 }

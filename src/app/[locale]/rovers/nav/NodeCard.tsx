@@ -16,10 +16,12 @@ interface NodeCardProps {
     activeCount?: number;
     requiredCount?: number;
     remainingSeconds?: number;
+    checkedInRovers?: string[];
   };
   userFaction: string;
   userCoords: { latitude: number; longitude: number } | null;
   locale: string;
+  userId: string;
 }
 
 // Client-side Haversine helper
@@ -38,7 +40,7 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-export default function NodeCard({ node, userFaction, userCoords, locale }: NodeCardProps) {
+export default function NodeCard({ node, userFaction, userCoords, locale, userId }: NodeCardProps) {
   const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -144,6 +146,8 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
   const isAlpha = node.controllingFaction === "ALPHA";
   const isBravo = node.controllingFaction === "BRAVO";
   const canCapture = userFaction && userFaction !== "UNASSIGNED" && (!isControlledBySelf || node.isHotSpot);
+  const isOpposingFactionHacking = !!(node.isHotSpot && node.activeFaction && node.activeFaction !== userFaction);
+  const hasAlreadyCheckedIn = !!(node.isHotSpot && node.checkedInRovers && node.checkedInRovers.includes(userId));
 
   return (
     <div className="bg-zinc-950/60 border border-amber-500/20 rounded-lg p-5 hover:border-amber-500/40 transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group shadow-[0_0_15px_rgba(0,0,0,0.5)] min-h-[180px]">
@@ -204,7 +208,7 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
       <div className="text-xs bg-black/40 border border-amber-500/10 p-3 rounded flex flex-col gap-1">
         <div className="flex justify-between">
           <span className="text-amber-500/60 uppercase">Target Range:</span>
-          <span className="text-amber-400 font-bold">{node.radiusMeters} Meters (+35m GPS buffer)</span>
+          <span className="text-amber-400 font-bold">200 Meters</span>
         </div>
         <div className="flex justify-between">
           <span className="text-amber-500/60 uppercase">Current Distance:</span>
@@ -212,7 +216,7 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
             className={`font-bold ${
               distance === null
                 ? "text-zinc-500"
-                : distance <= (node.radiusMeters + 35)
+                : distance <= 200
                 ? "text-green-400 animate-pulse"
                 : "text-red-500"
             }`}
@@ -220,7 +224,7 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
             {distance === null
               ? "WAITING_GPS_"
               : `${Math.round(distance)} meters ${
-                  distance <= (node.radiusMeters + 35) ? "(IN_RANGE)" : "(OUT_OF_RANGE)"
+                  distance <= 200 ? "(IN_RANGE)" : "(OUT_OF_RANGE)"
                 }`}
           </span>
         </div>
@@ -229,10 +233,22 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
       {/* Hack inputs & Validation */}
       {canCapture ? (
         <div className="flex flex-col gap-3.5 mt-auto pt-2">
+          {isOpposingFactionHacking && (
+            <div className="text-[10px] bg-red-950/20 border border-red-500/30 text-red-400 p-2 rounded uppercase font-bold text-center tracking-wide">
+              ⚠️ Opposing Faction {node.activeFaction} is actively hacking! Wait for queue to expire.
+            </div>
+          )}
+
+          {hasAlreadyCheckedIn && (
+            <div className="text-[10px] bg-green-950/20 border border-green-500/30 text-green-400 p-2 rounded uppercase font-bold text-center tracking-wide animate-pulse">
+              ✓ YOU HAVE CHECKED IN! WAITING FOR TEAMMATES...
+            </div>
+          )}
+
           {/* Method 1: GPS Verify Hack */}
           <button
             onClick={handleGPSCapture}
-            disabled={loading || distance === null || distance > (node.radiusMeters + 35)}
+            disabled={loading || distance === null || distance > 200 || isOpposingFactionHacking || hasAlreadyCheckedIn}
             className="w-full bg-amber-500 text-black hover:bg-amber-400 disabled:opacity-30 font-extrabold text-xs py-2.5 rounded transition cursor-pointer uppercase tracking-wider"
           >
             {loading ? "CHECKING IN..." : node.isHotSpot ? "🚨 CHECK IN TO HOT-ZONE_" : "CAPTURE_VIA_GPS_GATEWAY_"}
@@ -251,12 +267,12 @@ export default function NodeCard({ node, userFaction, userCoords, locale }: Node
               placeholder="INPUT_PHYSICAL_PASSCODE_"
               value={passcode}
               onChange={(e) => setPasscode(e.target.value)}
-              disabled={loading}
+              disabled={loading || isOpposingFactionHacking || hasAlreadyCheckedIn}
               className="bg-black border border-amber-500/30 focus:border-amber-400 text-zinc-200 placeholder-zinc-700 text-xs px-3 py-2 rounded focus:outline-none transition w-full uppercase tracking-wider font-semibold disabled:opacity-50"
             />
             <button
               type="submit"
-              disabled={loading || !passcode.trim()}
+              disabled={loading || !passcode.trim() || isOpposingFactionHacking || hasAlreadyCheckedIn}
               className="bg-amber-500/15 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400 font-extrabold text-xs px-4 py-2 rounded transition cursor-pointer uppercase"
             >
               {loading ? "SUBMITTING..." : "SUBMIT_"}

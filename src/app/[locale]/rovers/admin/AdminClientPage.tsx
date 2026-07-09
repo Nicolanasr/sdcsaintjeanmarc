@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   adminReleaseQuest,
   adminApproveSignOff,
@@ -23,6 +23,9 @@ import {
   adminMassUploadQuests,
   adminMassUploadShopItems,
   adminDeclineSignOff,
+  adminGetOperationHeliosGroup,
+  adminSendQuestReminder,
+  adminUpdateHotspotThreshold,
 } from "@/app/actions/rovers";
 
 const LocalDateStr = ({ date }: { date: string | Date }) => {
@@ -100,6 +103,7 @@ interface AdminClientPageProps {
   initialLogs?: SystemLog[];
   locale: string;
   initialNightNavActive: boolean;
+  initialHotspotThreshold?: number | null;
 }
 
 export default function AdminClientPage({
@@ -109,12 +113,18 @@ export default function AdminClientPage({
   initialLogs = [],
   locale,
   initialNightNavActive,
+  initialHotspotThreshold = null,
 }: AdminClientPageProps) {
   const [quests, setQuests] = useState<Quest[]>(initialQuests);
   const [rovers, setRovers] = useState<Rover[]>(initialRovers);
   const [shopItems, setShopItems] = useState<ShopItem[]>(initialShopItems);
   const [logs, setLogs] = useState<SystemLog[]>(initialLogs);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsTotalPages, setLogsTotalPages] = useState(1);
+  const [logsTotal, setLogsTotal] = useState(0);
+  const [logsLimit] = useState(50);
   const [nightNavActive, setNightNavActive] = useState(initialNightNavActive);
+  const [hotspotThreshold, setHotspotThreshold] = useState<number | "">(initialHotspotThreshold ?? "");
 
   // Workstation active tab state
   const [activeTab, setActiveTab] = useState<"scouts" | "challenges" | "registry" | "marketplace" | "logs">("scouts");
@@ -183,6 +193,9 @@ export default function AdminClientPage({
 
   const [decliningSignOff, setDecliningSignOff] = useState<{ roverId: string; questId: string; questTitle: string; roverName: string } | null>(null);
   const [declineReasonText, setDeclineReasonText] = useState("");
+
+  const [reminderQuest, setReminderQuest] = useState<Quest | null>(null);
+  const [reminderGroupId, setReminderGroupId] = useState("");
 
   const [editingShopItem, setEditingShopItem] = useState<ShopItem | null>(null);
   const [editShopTitle, setEditShopTitle] = useState("");
@@ -434,6 +447,74 @@ export default function AdminClientPage({
         }
     };
 
+    const handleSendReminderClick = async (quest: Quest) => {
+        setReminderQuest(quest);
+        try {
+            const res = await adminGetOperationHeliosGroup();
+            if (res.success) {
+                setReminderGroupId(res.groupId || "");
+            }
+        } catch (err) {
+            console.error("Failed to load group ID:", err);
+        }
+    };
+
+    const handleSendReminderSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!reminderQuest || !reminderGroupId.trim()) return;
+
+        setLoading(`reminder-${reminderQuest.id}`);
+        setMessage(null);
+
+        try {
+            const res = await adminSendQuestReminder(reminderQuest.id, reminderGroupId.trim());
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `REMINDER_SENT: WhatsApp reminder sent to group "${reminderGroupId.trim()}" successfully.`,
+                });
+                setReminderQuest(null);
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `SEND_FAILED: ${res.error || "Could not dispatch WhatsApp message."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to contact gateway."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const fetchLogs = async (page: number) => {
+        setLoading("refresh-logs");
+        try {
+            const res = await fetch(`/api/admin/logs?page=${page}&limit=${logsLimit}`);
+            const data = await res.json();
+            if (data.logs) {
+                setLogs(data.logs);
+                setLogsTotalPages(data.totalPages || 1);
+                setLogsTotal(data.total || 0);
+                setLogsPage(data.page || 1);
+            }
+        } catch (err) {
+            console.error("Failed to fetch logs:", err);
+            setMessage({ text: "FAILED TO REFRESH LOG MATRIX", type: "error" });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "logs") {
+            fetchLogs(1);
+        }
+    }, [activeTab]);
+
     // Toggle Night Nav
     const handleToggleNightNav = async () => {
         setLoading("toggle-nav");
@@ -457,6 +538,34 @@ export default function AdminClientPage({
             setMessage({
                 type: "error",
                 text: `SYSTEM_ERROR: ${err.message || "Failed to toggle configuration status."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const handleUpdateThreshold = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading("update-threshold");
+        setMessage(null);
+        try {
+            const val = hotspotThreshold === "" ? null : Number(hotspotThreshold);
+            const res = await adminUpdateHotspotThreshold(val);
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `SYSTEM_CONFIG: Hot-Spot Capture Threshold override has been updated successfully.`,
+                });
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `SYSTEM_CONFIG_FAILED: ${res.error || "Failed to update threshold override."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to contact gateway."}`,
             });
         } finally {
             setLoading(null);
@@ -1335,6 +1444,33 @@ export default function AdminClientPage({
                     </button>
                 </div>
 
+                {/* Hotspot Capture Threshold Override */}
+                <form onSubmit={handleUpdateThreshold} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
+                    <div>
+                        <div className="text-xs font-bold text-zinc-300 uppercase">🔥 Hotspot Capture Threshold:</div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                            Number of scouts required to capture a Hotspot (leave blank to require all faction scouts).
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <input
+                            type="number"
+                            placeholder="ALL"
+                            value={hotspotThreshold}
+                            onChange={(e) => setHotspotThreshold(e.target.value === "" ? "" : Number(e.target.value))}
+                            className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-1.5 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold w-24"
+                            min="1"
+                        />
+                        <button
+                            type="submit"
+                            disabled={loading === "update-threshold"}
+                            className="px-4 py-1.5 text-xs bg-amber-500 text-black hover:bg-amber-400 font-extrabold rounded uppercase tracking-wider transition cursor-pointer"
+                        >
+                            {loading === "update-threshold" ? "SAVING..." : "SAVE"}
+                        </button>
+                    </div>
+                </form>
+
                 {message && (
                     <div
                         className={`text-xs p-3 rounded border uppercase font-bold tracking-wide ${message.type === "success"
@@ -1685,6 +1821,12 @@ export default function AdminClientPage({
                                                     <td className="p-3.5 text-right">
                                                         <div className="flex justify-end gap-2">
                                                             <button
+                                                                onClick={() => handleSendReminderClick(quest)}
+                                                                className="px-2 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-extrabold transition cursor-pointer text-[10px] uppercase"
+                                                            >
+                                                                🔔 Remind
+                                                            </button>
+                                                            <button
                                                                 onClick={() => handleEditQuestClick(quest)}
                                                                 className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
                                                             >
@@ -1913,25 +2055,11 @@ export default function AdminClientPage({
                                     📋 SYSTEM_AUDIT_&_DISPATCH_LOGS
                                 </h3>
                                 <p className="text-[10px] text-zinc-500 uppercase tracking-wider">
-                                    Displaying last 200 real-time events, WhatsApp receipts, and admin audits.
+                                    Displaying real-time events, WhatsApp receipts, and admin audits.
                                 </p>
                             </div>
                             <button
-                                onClick={async () => {
-                                    setLoading("refresh-logs");
-                                    try {
-                                        const res = await fetch("/api/admin/logs");
-                                        const data = await res.json();
-                                        if (data.logs) {
-                                            setLogs(data.logs);
-                                            setMessage({ text: "SYSTEM LOG DATABASE SYNCED SUCCESSFULLY", type: "success" });
-                                        }
-                                    } catch (err) {
-                                        setMessage({ text: "FAILED TO REFRESH LOG MATRIX", type: "error" });
-                                    } finally {
-                                        setLoading(null);
-                                    }
-                                }}
+                                onClick={async () => fetchLogs(logsPage)}
                                 disabled={loading === "refresh-logs"}
                                 className="px-3 py-1.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-xs font-bold uppercase tracking-wider"
                             >
@@ -1994,6 +2122,29 @@ export default function AdminClientPage({
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Controls */}
+                        {logsTotalPages > 1 && (
+                            <div className="flex justify-between items-center bg-zinc-950/40 border border-amber-500/20 px-4 py-3 rounded-lg mt-2 text-[11px] font-bold uppercase tracking-wider">
+                                <button
+                                    onClick={() => fetchLogs(logsPage - 1)}
+                                    disabled={logsPage <= 1 || loading === "refresh-logs"}
+                                    className="px-3 py-1.5 rounded bg-zinc-900 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    ◀ PREV
+                                </button>
+                                <span className="text-zinc-400">
+                                    PAGE {logsPage} OF {logsTotalPages} <span className="text-amber-500/50">({logsTotal} LOGS)</span>
+                                </span>
+                                <button
+                                    onClick={() => fetchLogs(logsPage + 1)}
+                                    disabled={logsPage >= logsTotalPages || loading === "refresh-logs"}
+                                    className="px-3 py-1.5 rounded bg-zinc-900 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    NEXT ▶
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -3071,6 +3222,67 @@ export default function AdminClientPage({
                                     className="px-4 py-2 bg-red-500 hover:bg-red-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
                                 >
                                     {loading === `decline-${decliningSignOff.roverId}-${decliningSignOff.questId}` ? "DECLINING..." : "CONFIRM_DECLINE"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Send Quest Reminder */}
+            {reminderQuest && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in text-left">
+                    <div className="bg-zinc-950 border border-amber-500/30 rounded-xl p-6 w-full max-w-md shadow-[0_0_50px_rgba(245,158,11,0.15)] relative">
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+                        
+                        <h2 className="text-zinc-100 font-extrabold text-lg uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <span>🔔</span> Send Quest Reminder
+                        </h2>
+                        <p className="text-xs text-zinc-400 mb-4 leading-relaxed font-sans">
+                            Send a WhatsApp reminder message to the WhatsApp Group chat containing the quest details.
+                        </p>
+
+                        <form onSubmit={handleSendReminderSubmit} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] uppercase text-amber-500/60 font-bold">WhatsApp Group JID (chatId):</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={reminderGroupId}
+                                    onChange={(e) => setReminderGroupId(e.target.value)}
+                                    placeholder="e.g., 120363294324389024@g.us"
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold"
+                                />
+                                <span className="text-[8px] text-zinc-500 uppercase mt-0.5 font-sans">
+                                    Format: (Group ID number)@g.us. Operation HELIOS group JID will be saved after sending.
+                                </span>
+                            </div>
+
+                            <div className="bg-amber-950/10 border border-amber-500/10 rounded p-3 text-[10px] text-amber-500/80 font-mono">
+                                <span className="font-bold text-amber-400">📝 MSG PREVIEW:</span><br/>
+                                🔔 *HELIOS MISSION REMINDER* 🔔<br/><br/>
+                                📢 Rovers! Don&apos;t forget to complete the active challenge: *&quot;{reminderQuest.title}&quot;*!<br/>
+                                💰 Reward: *{reminderQuest.creditReward} Credits*<br/>
+                                {reminderQuest.clueHint && <>🔍 Clue Hint: {reminderQuest.clueHint}<br/></>}
+                                Navigate: https://sdcsaintjeanmarc.org/en/rovers/terminal
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setReminderQuest(null);
+                                    }}
+                                    className="px-4 py-2 border border-zinc-700 hover:bg-zinc-900 text-zinc-400 text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    CANCEL
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading === `reminder-${reminderQuest.id}`}
+                                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded transition uppercase cursor-pointer"
+                                >
+                                    {loading === `reminder-${reminderQuest.id}` ? "SENDING..." : "DISPATCH_REMINDER"}
                                 </button>
                             </div>
                         </form>

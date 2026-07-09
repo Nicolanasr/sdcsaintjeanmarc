@@ -11,6 +11,7 @@ import {
   sendOutbidNotification,
   broadcastNodeCaptureNotification,
   sendWhatsAppMessage,
+  getOperationHeliosGroupId,
 } from "@/lib/whatsapp";
 import { Faction, QuestPhase, ShopItemType, VerificationType } from "@prisma/client";
 
@@ -403,16 +404,14 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
   const node = await prisma.geoNode.findUnique({ where: { id: nodeId } });
   if (!node) return { success: false, error: "Node not found" };
 
-  if (lat === undefined || lng === undefined) {
-    return { success: false, error: "GPS coordinates are required to verify physical presence." };
-  }
-
-  const distance = getDistanceMeters(lat, lng, node.latitude, node.longitude);
-  if (distance > 200) {
-    return {
-      success: false,
-      error: `You are too far away (${Math.round(distance)}m). You must be physically near the node (within 200m) to check in.`,
-    };
+  if (lat !== undefined && lng !== undefined) {
+    const distance = getDistanceMeters(lat, lng, node.latitude, node.longitude);
+    if (distance > 200) {
+      return {
+        success: false,
+        error: `You are too far away (${Math.round(distance)}m). You must be physically near the node (within 200m) to check in.`,
+      };
+    }
   }
 
   if (node.secretPasscode.trim().toLowerCase() !== passcode.trim().toLowerCase()) {
@@ -427,9 +426,9 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
     try {
       const result = await prisma.$transaction(async (tx) => {
         const now = new Date();
-        const windowStart = new Date(now.getTime() - 20000); // 20 seconds ago
+        const windowStart = new Date(now.getTime() - 60000); // 60 seconds ago
 
-        // 1. Wipe check-ins older than 20 seconds at this node
+        // 1. Wipe check-ins older than 60 seconds at this node
         await tx.nodeCheckIn.deleteMany({
           where: {
             nodeId,
@@ -437,35 +436,32 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
           }
         });
 
-        // 2. Fetch all active check-ins at this node in the last 20 seconds
+        // 2. Fetch all active check-ins at this node in the last 30 seconds
         const activeCheckIns = await tx.nodeCheckIn.findMany({
           where: { nodeId }
         });
 
-        // 3. Check for interruption (opposing team presence)
+        // 3. Check for opposing faction active queue
         const opposingCheckIn = activeCheckIns.find(c => c.faction !== faction);
         if (opposingCheckIn) {
-          // Reset capture queue for this node
-          await tx.nodeCheckIn.deleteMany({ where: { nodeId } });
-          
-          // Add current scout as starting point
-          await tx.nodeCheckIn.create({
-            data: { nodeId, roverId: session.profile.id, faction }
-          });
-
           return {
-            status: "INTERRUPTED",
-            message: "⚠️ Opposing team presence detected in range! Capture progress has been reset."
+            status: "BLOCKED",
+            message: `⚠️ Faction ${opposingCheckIn.faction} is actively capturing this Hot-Spot! You must wait for their queue to expire.`
           };
         }
 
-        // 4. Create check-in if not already present
+        // 4. Block duplicate check-in
         const alreadyCheckedIn = activeCheckIns.some(c => c.roverId === session.profile.id);
-        if (!alreadyCheckedIn) {
-          await tx.nodeCheckIn.create({
-            data: { nodeId, roverId: session.profile.id, faction }
-          });
+        if (alreadyCheckedIn) {
+          return {
+            status: "ALREADY_CHECKED_IN",
+            message: "⚠️ You have already checked in to this Hot-Spot. Your teammates must check in to complete the capture!"
+          };
         }
+
+        await tx.nodeCheckIn.create({
+          data: { nodeId, roverId: session.profile.id, faction }
+        });
 
         // 5. Query active unique check-ins again (including this one)
         const updatedCheckIns = await tx.nodeCheckIn.findMany({
@@ -479,7 +475,14 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
         });
 
         const activeUniqueScouts = updatedCheckIns.length;
-        const requiredCount = Math.max(1, totalFactionScouts);
+        
+        const thresholdSetting = await tx.systemSetting.findUnique({
+          where: { key: "hotspot_scout_threshold" }
+        });
+        const overrideThreshold = thresholdSetting ? parseInt(thresholdSetting.value, 10) : null;
+        const requiredCount = overrideThreshold !== null && !isNaN(overrideThreshold) 
+          ? overrideThreshold 
+          : Math.max(1, totalFactionScouts);
 
         if (activeUniqueScouts >= requiredCount) {
           // VICTORY! Conquer the Hotspot
@@ -531,6 +534,10 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
         } catch (waErr) {
           console.error("[WAHA] Failed to broadcast node conquer notification:", waErr);
         }
+      }
+
+      if (result.status === "BLOCKED") {
+        return { success: false, error: result.message };
       }
 
       return {
@@ -602,11 +609,10 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
   }
 
   const distance = getDistanceMeters(lat, lng, node.latitude, node.longitude);
-  const gpsAccuracyBuffer = 35; // 35m allowance for mobile GPS drift
-  if (distance > node.radiusMeters + gpsAccuracyBuffer) {
+  if (distance > 200) {
     return {
       success: false,
-      error: `You are out of range (${Math.round(distance)}m away). Must be within ${node.radiusMeters + gpsAccuracyBuffer}m (includes 35m GPS drift margin).`,
+      error: `You are out of range (${Math.round(distance)}m away). Must be physically near the node (within 200m) to check in.`,
     };
   }
 
@@ -614,9 +620,9 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
     try {
       const result = await prisma.$transaction(async (tx) => {
         const now = new Date();
-        const windowStart = new Date(now.getTime() - 20000); // 20 seconds ago
+        const windowStart = new Date(now.getTime() - 60000); // 60 seconds ago
 
-        // 1. Wipe check-ins older than 20 seconds at this node
+        // 1. Wipe check-ins older than 60 seconds at this node
         await tx.nodeCheckIn.deleteMany({
           where: {
             nodeId,
@@ -624,35 +630,32 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
           }
         });
 
-        // 2. Fetch all active check-ins at this node in the last 20 seconds
+        // 2. Fetch all active check-ins at this node in the last 30 seconds
         const activeCheckIns = await tx.nodeCheckIn.findMany({
           where: { nodeId }
         });
 
-        // 3. Check for interruption (opposing team presence)
+        // 3. Check for opposing faction active queue
         const opposingCheckIn = activeCheckIns.find(c => c.faction !== faction);
         if (opposingCheckIn) {
-          // Reset capture queue for this node!
-          await tx.nodeCheckIn.deleteMany({ where: { nodeId } });
-          
-          // Add current scout as starting point
-          await tx.nodeCheckIn.create({
-            data: { nodeId, roverId: session.profile.id, faction }
-          });
-
           return {
-            status: "INTERRUPTED",
-            message: "⚠️ Opposing team presence detected in range! Capture progress has been reset."
+            status: "BLOCKED",
+            message: `⚠️ Faction ${opposingCheckIn.faction} is actively capturing this Hot-Spot! You must wait for their queue to expire.`
           };
         }
 
-        // 4. Create check-in if not already present
+        // 4. Block duplicate check-in
         const alreadyCheckedIn = activeCheckIns.some(c => c.roverId === session.profile.id);
-        if (!alreadyCheckedIn) {
-          await tx.nodeCheckIn.create({
-            data: { nodeId, roverId: session.profile.id, faction }
-          });
+        if (alreadyCheckedIn) {
+          return {
+            status: "ALREADY_CHECKED_IN",
+            message: "⚠️ You have already checked in to this Hot-Spot. Your teammates must check in to complete the capture!"
+          };
         }
+
+        await tx.nodeCheckIn.create({
+          data: { nodeId, roverId: session.profile.id, faction }
+        });
 
         // 5. Query active unique check-ins again (including this one)
         const updatedCheckIns = await tx.nodeCheckIn.findMany({
@@ -666,7 +669,14 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
         });
 
         const activeUniqueScouts = updatedCheckIns.length;
-        const requiredCount = Math.max(1, totalFactionScouts);
+        
+        const thresholdSetting = await tx.systemSetting.findUnique({
+          where: { key: "hotspot_scout_threshold" }
+        });
+        const overrideThreshold = thresholdSetting ? parseInt(thresholdSetting.value, 10) : null;
+        const requiredCount = overrideThreshold !== null && !isNaN(overrideThreshold) 
+          ? overrideThreshold 
+          : Math.max(1, totalFactionScouts);
 
         if (activeUniqueScouts >= requiredCount) {
           // VICTORY! Conquer the Hotspot!
@@ -719,8 +729,8 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
           console.error("Failed to broadcast hot-spot capture notification:", waErr);
         }
         return { success: true, message: result.message };
-      } else if (result.status === "INTERRUPTED") {
-        await logSystemAction("GEONODE_HOTSPOT_INTERRUPTED", `Rover "${session.profile.fullName}" checked in at Hot-Spot "${node.name}", but opposing team presence reset the queue.`);
+      } else if (result.status === "INTERRUPTED" || result.status === "BLOCKED" || result.status === "ALREADY_CHECKED_IN") {
+        await logSystemAction("GEONODE_HOTSPOT_BLOCKED", `Rover "${session.profile.fullName}" attempted check-in at Hot-Spot "${node.name}", but check-in failed or was blocked: ${result.message}`);
         return { success: false, error: result.message };
       } else {
         return { success: true, message: result.message };
@@ -1530,7 +1540,8 @@ export async function adminSpawnHotSpot(name: string, lat?: number, lng?: number
     // Dispatch WhatsApp Broadcast Notification
     try {
       const alertMsg = `🚨 *HELIOS TACTICAL UPDATE: HOT-ZONE SPAWNED!* 🚨\n\nA new active capture point *"${nodeName}"* has been established!\n📍 Coords: *${finalLat.toFixed(6)}, ${finalLng.toFixed(6)}*\n\n🔥 Faction members must check in within 20s of each other to secure it. Opposing presence resets queue!\nNavigate: https://maps.google.com/?q=${finalLat.toFixed(6)},${finalLng.toFixed(6)}`;
-      await sendWhatsAppMessage("+961700078138", alertMsg);
+      const groupId = await getOperationHeliosGroupId();
+      await sendWhatsAppMessage(groupId, alertMsg);
     } catch (waErr) {
       console.error("[WAHA] Failed to broadcast hotspot spawn:", waErr);
     }
@@ -1812,10 +1823,16 @@ export async function getLiveGeoNodes() {
   if (!session) return { success: false, error: "Unauthorized" };
 
   const now = new Date();
-  const windowStart = new Date(now.getTime() - 20000); // 20s window
+  const windowStart = new Date(now.getTime() - 60000); // 60s window
 
   try {
-    // Wipe expired check-ins older than 20 seconds
+    const thresholdSetting = await prisma.systemSetting.findUnique({
+      where: { key: "hotspot_scout_threshold" }
+    });
+    const overrideThreshold = thresholdSetting ? parseInt(thresholdSetting.value, 10) : null;
+    const hasOverride = overrideThreshold !== null && !isNaN(overrideThreshold);
+
+    // Wipe expired check-ins older than 60 seconds
     await prisma.nodeCheckIn.deleteMany({
       where: {
         createdAt: { lt: windowStart }
@@ -1844,16 +1861,19 @@ export async function getLiveGeoNodes() {
       let activeFaction: string | null = null;
       let activeCount = 0;
       let remainingSeconds = 0;
-      const requiredCount = nodeCheckIns[0]?.faction === "ALPHA" ? Math.max(1, alphaScouts) : Math.max(1, bravoScouts);
+      let checkedInRovers: string[] = [];
+      const defaultReq = nodeCheckIns[0]?.faction === "ALPHA" ? Math.max(1, alphaScouts) : Math.max(1, bravoScouts);
+      const requiredCount = hasOverride ? overrideThreshold : defaultReq;
 
       if (nodeCheckIns.length > 0) {
         activeFaction = nodeCheckIns[0].faction;
         const factionCheckIns = nodeCheckIns.filter(c => c.faction === activeFaction);
         activeCount = new Set(factionCheckIns.map(c => c.roverId)).size;
+        checkedInRovers = Array.from(new Set(factionCheckIns.map(c => c.roverId)));
         
         const oldestCheckInTime = nodeCheckIns[0].createdAt.getTime();
         const elapsed = now.getTime() - oldestCheckInTime;
-        remainingSeconds = Math.max(0, Math.ceil((20000 - elapsed) / 1000));
+        remainingSeconds = Math.max(0, Math.ceil((60000 - elapsed) / 1000));
       }
 
       return {
@@ -1868,7 +1888,8 @@ export async function getLiveGeoNodes() {
         activeFaction,
         activeCount,
         requiredCount,
-        remainingSeconds
+        remainingSeconds,
+        checkedInRovers
       };
     });
 
@@ -1880,5 +1901,80 @@ export async function getLiveGeoNodes() {
     };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to fetch live nodes" };
+  }
+}
+
+// 27. Get Operation Helios Group ID from settings
+export async function adminGetOperationHeliosGroup() {
+  try {
+    await checkAdminSession();
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: "operation_helios_group_id" },
+    });
+    // live: 120363409250032589@g.us
+    // test: 120363410563591186@g.us
+    return { success: true, groupId: setting?.value || "120363410563591186@g.us" };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch group ID" };
+  }
+}
+
+// 28. Send Quest Reminder WhatsApp message to group
+export async function adminSendQuestReminder(questId: string, groupId: string) {
+  try {
+    await checkAdminSession();
+
+    const quest = await prisma.quest.findUnique({ where: { id: questId } });
+    if (!quest) throw new Error("Quest not found");
+
+    if (!groupId || !groupId.trim()) {
+      throw new Error("Group Chat ID is required");
+    }
+
+    // Save the group ID for future usage
+    await prisma.systemSetting.upsert({
+      where: { key: "operation_helios_group_id" },
+      update: { value: groupId.trim() },
+      create: { key: "operation_helios_group_id", value: groupId.trim() },
+    });
+
+    const message = `🔔 *HELIOS MISSION REMINDER* 🔔\n\n📢 Rovers! Don't forget to complete the active challenge: *"${quest.title}"*!\n💰 Reward: *${quest.creditReward} Credits*\n${quest.clueHint ? `🔍 Clue Hint: ${quest.clueHint}\n` : ""}\nLog in to your Helios Terminal and submit the decryption key: https://sdcsaintjeanmarc.org/en/rovers/terminal`;
+
+    const success = await sendWhatsAppMessage(groupId.trim(), message);
+    if (!success) {
+      throw new Error("Failed to send WhatsApp message. Please verify gateway logs.");
+    }
+
+    await logSystemAction(
+      "ADMIN_QUEST_REMINDER_SENT",
+      `Admin sent quest reminder for "${quest.title}" to group "${groupId.trim()}".`
+    );
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to send reminder" };
+  }
+}
+
+// 29. Admin Update Hotspot Capture Threshold override
+export async function adminUpdateHotspotThreshold(threshold: number | null) {
+  try {
+    await checkAdminSession();
+    if (threshold === null || isNaN(threshold)) {
+      await prisma.systemSetting.delete({
+        where: { key: "hotspot_scout_threshold" }
+      });
+    } else {
+      await prisma.systemSetting.upsert({
+        where: { key: "hotspot_scout_threshold" },
+        update: { value: String(threshold) },
+        create: { key: "hotspot_scout_threshold", value: String(threshold) },
+      });
+    }
+    revalidatePath("/rovers/admin");
+    revalidatePath("/rovers/nav");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to update threshold setting" };
   }
 }

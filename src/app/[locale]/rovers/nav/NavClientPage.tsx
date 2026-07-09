@@ -16,15 +16,16 @@ interface NavClientPageProps {
   }[];
   userFaction: string;
   locale: string;
+  userId: string;
 }
 
-export default function NavClientPage({ nodes: initialNodes, userFaction, locale }: NavClientPageProps) {
+export default function NavClientPage({ nodes: initialNodes, userFaction, locale, userId }: NavClientPageProps) {
   const [nodes, setNodes] = useState(initialNodes);
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
 
-  // Poll nodes every 3 seconds to update coordinate status in real-time
+  // Poll nodes every 1 second to update coordinate status in real-time
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -35,7 +36,7 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
       } catch (err) {
         console.error("Failed to poll live nodes:", err);
       }
-    }, 3000);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, []);
@@ -428,6 +429,7 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                   userFaction={userFaction}
                   userCoords={coords}
                   locale={locale}
+                  userId={userId}
                 />
               </div>
             ))}
