@@ -17,9 +17,10 @@ export default async function LeaderboardPage({ params }: PageProps) {
 
     // Query all scouts with rover profiles, sorted by credits desc
     const leaderboard = await prisma.roverProfile.findMany({
-        orderBy: {
-            roverCredits: "desc",
-        },
+        orderBy: [
+            { roverCredits: "desc" },
+            { updatedAt: "asc" }
+        ],
         include: {
             profile: true,
         },
@@ -51,6 +52,20 @@ export default async function LeaderboardPage({ params }: PageProps) {
                         <p className="text-zinc-500 text-xs mt-1">
                             Live rankings of all scouts based on accumulated mission credits.
                         </p>
+                        {session.profile.role === "admin" && (
+                            <form action={async () => {
+                                'use server';
+                                const { adminSendLeaderboardUpdate } = await import("@/app/actions/rovers");
+                                await adminSendLeaderboardUpdate();
+                            }} className="mt-3">
+                                <button
+                                    type="submit"
+                                    className="bg-amber-500 text-black hover:bg-amber-400 font-extrabold text-[10px] px-3.5 py-1.5 rounded uppercase tracking-wider transition cursor-pointer"
+                                >
+                                    📢 Send Update to WhatsApp Group
+                                </button>
+                            </form>
+                        )}
                     </div>
                     <div className="flex gap-4 text-xs font-semibold bg-black/60 border border-amber-500/10 px-4 py-2 rounded">
                         <div className="flex flex-col items-center">

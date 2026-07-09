@@ -2,237 +2,239 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  adminReleaseQuest,
-  adminApproveSignOff,
-  adminAdjustCredits,
-  updateRoverPhoneNumber,
-  adminToggleNightNav,
-  adminCreateRover,
-  adminCreateQuest,
-  adminDeleteQuest,
-  adminUpdateQuest,
-  adminCreateShopItem,
-  adminUpdateShopItem,
-  adminDeleteShopItem,
-  adminUpdateRover,
-  adminDeleteRover,
-  adminSpawnHotSpot,
-  adminClearHotSpots,
-  adminMassUploadRovers,
-  adminInviteUser,
-  adminMassUploadQuests,
-  adminMassUploadShopItems,
-  adminDeclineSignOff,
-  adminGetOperationHeliosGroup,
-  adminSendQuestReminder,
-  adminUpdateHotspotThreshold,
+    adminReleaseQuest,
+    adminApproveSignOff,
+    adminAdjustCredits,
+    updateRoverPhoneNumber,
+    adminToggleNightNav,
+    adminCreateRover,
+    adminCreateQuest,
+    adminDeleteQuest,
+    adminUpdateQuest,
+    adminCreateShopItem,
+    adminUpdateShopItem,
+    adminDeleteShopItem,
+    adminUpdateRover,
+    adminDeleteRover,
+    adminSpawnHotSpot,
+    adminClearHotSpots,
+    adminMassUploadRovers,
+    adminInviteUser,
+    adminMassUploadQuests,
+    adminMassUploadShopItems,
+    adminDeclineSignOff,
+    adminGetOperationHeliosGroup,
+    adminSendQuestReminder,
+    adminUpdateHotspotThreshold,
+    adminGetItemPurchaseHistory,
 } from "@/app/actions/rovers";
 
 const LocalDateStr = ({ date }: { date: string | Date }) => {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
-  if (!mounted) {
-    return <span className="opacity-0">...</span>;
-  }
+    if (!mounted) {
+        return <span className="opacity-0">...</span>;
+    }
 
-  return <span>{new Date(date).toLocaleString()}</span>;
+    return <span>{new Date(date).toLocaleString()}</span>;
 };
 
 interface Quest {
-  id: string;
-  title: string;
-  description?: string;
-  clueHint?: string | null;
-  creditReward: number;
-  isReleased: boolean;
-  unlockedAtDate: Date;
-  expiresAt?: Date | string | null;
-  verificationType: "DIGITAL_CODE" | "LEADER_SIGN_OFF";
-  phase?: "PRE_CAMP" | "LIVE_CAMP";
+    id: string;
+    title: string;
+    description?: string;
+    clueHint?: string | null;
+    creditReward: number;
+    isReleased: boolean;
+    unlockedAtDate: Date;
+    expiresAt?: Date | string | null;
+    verificationType: "DIGITAL_CODE" | "LEADER_SIGN_OFF";
+    phase?: "PRE_CAMP" | "LIVE_CAMP";
 }
 
 interface Rover {
-  id: string;
-  fullName: string;
-  email?: string;
-  role?: string;
-  unit: string | null;
-  lastActiveAt?: Date | string | null;
-  roverProfile: {
-    roverCredits: number;
-    faction: "ALPHA" | "BRAVO" | null;
-    phoneNumber: string;
-  } | null;
-  questCompletions: {
-    questId: string;
-    isVerified: boolean;
-    quest: Quest;
-  }[];
+    id: string;
+    fullName: string;
+    email?: string;
+    role?: string;
+    unit: string | null;
+    lastActiveAt?: Date | string | null;
+    roverProfile: {
+        roverCredits: number;
+        faction: "ALPHA" | "BRAVO" | null;
+        phoneNumber: string;
+    } | null;
+    questCompletions: {
+        questId: string;
+        isVerified: boolean;
+        quest: Quest;
+    }[];
 }
 
 interface ShopItem {
-  id: string;
-  title: string;
-  description: string;
-  type: "FIXED_PRICE" | "AUCTION";
-  priceOrCurrentBid: number;
-  stock: number;
-  isAvailable: boolean;
-  highestBidder: {
     id: string;
-    fullName: string;
-  } | null;
+    title: string;
+    description: string;
+    type: "FIXED_PRICE" | "AUCTION";
+    priceOrCurrentBid: number;
+    stock: number;
+    isAvailable: boolean;
+    highestBidder: {
+        id: string;
+        fullName: string;
+    } | null;
 }
 
 interface SystemLog {
-  id: number;
-  phone: string;
-  body: string;
-  status: string;
-  error: string | null;
-  createdAt: Date | string;
+    id: number;
+    phone: string;
+    body: string;
+    status: string;
+    error: string | null;
+    createdAt: Date | string;
 }
 
 interface AdminClientPageProps {
-  initialQuests: Quest[];
-  initialRovers: Rover[];
-  initialShopItems?: ShopItem[];
-  initialLogs?: SystemLog[];
-  locale: string;
-  initialNightNavActive: boolean;
-  initialHotspotThreshold?: number | null;
+    initialQuests: Quest[];
+    initialRovers: Rover[];
+    initialShopItems?: ShopItem[];
+    initialLogs?: SystemLog[];
+    locale: string;
+    initialNightNavActive: boolean;
+    initialHotspotThreshold?: number | null;
 }
 
 export default function AdminClientPage({
-  initialQuests,
-  initialRovers,
-  initialShopItems = [],
-  initialLogs = [],
-  locale,
-  initialNightNavActive,
-  initialHotspotThreshold = null,
+    initialQuests,
+    initialRovers,
+    initialShopItems = [],
+    initialLogs = [],
+    locale,
+    initialNightNavActive,
+    initialHotspotThreshold = null,
 }: AdminClientPageProps) {
-  const [quests, setQuests] = useState<Quest[]>(initialQuests);
-  const [rovers, setRovers] = useState<Rover[]>(initialRovers);
-  const [shopItems, setShopItems] = useState<ShopItem[]>(initialShopItems);
-  const [logs, setLogs] = useState<SystemLog[]>(initialLogs);
-  const [logsPage, setLogsPage] = useState(1);
-  const [logsTotalPages, setLogsTotalPages] = useState(1);
-  const [logsTotal, setLogsTotal] = useState(0);
-  const [logsLimit] = useState(50);
-  const [nightNavActive, setNightNavActive] = useState(initialNightNavActive);
-  const [hotspotThreshold, setHotspotThreshold] = useState<number | "">(initialHotspotThreshold ?? "");
+    const [quests, setQuests] = useState<Quest[]>(initialQuests);
+    const [rovers, setRovers] = useState<Rover[]>(initialRovers);
+    const [shopItems, setShopItems] = useState<ShopItem[]>(initialShopItems);
+    const [logs, setLogs] = useState<SystemLog[]>(initialLogs);
+    const [logsPage, setLogsPage] = useState(1);
+    const [logsTotalPages, setLogsTotalPages] = useState(1);
+    const [logsTotal, setLogsTotal] = useState(0);
+    const [logsLimit] = useState(50);
+    const [nightNavActive, setNightNavActive] = useState(initialNightNavActive);
+    const [hotspotThreshold, setHotspotThreshold] = useState<number | "">(initialHotspotThreshold ?? "");
 
-  // Workstation active tab state
-  const [activeTab, setActiveTab] = useState<"scouts" | "challenges" | "registry" | "marketplace" | "logs">("scouts");
+    // Workstation active tab state
+    const [activeTab, setActiveTab] = useState<"scouts" | "challenges" | "registry" | "marketplace" | "logs">("scouts");
 
-  // Inline Credits Adjuster state
-  const [adjustingCreditsId, setAdjustingCreditsId] = useState<string | null>(null);
-  const [inlineCreditsAmount, setInlineCreditsAmount] = useState<number | "">("");
-  const [inlineAdjustReason, setInlineAdjustReason] = useState("");
+    // Inline Credits Adjuster state
+    const [adjustingCreditsId, setAdjustingCreditsId] = useState<string | null>(null);
+    const [inlineCreditsAmount, setInlineCreditsAmount] = useState<number | "">("");
+    const [inlineAdjustReason, setInlineAdjustReason] = useState("");
 
-  // Phone Editor state
-  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
-  const [phoneVal, setPhoneVal] = useState("");
+    // Phone Editor state
+    const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
+    const [phoneVal, setPhoneVal] = useState("");
 
-  // Add User form state
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserFullName, setNewUserFullName] = useState("");
-  const [newUserPassword, setNewUserPassword] = useState("");
-  const [newUserRole, setNewUserRole] = useState<"scout" | "admin">("scout");
-  const [newUserUnit, setNewUserUnit] = useState("");
-  const [newUserFaction, setNewUserFaction] = useState<"ALPHA" | "BRAVO" | "">("");
-  const [newUserPhone, setNewUserPhone] = useState("");
+    // Add User form state
+    const [newUserEmail, setNewUserEmail] = useState("");
+    const [newUserFullName, setNewUserFullName] = useState("");
+    const [newUserPassword, setNewUserPassword] = useState("");
+    const [newUserRole, setNewUserRole] = useState<"scout" | "admin">("scout");
+    const [newUserUnit, setNewUserUnit] = useState("");
+    const [newUserFaction, setNewUserFaction] = useState<"ALPHA" | "BRAVO" | "">("");
+    const [newUserPhone, setNewUserPhone] = useState("");
 
-  // Add Quest form state
-  const [newQuestTitle, setNewQuestTitle] = useState("");
-  const [newQuestDesc, setNewQuestDesc] = useState("");
-  const [newQuestHint, setNewQuestHint] = useState("");
-  const [newQuestType, setNewQuestType] = useState<"DIGITAL_CODE" | "LEADER_SIGN_OFF">("DIGITAL_CODE");
-  const [newQuestAnswer, setNewQuestAnswer] = useState("");
-  const [newQuestReward, setNewQuestReward] = useState<number | "">("");
-  const [newQuestPhase, setNewQuestPhase] = useState<"PRE_CAMP" | "LIVE_CAMP">("PRE_CAMP");
-  const [newQuestDate, setNewQuestDate] = useState("");
-  const [newQuestExpiry, setNewQuestExpiry] = useState("");
-  const [newQuestReleased, setNewQuestReleased] = useState(false);
+    // Add Quest form state
+    const [newQuestTitle, setNewQuestTitle] = useState("");
+    const [newQuestDesc, setNewQuestDesc] = useState("");
+    const [newQuestHint, setNewQuestHint] = useState("");
+    const [newQuestType, setNewQuestType] = useState<"DIGITAL_CODE" | "LEADER_SIGN_OFF">("DIGITAL_CODE");
+    const [newQuestAnswer, setNewQuestAnswer] = useState("");
+    const [newQuestReward, setNewQuestReward] = useState<number | "">("");
+    const [newQuestPhase, setNewQuestPhase] = useState<"PRE_CAMP" | "LIVE_CAMP">("PRE_CAMP");
+    const [newQuestDate, setNewQuestDate] = useState("");
+    const [newQuestExpiry, setNewQuestExpiry] = useState("");
+    const [newQuestReleased, setNewQuestReleased] = useState(false);
 
-  // Hot Spot form state
-  const [hotspotName, setHotspotName] = useState("");
-  const [hotspotLat, setHotspotLat] = useState("");
-  const [hotspotLng, setHotspotLng] = useState("");
+    // Hot Spot form state
+    const [hotspotName, setHotspotName] = useState("");
+    const [hotspotLat, setHotspotLat] = useState("");
+    const [hotspotLng, setHotspotLng] = useState("");
 
-  // Mass Upload form state
-  const [massUploadText, setMassUploadText] = useState("");
-  const [massUploadDelimiter, setMassUploadDelimiter] = useState(",");
-  const [massUploadResult, setMassUploadResult] = useState<{ createdCount: number; skippedCount: number; errors: string[] } | null>(null);
+    // Mass Upload form state
+    const [massUploadText, setMassUploadText] = useState("");
+    const [massUploadDelimiter, setMassUploadDelimiter] = useState(",");
+    const [massUploadResult, setMassUploadResult] = useState<{ createdCount: number; skippedCount: number; errors: string[] } | null>(null);
 
-  // Edit overlays state
-  const [editingRover, setEditingRover] = useState<Rover | null>(null);
-  const [editRoverName, setEditRoverName] = useState("");
-  const [editRoverEmail, setEditRoverEmail] = useState("");
-  const [editRoverRole, setEditRoverRole] = useState("scout");
-  const [editRoverUnit, setEditRoverUnit] = useState("");
-  const [editRoverFaction, setEditRoverFaction] = useState<"ALPHA" | "BRAVO" | "">("");
-  const [editRoverPhone, setEditRoverPhone] = useState("");
-  const [editRoverPassword, setEditRoverPassword] = useState("");
+    // Edit overlays state
+    const [editingRover, setEditingRover] = useState<Rover | null>(null);
+    const [editRoverName, setEditRoverName] = useState("");
+    const [editRoverEmail, setEditRoverEmail] = useState("");
+    const [editRoverRole, setEditRoverRole] = useState("scout");
+    const [editRoverUnit, setEditRoverUnit] = useState("");
+    const [editRoverFaction, setEditRoverFaction] = useState<"ALPHA" | "BRAVO" | "">("");
+    const [editRoverPhone, setEditRoverPhone] = useState("");
+    const [editRoverPassword, setEditRoverPassword] = useState("");
 
-  const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
-  const [editQuestTitle, setEditQuestTitle] = useState("");
-  const [editQuestReward, setEditQuestReward] = useState<number | "">("");
-  const [editQuestDesc, setEditQuestDesc] = useState("");
-  const [editQuestHint, setEditQuestHint] = useState("");
-  const [editQuestType, setEditQuestType] = useState<"DIGITAL_CODE" | "LEADER_SIGN_OFF">("DIGITAL_CODE");
-  const [editQuestAnswer, setEditQuestAnswer] = useState("");
-  const [editQuestDate, setEditQuestDate] = useState("");
-  const [editQuestExpiry, setEditQuestExpiry] = useState("");
-  const [editQuestPhase, setEditQuestPhase] = useState<"PRE_CAMP" | "LIVE_CAMP">("PRE_CAMP");
-  const [editQuestReleased, setEditQuestReleased] = useState(false);
+    const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
+    const [editQuestTitle, setEditQuestTitle] = useState("");
+    const [editQuestReward, setEditQuestReward] = useState<number | "">("");
+    const [editQuestDesc, setEditQuestDesc] = useState("");
+    const [editQuestHint, setEditQuestHint] = useState("");
+    const [editQuestType, setEditQuestType] = useState<"DIGITAL_CODE" | "LEADER_SIGN_OFF">("DIGITAL_CODE");
+    const [editQuestAnswer, setEditQuestAnswer] = useState("");
+    const [editQuestDate, setEditQuestDate] = useState("");
+    const [editQuestExpiry, setEditQuestExpiry] = useState("");
+    const [editQuestPhase, setEditQuestPhase] = useState<"PRE_CAMP" | "LIVE_CAMP">("PRE_CAMP");
+    const [editQuestReleased, setEditQuestReleased] = useState(false);
 
-  const [decliningSignOff, setDecliningSignOff] = useState<{ roverId: string; questId: string; questTitle: string; roverName: string } | null>(null);
-  const [declineReasonText, setDeclineReasonText] = useState("");
+    const [decliningSignOff, setDecliningSignOff] = useState<{ roverId: string; questId: string; questTitle: string; roverName: string } | null>(null);
+    const [declineReasonText, setDeclineReasonText] = useState("");
 
-  const [reminderQuest, setReminderQuest] = useState<Quest | null>(null);
-  const [reminderGroupId, setReminderGroupId] = useState("");
+    const [reminderQuest, setReminderQuest] = useState<Quest | null>(null);
+    const [reminderGroupId, setReminderGroupId] = useState("");
 
-  const [editingShopItem, setEditingShopItem] = useState<ShopItem | null>(null);
-  const [editShopTitle, setEditShopTitle] = useState("");
-  const [editShopDesc, setEditShopDesc] = useState("");
-  const [editShopType, setEditShopType] = useState<"FIXED_PRICE" | "AUCTION">("FIXED_PRICE");
-  const [editShopPrice, setEditShopPrice] = useState<number | "">("");
-  const [editShopStock, setEditShopStock] = useState<number | "">("");
-  const [editShopAvailable, setEditShopAvailable] = useState(true);
+    const [editingShopItem, setEditingShopItem] = useState<ShopItem | null>(null);
+    const [editShopTitle, setEditShopTitle] = useState("");
+    const [editShopDesc, setEditShopDesc] = useState("");
+    const [editShopType, setEditShopType] = useState<"FIXED_PRICE" | "AUCTION">("FIXED_PRICE");
+    const [editShopPrice, setEditShopPrice] = useState<number | "">("");
+    const [editShopStock, setEditShopStock] = useState<number | "">("");
+    const [editShopAvailable, setEditShopAvailable] = useState(true);
 
-  // ShopItem Creation form state
-  const [newShopTitle, setNewShopTitle] = useState("");
-  const [newShopDesc, setNewShopDesc] = useState("");
-  const [newShopType, setNewShopType] = useState<"FIXED_PRICE" | "AUCTION">("FIXED_PRICE");
-  const [newShopPrice, setNewShopPrice] = useState<number | "">("");
-  const [newShopStock, setNewShopStock] = useState<number | "">("");
-  const [newShopAvailable, setNewShopAvailable] = useState(true);
+    // ShopItem Creation form state
+    const [newShopTitle, setNewShopTitle] = useState("");
+    const [newShopDesc, setNewShopDesc] = useState("");
+    const [newShopType, setNewShopType] = useState<"FIXED_PRICE" | "AUCTION">("FIXED_PRICE");
+    const [newShopPrice, setNewShopPrice] = useState<number | "">("");
+    const [newShopStock, setNewShopStock] = useState<number | "">("");
+    const [newShopAvailable, setNewShopAvailable] = useState(true);
 
-  // Modal creation visibility states
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [showMassUploadModal, setShowMassUploadModal] = useState(false);
-  const [showAddQuestModal, setShowAddQuestModal] = useState(false);
-  const [showAddShopItemModal, setShowAddShopItemModal] = useState(false);
-  const [showSpawnHotspotModal, setShowSpawnHotspotModal] = useState(false);
-  const [invitingUser, setInvitingUser] = useState<Rover | null>(null);
-  const [inviteTempPassword, setInviteTempPassword] = useState("");
+    // Modal creation visibility states
+    const [showAddUserModal, setShowAddUserModal] = useState(false);
+    const [showMassUploadModal, setShowMassUploadModal] = useState(false);
+    const [showAddQuestModal, setShowAddQuestModal] = useState(false);
+    const [showAddShopItemModal, setShowAddShopItemModal] = useState(false);
+    const [showSpawnHotspotModal, setShowSpawnHotspotModal] = useState(false);
+    const [invitingUser, setInvitingUser] = useState<Rover | null>(null);
+    const [inviteTempPassword, setInviteTempPassword] = useState("");
 
-  // Mass Upload states for Challenges and Shop Items
-  const [showMassUploadQuestsModal, setShowMassUploadQuestsModal] = useState(false);
-  const [massUploadQuestsText, setMassUploadQuestsText] = useState("");
-  const [massUploadQuestsDelimiter, setMassUploadQuestsDelimiter] = useState("\t");
+    // Mass Upload states for Challenges and Shop Items
+    const [showMassUploadQuestsModal, setShowMassUploadQuestsModal] = useState(false);
+    const [massUploadQuestsText, setMassUploadQuestsText] = useState("");
+    const [massUploadQuestsDelimiter, setMassUploadQuestsDelimiter] = useState("\t");
 
-  const [showMassUploadShopItemsModal, setShowMassUploadShopItemsModal] = useState(false);
-  const [massUploadShopItemsText, setMassUploadShopItemsText] = useState("");
-  const [massUploadShopItemsDelimiter, setMassUploadShopItemsDelimiter] = useState("\t");
+    const [showMassUploadShopItemsModal, setShowMassUploadShopItemsModal] = useState(false);
+    const [massUploadShopItemsText, setMassUploadShopItemsText] = useState("");
+    const [massUploadShopItemsDelimiter, setMassUploadShopItemsDelimiter] = useState("\t");
 
-  const [loading, setLoading] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [loading, setLoading] = useState<string | null>(null);
+    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [purchaseHistory, setPurchaseHistory] = useState<{ title: string; logs: any[] } | null>(null);
 
     const startEditPhone = (roverId: string, currentPhone: string) => {
         setEditingPhoneId(roverId);
@@ -275,6 +277,22 @@ export default function AdminClientPage({
                 type: "error",
                 text: `SYSTEM_ERROR: ${err.message || "Failed to update phone number."}`,
             });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const handleShowHistory = async (itemTitle: string) => {
+        setLoading(`history-${itemTitle}`);
+        try {
+            const res = await adminGetItemPurchaseHistory(itemTitle);
+            if (res.success && res.logs) {
+                setPurchaseHistory({ title: itemTitle, logs: res.logs });
+            } else {
+                alert(res.error || "Failed to load purchase history");
+            }
+        } catch (err: any) {
+            alert(err.message || "Failed to fetch history");
         } finally {
             setLoading(null);
         }
@@ -1019,399 +1037,399 @@ export default function AdminClientPage({
         }
     };
 
-  // ==========================================
-  // EDIT ACTION TRIGGERS & SUBMISSIONS
-  // ==========================================
+    // ==========================================
+    // EDIT ACTION TRIGGERS & SUBMISSIONS
+    // ==========================================
 
-  // 1. Rover/User Handlers
-  const handleEditRoverClick = (rover: Rover) => {
-    setEditingRover(rover);
-    setEditRoverName(rover.fullName);
-    setEditRoverEmail(rover.email || "");
-    setEditRoverRole(rover.role || "scout");
-    setEditRoverUnit(rover.unit || "");
-    setEditRoverFaction(rover.roverProfile?.faction || "");
-    setEditRoverPhone(rover.roverProfile?.phoneNumber || "");
-    setEditRoverPassword("");
-  };
+    // 1. Rover/User Handlers
+    const handleEditRoverClick = (rover: Rover) => {
+        setEditingRover(rover);
+        setEditRoverName(rover.fullName);
+        setEditRoverEmail(rover.email || "");
+        setEditRoverRole(rover.role || "scout");
+        setEditRoverUnit(rover.unit || "");
+        setEditRoverFaction(rover.roverProfile?.faction || "");
+        setEditRoverPhone(rover.roverProfile?.phoneNumber || "");
+        setEditRoverPassword("");
+    };
 
-  const handleEditRoverSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingRover || !editRoverName || !editRoverEmail) return;
+    const handleEditRoverSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingRover || !editRoverName || !editRoverEmail) return;
 
-    setLoading(`edit-rover-${editingRover.id}`);
-    setMessage(null);
+        setLoading(`edit-rover-${editingRover.id}`);
+        setMessage(null);
 
-    try {
-      const res = await adminUpdateRover(editingRover.id, {
-        fullName: editRoverName,
-        email: editRoverEmail,
-        role: editRoverRole,
-        unit: editRoverUnit || null,
-        faction: editRoverRole === "scout" && editRoverFaction !== "" ? editRoverFaction : null,
-        phoneNumber: editRoverRole === "scout" ? editRoverPhone : undefined,
-        password: editRoverPassword || undefined,
-      });
-
-      if (res.success) {
-        setMessage({
-          type: "success",
-          text: `USER_UPDATED: Details for '${editRoverName}' saved successfully.`,
-        });
-
-        setRovers((prev) =>
-          prev.map((r) => {
-            if (r.id === editingRover.id) {
-              return {
-                ...r,
+        try {
+            const res = await adminUpdateRover(editingRover.id, {
                 fullName: editRoverName,
                 email: editRoverEmail,
                 role: editRoverRole,
                 unit: editRoverUnit || null,
-                roverProfile: editRoverRole === "scout" ? {
-                  roverCredits: r.roverProfile?.roverCredits || 0,
-                  faction: editRoverFaction !== "" ? editRoverFaction : null,
-                  phoneNumber: editRoverPhone,
-                } : null,
-              };
+                faction: editRoverRole === "scout" && editRoverFaction !== "" ? editRoverFaction : null,
+                phoneNumber: editRoverRole === "scout" ? editRoverPhone : undefined,
+                password: editRoverPassword || undefined,
+            });
+
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `USER_UPDATED: Details for '${editRoverName}' saved successfully.`,
+                });
+
+                setRovers((prev) =>
+                    prev.map((r) => {
+                        if (r.id === editingRover.id) {
+                            return {
+                                ...r,
+                                fullName: editRoverName,
+                                email: editRoverEmail,
+                                role: editRoverRole,
+                                unit: editRoverUnit || null,
+                                roverProfile: editRoverRole === "scout" ? {
+                                    roverCredits: r.roverProfile?.roverCredits || 0,
+                                    faction: editRoverFaction !== "" ? editRoverFaction : null,
+                                    phoneNumber: editRoverPhone,
+                                } : null,
+                            };
+                        }
+                        return r;
+                    })
+                );
+
+                setEditingRover(null);
+                setEditRoverPassword("");
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `UPDATE_USER_FAILED: ${res.error || "Failed to update user."}`,
+                });
             }
-            return r;
-          })
-        );
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to edit user account."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
 
-        setEditingRover(null);
-        setEditRoverPassword("");
-      } else {
-        setMessage({
-          type: "error",
-          text: `UPDATE_USER_FAILED: ${res.error || "Failed to update user."}`,
-        });
-      }
-    } catch (err: any) {
-      setMessage({
-        type: "error",
-        text: `SYSTEM_ERROR: ${err.message || "Failed to edit user account."}`,
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
+    const handleDeleteRover = async (userId: string, fullName: string) => {
+        if (!confirm(`CAUTION: Are you sure you want to permanently delete user "${fullName}"? This will erase their login credentials and all associated profiles.`)) return;
 
-  const handleDeleteRover = async (userId: string, fullName: string) => {
-    if (!confirm(`CAUTION: Are you sure you want to permanently delete user "${fullName}"? This will erase their login credentials and all associated profiles.`)) return;
+        setLoading(`delete-rover-${userId}`);
+        setMessage(null);
 
-    setLoading(`delete-rover-${userId}`);
-    setMessage(null);
+        try {
+            const res = await adminDeleteRover(userId);
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `USER_DELETED: '${fullName}' has been permanently removed.`,
+                });
+                setRovers((prev) => prev.filter((r) => r.id !== userId));
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `DELETE_USER_FAILED: ${res.error || "Failed to delete user."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Delete transaction failed."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
 
-    try {
-      const res = await adminDeleteRover(userId);
-      if (res.success) {
-        setMessage({
-          type: "success",
-          text: `USER_DELETED: '${fullName}' has been permanently removed.`,
-        });
-        setRovers((prev) => prev.filter((r) => r.id !== userId));
-      } else {
-        setMessage({
-          type: "error",
-          text: `DELETE_USER_FAILED: ${res.error || "Failed to delete user."}`,
-        });
-      }
-    } catch (err: any) {
-      setMessage({
-        type: "error",
-        text: `SYSTEM_ERROR: ${err.message || "Delete transaction failed."}`,
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
+    // 2. Quest/Challenge Handlers
+    const handleEditQuestClick = (quest: Quest) => {
+        setEditingQuest(quest);
+        setEditQuestTitle(quest.title);
+        setEditQuestReward(quest.creditReward);
+        setEditQuestDesc(quest.description || "");
+        setEditQuestHint(quest.clueHint || "");
+        setEditQuestType(quest.verificationType);
+        setEditQuestAnswer("");
+        setEditQuestPhase(quest.phase || "PRE_CAMP");
+        setEditQuestReleased(quest.isReleased);
 
-  // 2. Quest/Challenge Handlers
-  const handleEditQuestClick = (quest: Quest) => {
-    setEditingQuest(quest);
-    setEditQuestTitle(quest.title);
-    setEditQuestReward(quest.creditReward);
-    setEditQuestDesc(quest.description || "");
-    setEditQuestHint(quest.clueHint || "");
-    setEditQuestType(quest.verificationType);
-    setEditQuestAnswer("");
-    setEditQuestPhase(quest.phase || "PRE_CAMP");
-    setEditQuestReleased(quest.isReleased);
-    
-    // Format date for datetime-local input
-    if (quest.unlockedAtDate) {
-      const date = new Date(quest.unlockedAtDate);
-      const tzOffset = date.getTimezoneOffset() * 60000;
-      const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
-      setEditQuestDate(localISOTime);
-    } else {
-      setEditQuestDate("");
-    }
+        // Format date for datetime-local input
+        if (quest.unlockedAtDate) {
+            const date = new Date(quest.unlockedAtDate);
+            const tzOffset = date.getTimezoneOffset() * 60000;
+            const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+            setEditQuestDate(localISOTime);
+        } else {
+            setEditQuestDate("");
+        }
 
-    if (quest.expiresAt) {
-      const date = new Date(quest.expiresAt);
-      const tzOffset = date.getTimezoneOffset() * 60000;
-      const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
-      setEditQuestExpiry(localISOTime);
-    } else {
-      setEditQuestExpiry("");
-    }
-  };
+        if (quest.expiresAt) {
+            const date = new Date(quest.expiresAt);
+            const tzOffset = date.getTimezoneOffset() * 60000;
+            const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+            setEditQuestExpiry(localISOTime);
+        } else {
+            setEditQuestExpiry("");
+        }
+    };
 
-  const handleEditQuestSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingQuest || !editQuestTitle || !editQuestDesc || editQuestReward === "" || !editQuestDate) return;
+    const handleEditQuestSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingQuest || !editQuestTitle || !editQuestDesc || editQuestReward === "" || !editQuestDate) return;
 
-    setLoading(`edit-quest-${editingQuest.id}`);
-    setMessage(null);
+        setLoading(`edit-quest-${editingQuest.id}`);
+        setMessage(null);
 
-    try {
-      const res = await adminUpdateQuest(editingQuest.id, {
-        title: editQuestTitle,
-        description: editQuestDesc,
-        clueHint: editQuestHint || null,
-        verificationType: editQuestType,
-        answerCode: editQuestType === "DIGITAL_CODE" ? editQuestAnswer : undefined,
-        creditReward: Number(editQuestReward),
-        unlockedAtDate: new Date(editQuestDate).toISOString(),
-        expiresAt: editQuestExpiry ? new Date(editQuestExpiry).toISOString() : null,
-        phase: editQuestPhase,
-        isReleased: editQuestReleased,
-      });
-
-      if (res.success) {
-        setMessage({
-          type: "success",
-          text: `CHALLENGE_UPDATED: '${editQuestTitle}' has been successfully saved.`,
-        });
-
-        setQuests((prev) =>
-          prev.map((q) => {
-            if (q.id === editingQuest.id) {
-              return {
-                ...q,
+        try {
+            const res = await adminUpdateQuest(editingQuest.id, {
                 title: editQuestTitle,
                 description: editQuestDesc,
                 clueHint: editQuestHint || null,
                 verificationType: editQuestType,
+                answerCode: editQuestType === "DIGITAL_CODE" ? editQuestAnswer : undefined,
                 creditReward: Number(editQuestReward),
-                unlockedAtDate: new Date(editQuestDate),
-                expiresAt: editQuestExpiry ? new Date(editQuestExpiry) : null,
+                unlockedAtDate: new Date(editQuestDate).toISOString(),
+                expiresAt: editQuestExpiry ? new Date(editQuestExpiry).toISOString() : null,
                 phase: editQuestPhase,
                 isReleased: editQuestReleased,
-              };
+            });
+
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `CHALLENGE_UPDATED: '${editQuestTitle}' has been successfully saved.`,
+                });
+
+                setQuests((prev) =>
+                    prev.map((q) => {
+                        if (q.id === editingQuest.id) {
+                            return {
+                                ...q,
+                                title: editQuestTitle,
+                                description: editQuestDesc,
+                                clueHint: editQuestHint || null,
+                                verificationType: editQuestType,
+                                creditReward: Number(editQuestReward),
+                                unlockedAtDate: new Date(editQuestDate),
+                                expiresAt: editQuestExpiry ? new Date(editQuestExpiry) : null,
+                                phase: editQuestPhase,
+                                isReleased: editQuestReleased,
+                            };
+                        }
+                        return q;
+                    }).sort((a, b) => new Date(a.unlockedAtDate).getTime() - new Date(b.unlockedAtDate).getTime())
+                );
+
+                setEditingQuest(null);
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `UPDATE_QUEST_FAILED: ${res.error || "Failed to update challenge."}`,
+                });
             }
-            return q;
-          }).sort((a, b) => new Date(a.unlockedAtDate).getTime() - new Date(b.unlockedAtDate).getTime())
-        );
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to communicate edit with server."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
 
-        setEditingQuest(null);
-      } else {
-        setMessage({
-          type: "error",
-          text: `UPDATE_QUEST_FAILED: ${res.error || "Failed to update challenge."}`,
-        });
-      }
-    } catch (err: any) {
-      setMessage({
-        type: "error",
-        text: `SYSTEM_ERROR: ${err.message || "Failed to communicate edit with server."}`,
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
+    const handleDeleteQuest = async (questId: string, title: string) => {
+        if (!confirm(`CAUTION: Are you sure you want to permanently delete quest "${title}"? This will delete all completions related to it.`)) return;
 
-  const handleDeleteQuest = async (questId: string, title: string) => {
-    if (!confirm(`CAUTION: Are you sure you want to permanently delete quest "${title}"? This will delete all completions related to it.`)) return;
+        setLoading(`delete-quest-${questId}`);
+        setMessage(null);
 
-    setLoading(`delete-quest-${questId}`);
-    setMessage(null);
+        try {
+            const res = await adminDeleteQuest(questId);
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `CHALLENGE_DELETED: '${title}' has been removed from database.`,
+                });
+                setQuests((prev) => prev.filter((q) => q.id !== questId));
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `DELETE_QUEST_FAILED: ${res.error || "Failed to delete quest."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Delete transaction failed."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
 
-    try {
-      const res = await adminDeleteQuest(questId);
-      if (res.success) {
-        setMessage({
-          type: "success",
-          text: `CHALLENGE_DELETED: '${title}' has been removed from database.`,
-        });
-        setQuests((prev) => prev.filter((q) => q.id !== questId));
-      } else {
-        setMessage({
-          type: "error",
-          text: `DELETE_QUEST_FAILED: ${res.error || "Failed to delete quest."}`,
-        });
-      }
-    } catch (err: any) {
-      setMessage({
-        type: "error",
-        text: `SYSTEM_ERROR: ${err.message || "Delete transaction failed."}`,
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
+    // 3. ShopItem/Marketplace Handlers
+    const handleAddShopItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newShopTitle || !newShopDesc || newShopPrice === "") return;
 
-  // 3. ShopItem/Marketplace Handlers
-  const handleAddShopItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newShopTitle || !newShopDesc || newShopPrice === "") return;
+        setLoading("add-shop");
+        setMessage(null);
 
-    setLoading("add-shop");
-    setMessage(null);
+        try {
+            const res = await adminCreateShopItem({
+                title: newShopTitle,
+                description: newShopDesc,
+                type: newShopType,
+                priceOrCurrentBid: Number(newShopPrice),
+                stock: newShopType === "FIXED_PRICE" ? Number(newShopStock || 0) : 0,
+                isAvailable: newShopAvailable,
+            });
 
-    try {
-      const res = await adminCreateShopItem({
-        title: newShopTitle,
-        description: newShopDesc,
-        type: newShopType,
-        priceOrCurrentBid: Number(newShopPrice),
-        stock: newShopType === "FIXED_PRICE" ? Number(newShopStock || 0) : 0,
-        isAvailable: newShopAvailable,
-      });
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `SHOP_ITEM_CREATED: '${newShopTitle}' is now live in marketplace.`,
+                });
 
-      if (res.success) {
-        setMessage({
-          type: "success",
-          text: `SHOP_ITEM_CREATED: '${newShopTitle}' is now live in marketplace.`,
-        });
+                const dummyItem: ShopItem = {
+                    id: res.itemId || Math.random().toString(),
+                    title: newShopTitle,
+                    description: newShopDesc,
+                    type: newShopType,
+                    priceOrCurrentBid: Number(newShopPrice),
+                    stock: newShopType === "FIXED_PRICE" ? Number(newShopStock || 0) : 0,
+                    isAvailable: newShopAvailable,
+                    highestBidder: null,
+                };
 
-        const dummyItem: ShopItem = {
-          id: res.itemId || Math.random().toString(),
-          title: newShopTitle,
-          description: newShopDesc,
-          type: newShopType,
-          priceOrCurrentBid: Number(newShopPrice),
-          stock: newShopType === "FIXED_PRICE" ? Number(newShopStock || 0) : 0,
-          isAvailable: newShopAvailable,
-          highestBidder: null,
-        };
+                setShopItems((prev) => [dummyItem, ...prev]);
+                setShowAddShopItemModal(false);
 
-        setShopItems((prev) => [dummyItem, ...prev]);
-        setShowAddShopItemModal(false);
+                // Reset fields
+                setNewShopTitle("");
+                setNewShopDesc("");
+                setNewShopType("FIXED_PRICE");
+                setNewShopPrice("");
+                setNewShopStock("");
+                setNewShopAvailable(true);
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `CREATE_SHOP_FAILED: ${res.error || "Failed to create shop item."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to save shop item."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
 
-        // Reset fields
-        setNewShopTitle("");
-        setNewShopDesc("");
-        setNewShopType("FIXED_PRICE");
-        setNewShopPrice("");
-        setNewShopStock("");
-        setNewShopAvailable(true);
-      } else {
-        setMessage({
-          type: "error",
-          text: `CREATE_SHOP_FAILED: ${res.error || "Failed to create shop item."}`,
-        });
-      }
-    } catch (err: any) {
-      setMessage({
-        type: "error",
-        text: `SYSTEM_ERROR: ${err.message || "Failed to save shop item."}`,
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
+    const handleEditShopClick = (item: ShopItem) => {
+        setEditingShopItem(item);
+        setEditShopTitle(item.title);
+        setEditShopDesc(item.description);
+        setEditShopType(item.type);
+        setEditShopPrice(item.priceOrCurrentBid);
+        setEditShopStock(item.stock);
+        setEditShopAvailable(item.isAvailable);
+    };
 
-  const handleEditShopClick = (item: ShopItem) => {
-    setEditingShopItem(item);
-    setEditShopTitle(item.title);
-    setEditShopDesc(item.description);
-    setEditShopType(item.type);
-    setEditShopPrice(item.priceOrCurrentBid);
-    setEditShopStock(item.stock);
-    setEditShopAvailable(item.isAvailable);
-  };
+    const handleEditShopSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingShopItem || !editShopTitle || !editShopDesc || editShopPrice === "") return;
 
-  const handleEditShopSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingShopItem || !editShopTitle || !editShopDesc || editShopPrice === "") return;
+        setLoading(`edit-shop-${editingShopItem.id}`);
+        setMessage(null);
 
-    setLoading(`edit-shop-${editingShopItem.id}`);
-    setMessage(null);
-
-    try {
-      const res = await adminUpdateShopItem(editingShopItem.id, {
-        title: editShopTitle,
-        description: editShopDesc,
-        type: editShopType,
-        priceOrCurrentBid: Number(editShopPrice),
-        stock: editShopType === "FIXED_PRICE" ? Number(editShopStock || 0) : 0,
-        isAvailable: editShopAvailable,
-      });
-
-      if (res.success) {
-        setMessage({
-          type: "success",
-          text: `SHOP_ITEM_UPDATED: '${editShopTitle}' updated successfully.`,
-        });
-
-        setShopItems((prev) =>
-          prev.map((item) => {
-            if (item.id === editingShopItem.id) {
-              return {
-                ...item,
+        try {
+            const res = await adminUpdateShopItem(editingShopItem.id, {
                 title: editShopTitle,
                 description: editShopDesc,
                 type: editShopType,
                 priceOrCurrentBid: Number(editShopPrice),
                 stock: editShopType === "FIXED_PRICE" ? Number(editShopStock || 0) : 0,
                 isAvailable: editShopAvailable,
-              };
+            });
+
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `SHOP_ITEM_UPDATED: '${editShopTitle}' updated successfully.`,
+                });
+
+                setShopItems((prev) =>
+                    prev.map((item) => {
+                        if (item.id === editingShopItem.id) {
+                            return {
+                                ...item,
+                                title: editShopTitle,
+                                description: editShopDesc,
+                                type: editShopType,
+                                priceOrCurrentBid: Number(editShopPrice),
+                                stock: editShopType === "FIXED_PRICE" ? Number(editShopStock || 0) : 0,
+                                isAvailable: editShopAvailable,
+                            };
+                        }
+                        return item;
+                    })
+                );
+
+                setEditingShopItem(null);
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `UPDATE_SHOP_FAILED: ${res.error || "Failed to update item."}`,
+                });
             }
-            return item;
-          })
-        );
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to communicate edit with server."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
 
-        setEditingShopItem(null);
-      } else {
-        setMessage({
-          type: "error",
-          text: `UPDATE_SHOP_FAILED: ${res.error || "Failed to update item."}`,
-        });
-      }
-    } catch (err: any) {
-      setMessage({
-        type: "error",
-        text: `SYSTEM_ERROR: ${err.message || "Failed to communicate edit with server."}`,
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
+    const handleDeleteShopItem = async (itemId: string, title: string) => {
+        if (!confirm(`CAUTION: Are you sure you want to permanently delete item "${title}"?`)) return;
 
-  const handleDeleteShopItem = async (itemId: string, title: string) => {
-    if (!confirm(`CAUTION: Are you sure you want to permanently delete item "${title}"?`)) return;
+        setLoading(`delete-shop-${itemId}`);
+        setMessage(null);
 
-    setLoading(`delete-shop-${itemId}`);
-    setMessage(null);
+        try {
+            const res = await adminDeleteShopItem(itemId);
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `SHOP_ITEM_DELETED: '${title}' has been removed from catalog.`,
+                });
+                setShopItems((prev) => prev.filter((item) => item.id !== itemId));
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `DELETE_SHOP_FAILED: ${res.error || "Failed to delete item."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Delete transaction failed."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
 
-    try {
-      const res = await adminDeleteShopItem(itemId);
-      if (res.success) {
-        setMessage({
-          type: "success",
-          text: `SHOP_ITEM_DELETED: '${title}' has been removed from catalog.`,
-        });
-        setShopItems((prev) => prev.filter((item) => item.id !== itemId));
-      } else {
-        setMessage({
-          type: "error",
-          text: `DELETE_SHOP_FAILED: ${res.error || "Failed to delete item."}`,
-        });
-      }
-    } catch (err: any) {
-      setMessage({
-        type: "error",
-        text: `SYSTEM_ERROR: ${err.message || "Delete transaction failed."}`,
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  return (
+    return (
         <div className="flex flex-col gap-6">
             {/* Top Diagnostics Header / Warning Banner */}
             <section className="bg-amber-950/20 border border-amber-500/40 rounded-lg p-5 shadow-[0_0_15px_rgba(245,158,11,0.05)] flex flex-col gap-4">
@@ -1624,67 +1642,67 @@ export default function AdminClientPage({
                                                     </div>
                                                 </div>
 
-                                                 {/* Credits Info */}
-                                                 <div className="flex flex-col gap-2">
-                                                     {adjustingCreditsId === rover.id ? (
-                                                         <div className="p-3 bg-black/60 border border-amber-500/20 rounded flex flex-col gap-2 max-w-xs text-left">
-                                                             <div className="flex items-center gap-2">
-                                                                 <input
-                                                                     type="number"
-                                                                     value={inlineCreditsAmount}
-                                                                     onChange={(e) => {
-                                                                         const v = e.target.value;
-                                                                         setInlineCreditsAmount(v === "" ? "" : Number(v));
-                                                                     }}
-                                                                     placeholder="e.g. 100 or -50"
-                                                                     disabled={loading === `credits-${rover.id}`}
-                                                                     className="bg-zinc-950 border border-amber-500/35 text-zinc-100 text-[10px] px-2 py-1 rounded focus:outline-none w-24 font-semibold"
-                                                                 />
-                                                                 <span className="text-[8px] text-zinc-500 uppercase">Amount (+/-)</span>
-                                                             </div>
-                                                             <input
-                                                                 type="text"
-                                                                 value={inlineAdjustReason}
-                                                                 onChange={(e) => setInlineAdjustReason(e.target.value)}
-                                                                 placeholder="Adjustment reason"
-                                                                 disabled={loading === `credits-${rover.id}`}
-                                                                 className="bg-zinc-950 border border-amber-500/35 text-zinc-100 text-[10px] px-2 py-1 rounded focus:outline-none w-full"
-                                                             />
-                                                             <div className="flex gap-2 justify-end">
-                                                                 <button
-                                                                     onClick={() => handleInlineAdjustCredits(rover.id)}
-                                                                     disabled={loading === `credits-${rover.id}`}
-                                                                     className="bg-amber-500 hover:bg-amber-400 text-black text-[9px] font-extrabold px-2.5 py-1 rounded cursor-pointer"
-                                                                 >
-                                                                     OK
-                                                                 </button>
-                                                                 <button
-                                                                     onClick={() => setAdjustingCreditsId(null)}
-                                                                     className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[9px] font-extrabold px-2.5 py-1 rounded cursor-pointer"
-                                                                 >
-                                                                     CANCEL
-                                                                 </button>
-                                                             </div>
-                                                         </div>
-                                                     ) : (
-                                                         <div className="flex items-center gap-2">
-                                                             <div className="bg-amber-950/20 border border-amber-500/20 px-3 py-1 rounded flex flex-col items-center justify-center min-w-[70px]">
-                                                                 <span className="text-[8px] text-amber-500/60 uppercase">Credits</span>
-                                                                 <span className="text-amber-400 font-extrabold text-sm">{rover.roverProfile?.roverCredits || 0}</span>
-                                                             </div>
-                                                             <button
-                                                                 onClick={() => {
-                                                                     setAdjustingCreditsId(rover.id);
-                                                                     setInlineCreditsAmount("");
-                                                                     setInlineAdjustReason("");
-                                                                 }}
-                                                                 className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[9px] px-2.5 py-2 rounded transition uppercase tracking-wider cursor-pointer"
-                                                             >
-                                                                 Adjust
-                                                             </button>
-                                                         </div>
-                                                     )}
-                                                 </div>
+                                                {/* Credits Info */}
+                                                <div className="flex flex-col gap-2">
+                                                    {adjustingCreditsId === rover.id ? (
+                                                        <div className="p-3 bg-black/60 border border-amber-500/20 rounded flex flex-col gap-2 max-w-xs text-left">
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    value={inlineCreditsAmount}
+                                                                    onChange={(e) => {
+                                                                        const v = e.target.value;
+                                                                        setInlineCreditsAmount(v === "" ? "" : Number(v));
+                                                                    }}
+                                                                    placeholder="e.g. 100 or -50"
+                                                                    disabled={loading === `credits-${rover.id}`}
+                                                                    className="bg-zinc-950 border border-amber-500/35 text-zinc-100 text-[10px] px-2 py-1 rounded focus:outline-none w-24 font-semibold"
+                                                                />
+                                                                <span className="text-[8px] text-zinc-500 uppercase">Amount (+/-)</span>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                value={inlineAdjustReason}
+                                                                onChange={(e) => setInlineAdjustReason(e.target.value)}
+                                                                placeholder="Adjustment reason"
+                                                                disabled={loading === `credits-${rover.id}`}
+                                                                className="bg-zinc-950 border border-amber-500/35 text-zinc-100 text-[10px] px-2 py-1 rounded focus:outline-none w-full"
+                                                            />
+                                                            <div className="flex gap-2 justify-end">
+                                                                <button
+                                                                    onClick={() => handleInlineAdjustCredits(rover.id)}
+                                                                    disabled={loading === `credits-${rover.id}`}
+                                                                    className="bg-amber-500 hover:bg-amber-400 text-black text-[9px] font-extrabold px-2.5 py-1 rounded cursor-pointer"
+                                                                >
+                                                                    OK
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setAdjustingCreditsId(null)}
+                                                                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[9px] font-extrabold px-2.5 py-1 rounded cursor-pointer"
+                                                                >
+                                                                    CANCEL
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="bg-amber-950/20 border border-amber-500/20 px-3 py-1 rounded flex flex-col items-center justify-center min-w-[70px]">
+                                                                <span className="text-[8px] text-amber-500/60 uppercase">Credits</span>
+                                                                <span className="text-amber-400 font-extrabold text-sm">{rover.roverProfile?.roverCredits || 0}</span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setAdjustingCreditsId(rover.id);
+                                                                    setInlineCreditsAmount("");
+                                                                    setInlineAdjustReason("");
+                                                                }}
+                                                                className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[9px] px-2.5 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                                            >
+                                                                Adjust
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
 
                                                 {/* Pending Milestones Actions Card List */}
                                                 <div className="flex flex-col gap-2 min-w-[220px] md:max-w-xs items-end">
@@ -1996,11 +2014,10 @@ export default function AdminClientPage({
                                                     <div className="text-[10px] text-zinc-500 line-clamp-1">{item.description}</div>
                                                 </td>
                                                 <td className="p-3">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                                        item.type === "AUCTION" 
-                                                            ? "bg-purple-950/50 border border-purple-500/30 text-purple-400" 
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.type === "AUCTION"
+                                                            ? "bg-purple-950/50 border border-purple-500/30 text-purple-400"
                                                             : "bg-blue-950/50 border border-blue-500/30 text-blue-400"
-                                                    }`}>
+                                                        }`}>
                                                         {item.type}
                                                     </span>
                                                 </td>
@@ -2012,30 +2029,34 @@ export default function AdminClientPage({
                                                     )}
                                                 </td>
                                                 <td className="p-3">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                                        item.isAvailable 
-                                                            ? "bg-green-950/50 border border-green-500/30 text-green-400" 
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.isAvailable
+                                                            ? "bg-green-950/50 border border-green-500/30 text-green-400"
                                                             : "bg-red-950/50 border border-red-500/30 text-red-400"
-                                                    }`}>
+                                                        }`}>
                                                         {item.isAvailable ? "ACTIVE" : "LOCKED"}
                                                     </span>
                                                 </td>
                                                 <td className="p-3 text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <button
-                                                                onClick={() => handleEditShopClick(item)}
-                                                                className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
-                                                        >
-                                                            EDIT_
-                                                        </button>
-                                                        <button
-                                                                onClick={() => handleDeleteShopItem(item.id, item.title)}
-                                                                disabled={loading === `delete-shop-${item.id}`}
-                                                                className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
-                                                        >
-                                                            {loading === `delete-shop-${item.id}` ? "DELETING..." : "DELETE_"}
-                                                        </button>
-                                                    </div>
+                                                    <button
+                                                        onClick={() => handleShowHistory(item.title)}
+                                                        disabled={loading === `history-${item.title}`}
+                                                        className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                    >
+                                                        {loading === `history-${item.title}` ? "LOADING..." : "HISTORY_"}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleEditShopClick(item)}
+                                                        className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                    >
+                                                        EDIT_
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteShopItem(item.id, item.title)}
+                                                        disabled={loading === `delete-shop-${item.id}`}
+                                                        className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                    >
+                                                        {loading === `delete-shop-${item.id}` ? "DELETING..." : "DELETE_"}
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))
@@ -2089,11 +2110,10 @@ export default function AdminClientPage({
                                                     <LocalDateStr date={log.createdAt} />
                                                 </td>
                                                 <td className="p-3">
-                                                    <div className={`text-[10px] font-bold tracking-wide uppercase ${
-                                                        log.phone === "SYSTEM" 
-                                                            ? "text-amber-400" 
+                                                    <div className={`text-[10px] font-bold tracking-wide uppercase ${log.phone === "SYSTEM"
+                                                            ? "text-amber-400"
                                                             : "text-purple-400"
-                                                    }`}>
+                                                        }`}>
                                                         {log.phone === "SYSTEM" ? "🛡️ SYSTEM_AUDIT" : `📱 WA: ${log.phone}`}
                                                     </div>
                                                 </td>
@@ -2106,13 +2126,12 @@ export default function AdminClientPage({
                                                     )}
                                                 </td>
                                                 <td className="p-3 text-center">
-                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                                                        log.status === "LOG" 
-                                                            ? "bg-amber-950/50 border border-amber-500/30 text-amber-400" 
-                                                            : log.status === "SENT" 
-                                                                ? "bg-green-950/50 border border-green-500/30 text-green-400" 
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${log.status === "LOG"
+                                                            ? "bg-amber-950/50 border border-amber-500/30 text-amber-400"
+                                                            : log.status === "SENT"
+                                                                ? "bg-green-950/50 border border-green-500/30 text-green-400"
                                                                 : "bg-red-950/50 border border-red-500/30 text-red-400"
-                                                    }`}>
+                                                        }`}>
                                                         {log.status}
                                                     </span>
                                                 </td>
@@ -2723,6 +2742,52 @@ export default function AdminClientPage({
                 </div>
             )}
 
+            {/* Modal: Shop Item Purchase History */}
+            {purchaseHistory && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-amber-500/40 rounded-lg max-w-2xl w-full p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] text-left font-mono my-8">
+                        <div className="flex justify-between items-center border-b border-amber-500/20 pb-2 mb-4">
+                            <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest">
+                                🛍️ Purchase History: {purchaseHistory.title}
+                            </h3>
+                            <button 
+                                onClick={() => setPurchaseHistory(null)}
+                                className="text-zinc-500 hover:text-amber-400 text-xs font-bold uppercase transition"
+                            >
+                                CLOSE [X]
+                            </button>
+                        </div>
+
+                        <div className="max-h-[300px] overflow-y-auto">
+                            {purchaseHistory.logs.length === 0 ? (
+                                <p className="text-center py-6 text-zinc-500 text-xs italic">No purchase history found for this item.</p>
+                            ) : (
+                                <table className="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr className="border-b border-amber-500/10 text-amber-500/60 text-[9px] uppercase tracking-wider font-bold">
+                                            <th className="py-2">Date / Time</th>
+                                            <th className="py-2">Transaction Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {purchaseHistory.logs.map((log) => (
+                                            <tr key={log.id} className="border-b border-zinc-900 text-zinc-300 hover:bg-zinc-900/30">
+                                                <td className="py-2.5 font-mono text-[10px] text-zinc-500 whitespace-nowrap pr-4">
+                                                    {new Date(log.createdAt).toLocaleString()}
+                                                </td>
+                                                <td className="py-2.5 text-[10px] text-zinc-300">
+                                                    {log.error}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Modal: Add Individual User */}
             {showAddUserModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
@@ -2849,7 +2914,7 @@ export default function AdminClientPage({
                             📥 BATCH_MASS_IMPORT
                         </h3>
                         <p className="text-[10px] text-zinc-400 uppercase leading-relaxed tracking-wider mb-4 font-sans">
-                            Copy-paste rows directly from Excel or Google Sheets. Delimit values using Tabs or Commas. <br/>
+                            Copy-paste rows directly from Excel or Google Sheets. Delimit values using Tabs or Commas. <br />
                             <strong>Columns:</strong> Name, Email, Password, [Faction: ALPHA/BRAVO], [Phone], [Unit]
                         </p>
 
@@ -3072,7 +3137,7 @@ export default function AdminClientPage({
                             🏆 BATCH_IMPORT_CHALLENGES
                         </h3>
                         <p className="text-[10px] text-zinc-400 uppercase leading-relaxed tracking-wider mb-4 font-sans">
-                            Copy-paste rows directly from spreadsheets. Delimit values using Tabs or Commas. <br/>
+                            Copy-paste rows directly from spreadsheets. Delimit values using Tabs or Commas. <br />
                             <strong>Columns:</strong> Title, CreditReward, Description, [ClueHint], [VerificationType: DIGITAL_CODE/LEADER_SIGN_OFF], [AnswerKey]
                         </p>
 
@@ -3130,7 +3195,7 @@ export default function AdminClientPage({
                             🛒 BATCH_IMPORT_MARKETPLACE
                         </h3>
                         <p className="text-[10px] text-zinc-400 uppercase leading-relaxed tracking-wider mb-4 font-sans">
-                            Copy-paste rows directly from spreadsheets. Delimit values using Tabs or Commas. <br/>
+                            Copy-paste rows directly from spreadsheets. Delimit values using Tabs or Commas. <br />
                             <strong>Columns:</strong> Title, Price, Description, [Type: FIXED_PRICE/AUCTION], [Stock]
                         </p>
 
@@ -3185,7 +3250,7 @@ export default function AdminClientPage({
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
                     <div className="bg-zinc-950 border border-red-500/30 rounded-xl p-6 w-full max-w-md shadow-[0_0_50px_rgba(239,68,68,0.15)] relative">
                         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
-                        
+
                         <h2 className="text-zinc-100 font-extrabold text-lg uppercase tracking-wider mb-2 flex items-center gap-2">
                             <span>✕</span> Decline Sign-off
                         </h2>
@@ -3234,7 +3299,7 @@ export default function AdminClientPage({
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in text-left">
                     <div className="bg-zinc-950 border border-amber-500/30 rounded-xl p-6 w-full max-w-md shadow-[0_0_50px_rgba(245,158,11,0.15)] relative">
                         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
-                        
+
                         <h2 className="text-zinc-100 font-extrabold text-lg uppercase tracking-wider mb-2 flex items-center gap-2">
                             <span>🔔</span> Send Quest Reminder
                         </h2>
@@ -3259,11 +3324,11 @@ export default function AdminClientPage({
                             </div>
 
                             <div className="bg-amber-950/10 border border-amber-500/10 rounded p-3 text-[10px] text-amber-500/80 font-mono">
-                                <span className="font-bold text-amber-400">📝 MSG PREVIEW:</span><br/>
-                                🔔 *HELIOS MISSION REMINDER* 🔔<br/><br/>
-                                📢 Rovers! Don&apos;t forget to complete the active challenge: *&quot;{reminderQuest.title}&quot;*!<br/>
-                                💰 Reward: *{reminderQuest.creditReward} Credits*<br/>
-                                {reminderQuest.clueHint && <>🔍 Clue Hint: {reminderQuest.clueHint}<br/></>}
+                                <span className="font-bold text-amber-400">📝 MSG PREVIEW:</span><br />
+                                🔔 *HELIOS MISSION REMINDER* 🔔<br /><br />
+                                📢 Rovers! Don&apos;t forget to complete the active challenge: *&quot;{reminderQuest.title}&quot;*!<br />
+                                💰 Reward: *{reminderQuest.creditReward} Credits*<br />
+                                {reminderQuest.clueHint && <>🔍 Clue Hint: {reminderQuest.clueHint}<br /></>}
                                 Navigate: https://sdcsaintjeanmarc.org/en/rovers/terminal
                             </div>
 

@@ -520,20 +520,20 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
       revalidatePath("/rovers/admin");
 
       if (result.status === "CAPTURED") {
-        await logSystemAction("GEONODE_HOTSPOT_CONQUERED", `Faction ${faction} conquered Hot-Spot "${node.name}".`);
-        try {
-          const alertMessage = `🎉 *HELIOS TACTICAL UPDATE: SECTOR CONQUERED!* 🎉\n\nFaction *${faction}* has successfully conquered the active Hot-Spot *"${node.name}"*!\n\nAll participating team members have been awarded +150 Credits.`;
-          await broadcastNodeCaptureNotification(
-            session.profile.fullName,
-            node.name,
-            faction,
-            0,
-            0
-          );
-          await sendWhatsAppMessage("+961700078138", alertMessage);
-        } catch (waErr) {
-          console.error("[WAHA] Failed to broadcast node conquer notification:", waErr);
-        }
+        logSystemAction("GEONODE_HOTSPOT_CONQUERED", `Faction ${faction} conquered Hot-Spot "${node.name}".`);
+        const alertMessage = `🎉 *HELIOS TACTICAL UPDATE: SECTOR CONQUERED!* 🎉\n\nFaction *${faction}* has successfully conquered the active Hot-Spot *"${node.name}"*!\n\nAll participating team members have been awarded +150 Credits.`;
+        prisma.geoNode.count({ where: { controllingFaction: "ALPHA" } }).then(alphaCount => {
+          prisma.geoNode.count({ where: { controllingFaction: "BRAVO" } }).then(bravoCount => {
+            broadcastNodeCaptureNotification(
+              session.profile.fullName,
+              node.name,
+              faction,
+              alphaCount,
+              bravoCount
+            ).catch(waErr => console.error("[WAHA] Failed to broadcast node conquer notification:", waErr));
+          });
+        });
+        sendWhatsAppMessage("+961700078138", alertMessage).catch(waErr => console.error("[WAHA] Failed to notify admin:", waErr));
       }
 
       if (result.status === "BLOCKED") {
@@ -714,20 +714,20 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
       revalidatePath("/rovers/admin");
 
       if (result.status === "CAPTURED") {
-        await logSystemAction("GEONODE_HOTSPOT_CONQUERED", `Faction ${faction} conquered Hot-Spot "${node.name}".`);
-        try {
-          const alertMessage = `🎉 *HELIOS TACTICAL UPDATE: SECTOR CONQUERED!* 🎉\n\nFaction *${faction}* has successfully conquered the active Hot-Spot *"${node.name}"*!\n\nAll participating team members have been awarded +150 Credits.`;
-          await broadcastNodeCaptureNotification(
-            session.profile.fullName,
-            node.name,
-            faction,
-            0,
-            0
-          );
-          await sendWhatsAppMessage("+961700078138", alertMessage);
-        } catch (waErr) {
-          console.error("Failed to broadcast hot-spot capture notification:", waErr);
-        }
+        logSystemAction("GEONODE_HOTSPOT_CONQUERED", `Faction ${faction} conquered Hot-Spot "${node.name}".`);
+        const alertMessage = `🎉 *HELIOS TACTICAL UPDATE: SECTOR CONQUERED!* 🎉\n\nFaction *${faction}* has successfully conquered the active Hot-Spot *"${node.name}"*!\n\nAll participating team members have been awarded +150 Credits.`;
+        prisma.geoNode.count({ where: { controllingFaction: "ALPHA" } }).then(alphaCount => {
+          prisma.geoNode.count({ where: { controllingFaction: "BRAVO" } }).then(bravoCount => {
+            broadcastNodeCaptureNotification(
+              session.profile.fullName,
+              node.name,
+              faction,
+              alphaCount,
+              bravoCount
+            ).catch(waErr => console.error("Failed to broadcast hot-spot capture notification:", waErr));
+          });
+        });
+        sendWhatsAppMessage("+961700078138", alertMessage).catch(waErr => console.error("Failed to send admin notification:", waErr));
         return { success: true, message: result.message };
       } else if (result.status === "INTERRUPTED" || result.status === "BLOCKED" || result.status === "ALREADY_CHECKED_IN") {
         await logSystemAction("GEONODE_HOTSPOT_BLOCKED", `Rover "${session.profile.fullName}" attempted check-in at Hot-Spot "${node.name}", but check-in failed or was blocked: ${result.message}`);
@@ -1976,5 +1976,70 @@ export async function adminUpdateHotspotThreshold(threshold: number | null) {
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to update threshold setting" };
+  }
+}
+
+// 30. Admin Get Item Purchase History
+export async function adminGetItemPurchaseHistory(itemTitle: string) {
+  try {
+    await checkAdminSession();
+    const logs = await prisma.whatsAppLog.findMany({
+      where: {
+        phone: "SYSTEM",
+        body: "MARKETPLACE_PURCHASE",
+        error: {
+          contains: `purchased item "${itemTitle}"`
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+    return { success: true, logs };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch purchase history" };
+  }
+}
+
+// 31. Admin Send Leaderboard Update to WhatsApp Group
+export async function adminSendLeaderboardUpdate() {
+  try {
+    await checkAdminSession();
+
+    // Query leaderboard
+    const leaderboard = await prisma.roverProfile.findMany({
+      orderBy: [
+        { roverCredits: "desc" },
+        { updatedAt: "asc" }
+      ],
+      include: { profile: true },
+      where: { faction: { not: null } }
+    });
+
+    const alphaTotal = leaderboard
+      .filter((l) => l.faction === "ALPHA")
+      .reduce((sum, current) => sum + current.roverCredits, 0);
+
+    const bravoTotal = leaderboard
+      .filter((l) => l.faction === "BRAVO")
+      .reduce((sum, current) => sum + current.roverCredits, 0);
+
+    // Build leaderboard message
+    let message = `🏆 *HELIOS LEADERBOARD STATUS UPDATE* 🏆\n\n`;
+    message += `📊 *Faction Stats:*\n🔴 ALPHA: *${alphaTotal} CR*\n🔵 BRAVO: *${bravoTotal} CR*\n\n`;
+    message += `🥇 *Top 5 Scouts:*\n`;
+
+    const topFive = leaderboard.slice(0, 5);
+    topFive.forEach((rover, index) => {
+      const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🔸";
+      message += `${medal} ${index + 1}. *${rover.profile.fullName}* (${rover.faction}): *${rover.roverCredits} CR*\n`;
+    });
+
+    message += `\nKeep completing missions to earn points for your faction! 🚀\n🌐 View full rankings here: https://sdcsaintjeanmarc.org/en/rovers/leaderboard`;
+
+    const groupId = await getOperationHeliosGroupId();
+    await sendWhatsAppMessage(groupId, message);
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to broadcast leaderboard update" };
   }
 }

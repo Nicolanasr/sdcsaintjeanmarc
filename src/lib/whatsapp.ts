@@ -283,40 +283,13 @@ export async function broadcastNodeCaptureNotification(
   bravoCount: number
 ): Promise<number> {
   try {
-    const rovers = await prisma.roverProfile.findMany({
-      select: { phoneNumber: true }
-    });
-
     const message = `🗺️ *HELIOS NIGHT NAV: TERRITORY UPDATE* 🗺️\n\n🛡️ Node Captured: "${nodeName}" has been successfully hacked by Rover *${capturedByName}* for Faction *${faction}*!\n\n📊 Grid Control Status:\n🔴 ALPHA: ${alphaCount} Nodes\n🔵 BRAVO: ${bravoCount} Nodes\n\nCheck active nodes map coordinates here: https://sdcsaintjeanmarc.org/en/rovers/nav`;
 
     // Also send to the WhatsApp Group JID
     const groupId = await getOperationHeliosGroupId();
-    await sendWhatsAppMessage(groupId, message);
+    const success = await sendWhatsAppMessage(groupId, message);
 
-    if (rovers.length === 0) return 0;
-
-    let successCount = 0;
-    for (const r of rovers) {
-      if (r.phoneNumber && r.phoneNumber.trim()) {
-        const success = await sendWhatsAppMessage(r.phoneNumber, message);
-        if (success) successCount++;
-      } else {
-        // Log failed attempt for rovers without a number so it's always recorded
-        try {
-          await prisma.whatsAppLog.create({
-            data: {
-              phone: "MISSING",
-              body: message,
-              status: "FAILED",
-              error: "SKIPPED_NO_PHONE: Rover profile has no phone number registered",
-            },
-          });
-        } catch (dbErr) {
-          console.error("[WAHA] Failed to log skipped message:", dbErr);
-        }
-      }
-    }
-    return successCount;
+    return success ? 1 : 0;
   } catch (err) {
     console.error("[WAHA] Failed to broadcast node capture notification:", err);
     return 0;
