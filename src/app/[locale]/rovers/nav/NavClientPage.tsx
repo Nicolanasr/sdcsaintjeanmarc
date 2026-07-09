@@ -349,12 +349,6 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                     <h2 className="text-xl font-bold tracking-widest text-amber-400 uppercase">
                         HELIOS_TACTICAL_MAP_
                     </h2>
-                    <button
-                        onClick={() => setShowQrScanner(true)}
-                        className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] px-3.5 py-2 rounded uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(245,158,11,0.2)] w-full sm:w-auto"
-                    >
-                        📷 Scan Offline QR Code
-                    </button>
                 </div>
 
                 {/* GPS Coordinate Monitor */}
@@ -506,6 +500,7 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                                     userCoords={coords}
                                     locale={locale}
                                     userId={userId}
+                                    onScanClick={() => setShowQrScanner(true)}
                                 />
                             </div>
                         ))}
