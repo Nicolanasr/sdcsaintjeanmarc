@@ -108,7 +108,7 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
             const onScanSuccess = async (decodedText: string) => {
                 try {
                     scanner.clear();
-                } catch (e) {}
+                } catch (e) { }
                 setShowQrScanner(false);
 
                 // Check in using passcode capture via checkInByQR server action
@@ -127,7 +127,11 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
             const scanner = new L("qr-reader", {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
-                rememberLastUsedCamera: true
+                rememberLastUsedCamera: true,
+                videoConstraints: {
+                    facingMode: "environment"
+                },
+                disableFlip: true
             });
 
             scanner.render(onScanSuccess, onScanFailure);
@@ -140,7 +144,7 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
             if (scanner) {
                 try {
                     scanner.clear().catch((e: any) => console.error("Error clearing scanner:", e));
-                } catch (err) {}
+                } catch (err) { }
                 (window as any).currentScanner = null;
             }
         };
@@ -424,8 +428,8 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                         <button
                             onClick={() => setMapMode("satellite")}
                             className={`px-2.5 py-1 text-[10px] uppercase font-extrabold tracking-wider rounded transition-all cursor-pointer ${mapMode === "satellite"
-                                    ? "bg-amber-500 text-black font-extrabold"
-                                    : "text-zinc-400 hover:text-zinc-200"
+                                ? "bg-amber-500 text-black font-extrabold"
+                                : "text-zinc-400 hover:text-zinc-200"
                                 }`}
                         >
                             🛰️ Satellite
@@ -433,8 +437,8 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                         <button
                             onClick={() => setMapMode("dark")}
                             className={`px-2.5 py-1 text-[10px] uppercase font-extrabold tracking-wider rounded transition-all cursor-pointer ${mapMode === "dark"
-                                    ? "bg-amber-500 text-black font-extrabold"
-                                    : "text-zinc-400 hover:text-zinc-200"
+                                ? "bg-amber-500 text-black font-extrabold"
+                                : "text-zinc-400 hover:text-zinc-200"
                                 }`}
                         >
                             🌑 Dark Vector
