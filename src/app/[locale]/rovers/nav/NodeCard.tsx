@@ -22,6 +22,7 @@ interface NodeCardProps {
   userCoords: { latitude: number; longitude: number } | null;
   locale: string;
   userId: string;
+  onScanClick?: () => void;
 }
 
 // Client-side Haversine helper
@@ -40,7 +41,7 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-export default function NodeCard({ node, userFaction, userCoords, locale, userId }: NodeCardProps) {
+export default function NodeCard({ node, userFaction, userCoords, locale, userId, onScanClick }: NodeCardProps) {
   const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -278,6 +279,16 @@ export default function NodeCard({ node, userFaction, userCoords, locale, userId
               {loading ? "SUBMITTING..." : "SUBMIT_"}
             </button>
           </form>
+          {onScanClick && (
+            <button
+              type="button"
+              onClick={onScanClick}
+              disabled={loading || isOpposingFactionHacking || hasAlreadyCheckedIn}
+              className="mt-2 w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 hover:border-blue-400 text-blue-400 font-extrabold text-[10px] py-2 rounded transition cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5 disabled:opacity-30"
+            >
+              📷 Scan Offline QR Code
+            </button>
+          )}
         </div>
       ) : (
         <div className="mt-auto pt-2 text-center">

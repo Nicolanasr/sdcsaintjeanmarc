@@ -484,13 +484,14 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
           ? overrideThreshold 
           : Math.max(1, totalFactionScouts);
 
+        console.log(`[CAPTURE_DEBUG_PASSCODE] faction="${faction}", totalFactionScouts=${totalFactionScouts}, overrideThreshold=${overrideThreshold}, requiredCount=${requiredCount}, activeUniqueScouts=${activeUniqueScouts}`);
+
         if (activeUniqueScouts >= requiredCount) {
           // VICTORY! Conquer the Hotspot
           await tx.geoNode.update({
             where: { id: nodeId },
             data: {
               controllingFaction: faction,
-              isHotSpot: false,
             }
           });
 
@@ -591,6 +592,30 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
   }
 }
 
+// 6b. Check-In by QR Passcode (Bypasses GPS)
+export async function checkInByQR(passcode: string) {
+  try {
+    const session = await getRoverSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
+    const node = await prisma.geoNode.findFirst({
+      where: {
+        secretPasscode: {
+          equals: passcode.trim(),
+          mode: "insensitive"
+        }
+      }
+    });
+    if (!node) {
+      return { success: false, error: "Invalid QR code passcode scanned." };
+    }
+
+    return await captureNodeByPasscode(node.id, passcode);
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to process QR check-in" };
+  }
+}
+
 // 7. Capture Node by GPS Validation
 export async function captureNodeByGPS(nodeId: string, lat: number, lng: number) {
   const session = await getRoverSession();
@@ -604,7 +629,7 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
   const node = await prisma.geoNode.findUnique({ where: { id: nodeId } });
   if (!node) return { success: false, error: "Node not found" };
 
-  if (!node.isHotSpot && node.controllingFaction === faction) {
+  if (node.controllingFaction === faction) {
     return { success: false, error: `This node is already controlled by your faction (${faction})` };
   }
 
@@ -678,13 +703,14 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
           ? overrideThreshold 
           : Math.max(1, totalFactionScouts);
 
+        console.log(`[CAPTURE_DEBUG_GPS] faction="${faction}", totalFactionScouts=${totalFactionScouts}, overrideThreshold=${overrideThreshold}, requiredCount=${requiredCount}, activeUniqueScouts=${activeUniqueScouts}`);
+
         if (activeUniqueScouts >= requiredCount) {
           // VICTORY! Conquer the Hotspot!
           await tx.geoNode.update({
             where: { id: nodeId },
             data: {
               controllingFaction: faction,
-              isHotSpot: false,
             }
           });
 
@@ -1503,7 +1529,7 @@ export async function adminDeleteRover(userId: string) {
 }
 
 // 24. Admin Spawn Hot-Spot
-export async function adminSpawnHotSpot(name: string, lat?: number, lng?: number) {
+export async function adminSpawnHotSpot(name: string, lat?: number, lng?: number, isHotSpot: boolean = true) {
   try {
     await checkAdminSession();
 
@@ -1531,7 +1557,7 @@ export async function adminSpawnHotSpot(name: string, lat?: number, lng?: number
         radiusMeters: 25,
         secretPasscode: "HOTSPOT_" + Math.random().toString(36).substring(7).toUpperCase(),
         controllingFaction: null,
-        isHotSpot: true,
+        isHotSpot: isHotSpot,
       },
     });
 
@@ -1832,20 +1858,16 @@ export async function getLiveGeoNodes() {
     const overrideThreshold = thresholdSetting ? parseInt(thresholdSetting.value, 10) : null;
     const hasOverride = overrideThreshold !== null && !isNaN(overrideThreshold);
 
-    // Wipe expired check-ins older than 60 seconds
-    await prisma.nodeCheckIn.deleteMany({
+    // Get all active check-ins within the 60 seconds window
+    const allCheckIns = await prisma.nodeCheckIn.findMany({
       where: {
-        createdAt: { lt: windowStart }
-      }
+        createdAt: { gte: windowStart }
+      },
+      orderBy: { createdAt: "asc" }
     });
 
     const nodes = await prisma.geoNode.findMany({
       orderBy: { name: "asc" },
-    });
-
-    // Get all active check-ins
-    const allCheckIns = await prisma.nodeCheckIn.findMany({
-      orderBy: { createdAt: "asc" }
     });
 
     const alphaScouts = await prisma.roverProfile.count({
@@ -1961,7 +1983,7 @@ export async function adminUpdateHotspotThreshold(threshold: number | null) {
   try {
     await checkAdminSession();
     if (threshold === null || isNaN(threshold)) {
-      await prisma.systemSetting.delete({
+      await prisma.systemSetting.deleteMany({
         where: { key: "hotspot_scout_threshold" }
       });
     } else {

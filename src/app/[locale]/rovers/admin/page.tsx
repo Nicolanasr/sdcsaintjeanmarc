@@ -82,12 +82,18 @@ export default async function AdminPage({ params }: PageProps) {
   });
   const hotspotThreshold = thresholdSetting ? parseInt(thresholdSetting.value, 10) : null;
 
+  // Load all geoNodes
+  const nodes = await prisma.geoNode.findMany({
+    orderBy: { name: "asc" },
+  });
+
   return (
     <AdminClientPage
       initialQuests={quests}
       initialRovers={usersList}
       initialShopItems={shopItems}
       initialLogs={[]}
+      initialNodes={nodes}
       locale={locale}
       initialNightNavActive={nightNavActive}
       initialHotspotThreshold={hotspotThreshold}

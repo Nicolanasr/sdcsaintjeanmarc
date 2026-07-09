@@ -97,11 +97,23 @@ interface SystemLog {
     createdAt: Date | string;
 }
 
+interface GeoNode {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    radiusMeters: number;
+    secretPasscode: string;
+    controllingFaction: string | null;
+    isHotSpot: boolean;
+}
+
 interface AdminClientPageProps {
     initialQuests: Quest[];
     initialRovers: Rover[];
     initialShopItems?: ShopItem[];
     initialLogs?: SystemLog[];
+    initialNodes?: GeoNode[];
     locale: string;
     initialNightNavActive: boolean;
     initialHotspotThreshold?: number | null;
@@ -112,6 +124,7 @@ export default function AdminClientPage({
     initialRovers,
     initialShopItems = [],
     initialLogs = [],
+    initialNodes = [],
     locale,
     initialNightNavActive,
     initialHotspotThreshold = null,
@@ -120,6 +133,7 @@ export default function AdminClientPage({
     const [rovers, setRovers] = useState<Rover[]>(initialRovers);
     const [shopItems, setShopItems] = useState<ShopItem[]>(initialShopItems);
     const [logs, setLogs] = useState<SystemLog[]>(initialLogs);
+    const [nodes, setNodes] = useState<GeoNode[]>(initialNodes);
     const [logsPage, setLogsPage] = useState(1);
     const [logsTotalPages, setLogsTotalPages] = useState(1);
     const [logsTotal, setLogsTotal] = useState(0);
@@ -164,6 +178,7 @@ export default function AdminClientPage({
     const [hotspotName, setHotspotName] = useState("");
     const [hotspotLat, setHotspotLat] = useState("");
     const [hotspotLng, setHotspotLng] = useState("");
+    const [spawnIsHotSpot, setSpawnIsHotSpot] = useState(true);
 
     // Mass Upload form state
     const [massUploadText, setMassUploadText] = useState("");
@@ -298,6 +313,54 @@ export default function AdminClientPage({
         }
     };
 
+    const downloadQRCode = async (node: any) => {
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(node.secretPasscode)}`;
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = qrUrl;
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 360;
+            canvas.height = 480;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+
+            // Draw background card (dark premium look)
+            ctx.fillStyle = "#09090b"; // zinc-950
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw orange border
+            ctx.strokeStyle = "#f59e0b"; // amber-500
+            ctx.lineWidth = 4;
+            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+            // Draw QR code image
+            ctx.drawImage(img, 30, 40, 300, 300);
+
+            // Draw Text Details
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 16px Courier New";
+            ctx.textAlign = "center";
+            ctx.fillText(node.name.toUpperCase(), canvas.width / 2, 375);
+
+            ctx.fillStyle = "#f59e0b";
+            ctx.font = "bold 12px Courier New";
+            ctx.fillText(node.isHotSpot ? "🚨 ACTIVE HOT-ZONE 🚨" : "NORMAL ZONE", canvas.width / 2, 400);
+
+            ctx.fillStyle = "#71717a"; // zinc-500
+            ctx.font = "bold 10px Courier New";
+            ctx.fillText(`LAT: ${node.latitude.toFixed(6)}`, canvas.width / 2, 425);
+            ctx.fillText(`LNG: ${node.longitude.toFixed(6)}`, canvas.width / 2, 440);
+            ctx.fillText(`PASS: ${node.secretPasscode}`, canvas.width / 2, 455);
+
+            // Trigger browser download
+            const link = document.createElement("a");
+            link.download = `${node.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_qr.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        };
+    };
+
     // Handle release toggle
     const handleToggleRelease = async (questId: string, currentStatus: boolean) => {
         setLoading(`quest-${questId}`);
@@ -337,9 +400,13 @@ export default function AdminClientPage({
         try {
             const latNum = hotspotLat ? Number(hotspotLat) : undefined;
             const lngNum = hotspotLng ? Number(hotspotLng) : undefined;
-            const res = await adminSpawnHotSpot(hotspotName, latNum, lngNum);
+            const res = await adminSpawnHotSpot(hotspotName, latNum, lngNum, spawnIsHotSpot);
             if (res.success) {
-                setMessage({ text: `SUCCESS: Hot-Spot "${res.node?.name}" spawned successfully at ${res.node?.latitude.toFixed(6)}, ${res.node?.longitude.toFixed(6)}!`, type: "success" });
+                const nodeType = spawnIsHotSpot ? "Hot-Spot" : "Zone";
+                setMessage({ text: `SUCCESS: ${nodeType} "${res.node?.name}" spawned successfully at ${res.node?.latitude.toFixed(6)}, ${res.node?.longitude.toFixed(6)}!`, type: "success" });
+                if (res.node) {
+                    setNodes((prev) => [...prev, res.node as any].sort((a, b) => a.name.localeCompare(b.name)));
+                }
                 setHotspotName("");
                 setHotspotLat("");
                 setHotspotLng("");
@@ -363,6 +430,7 @@ export default function AdminClientPage({
             const res = await adminClearHotSpots();
             if (res.success) {
                 setMessage({ text: `SUCCESS: Cleared all active Hot-Spots successfully (${res.count} removed).`, type: "success" });
+                setNodes((prev) => prev.filter((n) => !n.isHotSpot));
             } else {
                 setMessage({ text: `CLEAR_FAILED: ${res.error}`, type: "error" });
             }
@@ -1963,6 +2031,79 @@ export default function AdminClientPage({
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Section 2: GeoNodes & Sectors list */}
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-500/20 pb-4 mt-6">
+                            <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded">
+                                🗺️ GEONODES_AND_SECTORS ({nodes.length})
+                            </h3>
+                            <button
+                                onClick={() => setShowSpawnHotspotModal(true)}
+                                className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                            >
+                                🚨 + Spawn new GeoNode / Hotspot
+                            </button>
+                        </div>
+
+                        <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-x-auto shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+                            <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
+                                <thead>
+                                    <tr className="border-b border-amber-500/20 bg-black/60 text-amber-500 uppercase text-[10px] tracking-wider">
+                                        <th className="p-3 bg-black/40">Zone Name</th>
+                                        <th className="p-3 bg-black/40">Coordinates (Lat, Lng)</th>
+                                        <th className="p-3 bg-black/40">Radius</th>
+                                        <th className="p-3 bg-black/40">Type</th>
+                                        <th className="p-3 bg-black/40">Control</th>
+                                        <th className="p-3 bg-black/40">Secret Passcode</th>
+                                        <th className="p-3 text-right bg-black/40">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {nodes.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} className="p-8 text-center text-zinc-600">No geo nodes found.</td>
+                                        </tr>
+                                    ) : (
+                                        nodes.map((node) => (
+                                            <tr key={node.id} className="border-b border-amber-500/10 hover:bg-amber-950/5 animate-fade-in">
+                                                <td className="p-3 font-bold text-zinc-200">{node.name}</td>
+                                                <td className="p-3 font-mono text-[11px]">{node.latitude.toFixed(6)}, {node.longitude.toFixed(6)}</td>
+                                                <td className="p-3">{node.radiusMeters}m</td>
+                                                <td className="p-3">
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${
+                                                        node.isHotSpot
+                                                            ? "bg-amber-950/40 border border-amber-500/30 text-amber-400"
+                                                            : "bg-zinc-800 text-zinc-500"
+                                                    }`}>
+                                                        {node.isHotSpot ? "🚨 HOTSPOT" : "NORMAL"}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3">
+                                                    {node.controllingFaction === "ALPHA" ? (
+                                                        <span className="text-red-400 font-extrabold">ALPHA</span>
+                                                    ) : node.controllingFaction === "BRAVO" ? (
+                                                        <span className="text-blue-400 font-extrabold">BRAVO</span>
+                                                    ) : (
+                                                        <span className="text-zinc-600 font-extrabold">UNCLAIMED</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 font-mono text-zinc-400">{node.secretPasscode}</td>
+                                                <td className="p-3 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => downloadQRCode(node)}
+                                                            className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                        >
+                                                            📷 QR CARD_
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 
@@ -2582,6 +2723,19 @@ export default function AdminClientPage({
                                         className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold font-mono"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-1.5 bg-black/40 border border-amber-500/10 p-3 rounded">
+                                <input
+                                    type="checkbox"
+                                    id="spawnIsHotSpot"
+                                    checked={spawnIsHotSpot}
+                                    onChange={(e) => setSpawnIsHotSpot(e.target.checked)}
+                                    className="accent-amber-500 cursor-pointer h-4 w-4"
+                                />
+                                <label htmlFor="spawnIsHotSpot" className="text-[10px] font-bold text-zinc-300 cursor-pointer uppercase select-none">
+                                    🚨 Make Active Hot-Spot (requires multiple scouts)?
+                                </label>
                             </div>
 
                             <div className="flex gap-3 justify-end mt-2">
