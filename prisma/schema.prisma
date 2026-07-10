@@ -24,6 +24,7 @@ model Profile {
   roverProfile     RoverProfile?
   questCompletions QuestCompletion[]
   bids             ShopItem[]       @relation("HighestBidder")
+  purchases        ShopPurchase[]
 }
 
 model Team {
@@ -156,6 +157,7 @@ model ShopItem {
   highestBidder     Profile?     @relation("HighestBidder", fields: [highestBidderId], references: [id], onDelete: SetNull)
   isAvailable       Boolean      @default(true) @map("is_available")
   stock             Int          @default(0)
+  purchases         ShopPurchase[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 }
@@ -169,6 +171,9 @@ model GeoNode {
   secretPasscode     String   @map("secret_passcode")
   controllingFaction Faction? @map("controlling_faction")
   isHotSpot          Boolean  @default(false) @map("is_hot_spot")
+  isDecoy            Boolean  @default(false) @map("is_decoy")
+  expiresAt          DateTime? @map("expires_at")
+  shieldExpiresAt    DateTime? @map("shield_expires_at")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
@@ -179,4 +184,16 @@ model NodeCheckIn {
   roverId   String   @map("rover_id")
   faction   Faction  @map("faction")
   createdAt DateTime @default(now()) @map("created_at")
+}
+
+model ShopPurchase {
+  id          String   @id @default(uuid())
+  shopItemId  String   @map("shop_item_id")
+  shopItem    ShopItem @relation(fields: [shopItemId], references: [id], onDelete: Cascade)
+  roverId     String   @map("rover_id")
+  rover       Profile  @relation(fields: [roverId], references: [id], onDelete: Cascade)
+  pricePaid   Int      @map("price_paid")
+  isDelivered Boolean  @default(false) @map("is_delivered")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 }

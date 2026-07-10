@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import NodeCard from "./NodeCard";
-import { getLiveGeoNodes, checkInByQR } from "@/app/actions/rovers";
+import { getLiveGeoNodes, checkInByQR, deployDecoyNode, getRoverInventory, activateCaptureShield } from "@/app/actions/rovers";
+import { cyberAudio } from "@/utils/audio";
 
 interface NavClientPageProps {
     nodes: {
@@ -13,6 +14,9 @@ interface NavClientPageProps {
         radiusMeters: number;
         controllingFaction: "ALPHA" | "BRAVO" | null;
         isHotSpot: boolean;
+        isDecoy?: boolean;
+        expiresAt?: Date | string | null;
+        shieldExpiresAt?: Date | string | null;
     }[];
     userFaction: string;
     locale: string;
@@ -25,6 +29,21 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
     const [gpsError, setGpsError] = useState<string | null>(null);
     const [showQrScanner, setShowQrScanner] = useState(false);
     const [watchId, setWatchId] = useState<number | null>(null);
+    const prevHackingNodeIds = useRef<string[]>([]);
+    const [inventory, setInventory] = useState({ decoys: 0, shields: 0 });
+    const [deployingDecoy, setDeployingDecoy] = useState(false);
+    const loadInventory = async () => {
+        const inv = await getRoverInventory();
+        setInventory({ decoys: inv.decoys || 0, shields: inv.shields || 0 });
+    };
+
+    useEffect(() => {
+        loadInventory();
+        const invInterval = setInterval(() => {
+            loadInventory();
+        }, 5000);
+        return () => clearInterval(invInterval);
+    }, []);
 
     // Poll nodes every 3 seconds to update coordinate status in real-time
     useEffect(() => {
@@ -33,6 +52,23 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                 const res = await getLiveGeoNodes();
                 if (res.success && res.nodes) {
                     setNodes(res.nodes as any);
+
+                    // Detect newly sieged nodes owned by our faction
+                    const currentlySieged = res.nodes.filter(
+                        (n: any) => n.isHotSpot && n.activeFaction && n.activeFaction !== userFaction && n.controllingFaction === userFaction
+                    );
+                    const newlySieged = currentlySieged.filter(
+                        (n: any) => !prevHackingNodeIds.current.includes(n.id)
+                    );
+
+                    if (newlySieged.length > 0) {
+                        cyberAudio.playSiege();
+                        if (typeof navigator !== "undefined" && navigator.vibrate) {
+                            navigator.vibrate([300, 150, 300, 150, 400]);
+                        }
+                    }
+
+                    prevHackingNodeIds.current = currentlySieged.map((n: any) => n.id);
                 }
             } catch (err) {
                 console.error("Failed to poll live nodes:", err);
@@ -40,7 +76,7 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
         }, 3000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [userFaction]);
 
     const mapRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
@@ -148,7 +184,7 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                 (window as any).currentScanner = null;
             }
         };
-    }, [showQrScanner, nodes]);
+    }, [showQrScanner]);
 
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [mapMode, setMapMode] = useState<"dark" | "satellite">("satellite");
@@ -233,7 +269,12 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
             nodes.forEach((node) => {
                 let color = "#71717a"; // Neutral gray
                 let factionText = "Neutral Node";
-                if (node.isHotSpot) {
+                let isDecoyVisible = node.isDecoy && node.controllingFaction === userFaction;
+
+                if (isDecoyVisible) {
+                    color = "#a855f7"; // Purple for teammate decoys
+                    factionText = "🕵️ FRIENDLY DECOY SECTOR";
+                } else if (node.isHotSpot) {
                     color = "#eab308"; // Amber
                     factionText = "🚨 CONTENDED HOT-ZONE";
                 } else if (node.controllingFaction === "ALPHA") {
@@ -254,11 +295,24 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                 }).addTo(mapRef.current);
                 circlesRef.current.push(circle);
 
+                const isShielded = node.shieldExpiresAt && new Date(node.shieldExpiresAt) > new Date();
+                if (isShielded) {
+                    const shieldCircle = L.circle([node.latitude, node.longitude], {
+                        color: "#06b6d4", // Cyan protective dome
+                        fillColor: "#06b6d4",
+                        fillOpacity: 0.12,
+                        radius: node.radiusMeters + 6,
+                        weight: 2,
+                        dashArray: "3, 3"
+                    }).addTo(mapRef.current);
+                    circlesRef.current.push(shieldCircle);
+                }
+
                 // Blip design marker
                 const blipIcon = L.divIcon({
                     className: "custom-leaflet-blip",
                     html: `<div class="w-6 h-6 rounded-full border-2 flex items-center justify-center font-extrabold text-[8px] text-white shadow-lg animate-pulse" style="background:${color}; border-color:#fff;">
-            ${node.isHotSpot ? "🚨" : node.name.split(" ").pop()?.substring(0, 2) || "ND"}
+            ${isDecoyVisible ? "🕵️" : node.isHotSpot ? "🚨" : node.name.split(" ").pop()?.substring(0, 2) || "ND"}
           </div>`,
                     iconSize: [24, 24],
                     iconAnchor: [12, 12]
@@ -268,10 +322,15 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                 markersRef.current.push(marker);
 
                 // Popup content markup with focus actions
+                const shieldText = isShielded 
+                    ? `<span style="color:#06b6d4; font-size:8px; font-weight:bold; display:block; margin-top:2px;">🛡️ SHIELDED UNTIL ${new Date(node.shieldExpiresAt!).toLocaleTimeString()}</span>` 
+                    : "";
+
                 const popupContent = `
           <div style="font-family:monospace; background:#09090b; padding:8px; border:1px solid rgba(245,158,11,0.3); border-radius:4px; min-width:130px; text-transform:uppercase;">
             <strong style="color:#fff; font-size:11px;">${node.name}</strong><br/>
             <span style="color:${color}; font-size:9px; font-weight:bold;">${factionText}</span><br/>
+            ${shieldText}
             <span style="color:#71717a; font-size:8px;">LAT: ${node.latitude.toFixed(6)}</span><br/>
             <span style="color:#71717a; font-size:8px;">LNG: ${node.longitude.toFixed(6)}</span><br/>
             <button onclick="window.focusNodeCard('${node.id}')" style="margin-top:6px; background:#f59e0b; color:#000; border:none; padding:4px 6px; font-size:9px; font-weight:bold; border-radius:2px; cursor:pointer; width:100%;">Focus Sector</button>
@@ -319,12 +378,13 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
         } else {
             const liveIcon = L.divIcon({
                 className: "user-leaflet-blip",
-                html: `<div class="relative flex items-center justify-center w-6 h-6">
+                html: `<div class="relative flex items-center justify-center w-12 h-12">
+          <span class="radar-sweep"></span>
           <span class="absolute w-6 h-6 border-2 border-green-500 rounded-full animate-ping"></span>
-          <span class="w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-[0_0_10px_#22c55e]"></span>
+          <span class="w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-[0_0_10px_#22c55e] z-10"></span>
         </div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
+                iconSize: [48, 48],
+                iconAnchor: [24, 24]
             });
 
             userMarkerRef.current = L.marker([coords.latitude, coords.longitude], { icon: liveIcon })
@@ -345,14 +405,107 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
         }
     }, [mapMode]);
 
+    const totalNodesCount = nodes.length;
+    const alphaNodesCount = nodes.filter(n => n.controllingFaction === "ALPHA").length;
+    const bravoNodesCount = nodes.filter(n => n.controllingFaction === "BRAVO").length;
+    const neutralNodesCount = totalNodesCount - alphaNodesCount - bravoNodesCount;
+
+    const alphaPct = totalNodesCount > 0 ? (alphaNodesCount / totalNodesCount) * 100 : 0;
+    const bravoPct = totalNodesCount > 0 ? (bravoNodesCount / totalNodesCount) * 100 : 0;
+    const neutralPct = totalNodesCount > 0 ? (neutralNodesCount / totalNodesCount) * 100 : 100;
+
     return (
         <div className="flex flex-col gap-6 pb-12">
+            {/* Live Faction Domination Progress Bar */}
+            <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg p-5 shadow-[0_0_15px_rgba(0,0,0,0.6)] flex flex-col gap-3 font-mono">
+                <div className="flex justify-between items-center text-xs">
+                    <span className="text-red-400 font-extrabold flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 bg-red-600 border border-red-400 rounded-sm inline-block shadow-[0_0_8px_rgba(220,38,38,0.5)]"></span>
+                        ALPHA: {alphaNodesCount} ({Math.round(alphaPct)}%)
+                    </span>
+                    <span className="text-zinc-500 font-bold uppercase text-[10px]">
+                        FACTION_DOMINATION_INDEX
+                    </span>
+                    <span className="text-blue-400 font-extrabold flex items-center gap-1.5">
+                        BRAVO: {bravoNodesCount} ({Math.round(bravoPct)}%)
+                        <span className="w-2.5 h-2.5 bg-blue-600 border border-blue-400 rounded-sm inline-block shadow-[0_0_8px_rgba(37,99,235,0.5)]"></span>
+                    </span>
+                </div>
+                
+                {/* Glowing segment bar */}
+                <div className="w-full h-3 bg-zinc-900 border border-zinc-800 rounded overflow-hidden flex shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
+                    {alphaPct > 0 && (
+                        <div 
+                            style={{ width: `${alphaPct}%` }} 
+                            className="h-full bg-red-600 border-r border-red-400 shadow-[0_0_10px_rgba(220,38,38,0.4)] transition-all duration-500 ease-out"
+                        />
+                    )}
+                    {neutralPct > 0 && (
+                        <div 
+                            style={{ width: `${neutralPct}%` }} 
+                            className="h-full bg-zinc-800 transition-all duration-500 ease-out"
+                        />
+                    )}
+                    {bravoPct > 0 && (
+                        <div 
+                            style={{ width: `${bravoPct}%` }} 
+                            className="h-full bg-blue-600 border-l border-blue-400 shadow-[0_0_10px_rgba(37,99,235,0.4)] transition-all duration-500 ease-out"
+                        />
+                    )}
+                </div>
+            </div>
+
             {/* GPS Status Dashboard */}
             <section className="bg-zinc-950/40 border border-amber-500/20 rounded-lg p-5 shadow-[0_0_15px_rgba(0,0,0,0.6)]">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
                     <h2 className="text-xl font-bold tracking-widest text-amber-400 uppercase">
                         HELIOS_TACTICAL_MAP_
                     </h2>
+
+                    {userFaction && userFaction !== "UNASSIGNED" && (
+                        <div className="flex flex-wrap items-center gap-3 font-mono">
+                            <button
+                                onClick={async () => {
+                                    if (inventory.decoys === 0) return;
+                                    if (!coords) {
+                                        alert("GPS coordinates not acquired. Cannot deploy decoy without location lock.");
+                                        return;
+                                    }
+                                    setDeployingDecoy(true);
+                                    const res = await deployDecoyNode(coords.latitude, coords.longitude);
+                                    if (res.success) {
+                                        cyberAudio.playSuccess();
+                                        alert("Decoy node successfully deployed at your current coordinates! Expiring in 30 minutes.");
+                                        loadInventory();
+                                        // Refresh nodes
+                                        const pollRes = await getLiveGeoNodes();
+                                        if (pollRes.success && pollRes.nodes) {
+                                            setNodes(pollRes.nodes as any);
+                                        }
+                                    } else {
+                                        cyberAudio.playFailure();
+                                        alert(res.error || "Failed to deploy decoy node.");
+                                    }
+                                    setDeployingDecoy(false);
+                                }}
+                                disabled={deployingDecoy || !coords || inventory.decoys === 0}
+                                className={`font-extrabold text-[10px] px-3 py-2 rounded transition uppercase tracking-wider flex items-center gap-1.5 cursor-pointer border ${
+                                    inventory.decoys > 0
+                                        ? "bg-amber-500 hover:bg-amber-400 text-black border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                                        : "bg-zinc-950/20 border-zinc-800 text-zinc-600 disabled:opacity-40 disabled:pointer-events-none"
+                                }`}
+                            >
+                                🕵️ {deployingDecoy ? "DEPLOYING..." : `DEPLOY DECOY (${inventory.decoys})`}
+                            </button>
+                            <span className={`font-extrabold text-[10px] px-3 py-2 rounded uppercase tracking-wider flex items-center gap-1 select-none border ${
+                                inventory.shields > 0
+                                    ? "bg-blue-500/10 border-blue-500/30 text-blue-400"
+                                    : "bg-zinc-950/20 border-zinc-800 text-zinc-600"
+                            }`}>
+                                🛡️ {inventory.shields} SHIELDS AVAILABLE
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* GPS Coordinate Monitor */}
@@ -478,6 +631,27 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
           .leaflet-bar a:hover {
             background: rgba(245, 158, 11, 0.1) !important;
           }
+          @keyframes radar-pulse {
+            0% {
+              transform: scale(0.6);
+              opacity: 0.8;
+            }
+            100% {
+              transform: scale(3.5);
+              opacity: 0;
+            }
+          }
+          .radar-sweep {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            border: 2px solid #22c55e;
+            border-radius: 50%;
+            background: rgba(34, 197, 94, 0.08);
+            animation: radar-pulse 2.2s infinite linear;
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+            pointer-events: none;
+          }
         `}} />
             </section>
 
@@ -505,6 +679,8 @@ export default function NavClientPage({ nodes: initialNodes, userFaction, locale
                                     locale={locale}
                                     userId={userId}
                                     onScanClick={() => setShowQrScanner(true)}
+                                    shieldsAvailable={inventory.shields}
+                                    onShieldActivated={loadInventory}
                                 />
                             </div>
                         ))}

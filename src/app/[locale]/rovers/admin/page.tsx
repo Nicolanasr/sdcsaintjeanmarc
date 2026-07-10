@@ -76,6 +76,12 @@ export default async function AdminPage({ params }: PageProps) {
   });
   const nightNavActive = navSetting?.value === "true";
 
+  // Load system setting for Lucky Wheel
+  const wheelSetting = await prisma.systemSetting.findUnique({
+    where: { key: "lucky_wheel_active" },
+  });
+  const luckyWheelActive = wheelSetting ? wheelSetting.value === "true" : true;
+
   // Load system setting for Hotspot threshold override
   const thresholdSetting = await prisma.systemSetting.findUnique({
     where: { key: "hotspot_scout_threshold" },
@@ -97,6 +103,7 @@ export default async function AdminPage({ params }: PageProps) {
       locale={locale}
       initialNightNavActive={nightNavActive}
       initialHotspotThreshold={hotspotThreshold}
+      initialLuckyWheelActive={luckyWheelActive}
     />
   );
 }

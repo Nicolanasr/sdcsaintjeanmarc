@@ -7,6 +7,7 @@ import {
     adminAdjustCredits,
     updateRoverPhoneNumber,
     adminToggleNightNav,
+    adminToggleLuckyWheel,
     adminCreateRover,
     adminCreateQuest,
     adminDeleteQuest,
@@ -27,6 +28,9 @@ import {
     adminSendQuestReminder,
     adminUpdateHotspotThreshold,
     adminGetItemPurchaseHistory,
+    adminGetQuestCompletions,
+    adminGetMarketplacePurchases,
+    adminTogglePurchaseDelivery,
 } from "@/app/actions/rovers";
 
 const LocalDateStr = ({ date }: { date: string | Date }) => {
@@ -117,6 +121,7 @@ interface AdminClientPageProps {
     locale: string;
     initialNightNavActive: boolean;
     initialHotspotThreshold?: number | null;
+    initialLuckyWheelActive: boolean;
 }
 
 export default function AdminClientPage({
@@ -128,6 +133,7 @@ export default function AdminClientPage({
     locale,
     initialNightNavActive,
     initialHotspotThreshold = null,
+    initialLuckyWheelActive,
 }: AdminClientPageProps) {
     const [quests, setQuests] = useState<Quest[]>(initialQuests);
     const [rovers, setRovers] = useState<Rover[]>(initialRovers);
@@ -139,10 +145,45 @@ export default function AdminClientPage({
     const [logsTotal, setLogsTotal] = useState(0);
     const [logsLimit] = useState(50);
     const [nightNavActive, setNightNavActive] = useState(initialNightNavActive);
+    const [luckyWheelActive, setLuckyWheelActive] = useState(initialLuckyWheelActive);
     const [hotspotThreshold, setHotspotThreshold] = useState<number | "">(initialHotspotThreshold ?? "");
 
     // Workstation active tab state
-    const [activeTab, setActiveTab] = useState<"scouts" | "challenges" | "registry" | "marketplace" | "logs">("scouts");
+    const [activeTab, setActiveTab] = useState<"scouts" | "challenges" | "registry" | "marketplace" | "submissions" | "purchases" | "logs">("scouts");
+
+    // Submissions and Purchases states
+    const [completions, setCompletions] = useState<any[]>([]);
+    const [purchasesList, setPurchasesList] = useState<any[]>([]);
+
+    // Filters for Quest Submissions
+    const [subFilterQuest, setSubFilterQuest] = useState("");
+    const [subFilterUser, setSubFilterUser] = useState("");
+    const [subFilterDate, setSubFilterDate] = useState("");
+    const [submissionsPage, setSubmissionsPage] = useState(1);
+
+    useEffect(() => {
+        if (activeTab === "submissions") {
+            setLoading("load-submissions");
+            adminGetQuestCompletions().then((res) => {
+                if (res.success && res.completions) {
+                    setCompletions(res.completions);
+                } else {
+                    alert(res.error || "Failed to load quest completions");
+                }
+            }).catch(err => console.error(err))
+            .finally(() => setLoading(null));
+        } else if (activeTab === "purchases") {
+            setLoading("load-purchases");
+            adminGetMarketplacePurchases().then((res) => {
+                if (res.success && res.purchases) {
+                    setPurchasesList(res.purchases);
+                } else {
+                    alert(res.error || "Failed to load purchases");
+                }
+            }).catch(err => console.error(err))
+            .finally(() => setLoading(null));
+        }
+    }, [activeTab]);
 
     // Inline Credits Adjuster state
     const [adjustingCreditsId, setAdjustingCreditsId] = useState<string | null>(null);
@@ -624,6 +665,35 @@ export default function AdminClientPage({
             setMessage({
                 type: "error",
                 text: `SYSTEM_ERROR: ${err.message || "Failed to toggle configuration status."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    // Toggle Lucky Wheel
+    const handleToggleLuckyWheel = async () => {
+        setLoading("toggle-wheel");
+        setMessage(null);
+        try {
+            const nextStatus = !luckyWheelActive;
+            const res = await adminToggleLuckyWheel(nextStatus);
+            if (res.success) {
+                setLuckyWheelActive(nextStatus);
+                setMessage({
+                    type: "success",
+                    text: `SYSTEM_CONFIG: Cyber-Spin Wheel is now ${nextStatus ? "ENABLED" : "DISABLED"}.`,
+                });
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `SYSTEM_CONFIG_FAILED: ${res.error || "Failed to update configuration."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to toggle lucky wheel status."}`,
             });
         } finally {
             setLoading(null);
@@ -1530,6 +1600,26 @@ export default function AdminClientPage({
                     </button>
                 </div>
 
+                {/* Lucky Wheel Active Toggler */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
+                    <div>
+                        <div className="text-xs font-bold text-zinc-300 uppercase">🎡 Cyber-Spin Lucky Wheel:</div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                            Current state: {luckyWheelActive ? "ONLINE (PLAYERS CAN SPIN)" : "OFFLINE (SPINNING IS LOCKED)"}
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleToggleLuckyWheel}
+                        disabled={loading === "toggle-wheel"}
+                        className={`px-4 py-2 text-xs font-extrabold rounded uppercase tracking-wider transition cursor-pointer ${luckyWheelActive
+                            ? "bg-red-950/20 border border-red-500/40 text-red-500 hover:bg-red-950/40 hover:text-red-400"
+                            : "bg-green-950/20 border border-green-500/40 text-green-500 hover:bg-green-950/40 hover:text-green-400"
+                            }`}
+                    >
+                        {loading === "toggle-wheel" ? "PROCESSING..." : luckyWheelActive ? "DISABLE SPIN WHEEL" : "ENABLE SPIN WHEEL"}
+                    </button>
+                </div>
+
                 {/* Hotspot Capture Threshold Override */}
                 <form onSubmit={handleUpdateThreshold} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
                     <div>
@@ -1606,6 +1696,24 @@ export default function AdminClientPage({
                         }`}
                 >
                     🛒 Marketplace Control
+                </button>
+                <button
+                    onClick={() => setActiveTab("submissions")}
+                    className={`px-4 py-2 rounded transition cursor-pointer ${activeTab === "submissions"
+                        ? "bg-amber-500 text-black shadow-[0_0_8px_rgba(245,158,11,0.2)]"
+                        : "text-zinc-400 hover:text-amber-400 hover:bg-amber-950/15"
+                        }`}
+                >
+                    📝 Quest Submissions
+                </button>
+                <button
+                    onClick={() => setActiveTab("purchases")}
+                    className={`px-4 py-2 rounded transition cursor-pointer ${activeTab === "purchases"
+                        ? "bg-amber-500 text-black shadow-[0_0_8px_rgba(245,158,11,0.2)]"
+                        : "text-zinc-400 hover:text-amber-400 hover:bg-amber-950/15"
+                        }`}
+                >
+                    🛍️ Shop Purchases
                 </button>
                 <button
                     onClick={() => setActiveTab("logs")}
@@ -2197,6 +2305,246 @@ export default function AdminClientPage({
                                                         className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
                                                     >
                                                         {loading === `delete-shop-${item.id}` ? "DELETING..." : "DELETE_"}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Tab: Quest Submissions */}
+                {activeTab === "submissions" && (
+                    <div className="flex flex-col gap-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+                            <div>
+                                <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded inline-block">
+                                    📝 QUEST_SUBMISSIONS_DIRECTORY
+                                </h3>
+                                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-1">
+                                    Flat list of all quest completion records across the platform.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Filters */}
+                        {(() => {
+                            const uniqueQuests = Array.from(new Set(completions.map((c) => c.quest.title))).sort();
+                            const uniqueUsers = Array.from(new Set(completions.map((c) => c.rover.fullName))).sort();
+
+                            const filtered = completions.filter((c) => {
+                                const matchQuest = subFilterQuest ? c.quest.title === subFilterQuest : true;
+                                const matchUser = subFilterUser ? c.rover.fullName === subFilterUser : true;
+                                const matchDate = subFilterDate 
+                                    ? new Date(c.completedAt).toISOString().split("T")[0] === subFilterDate 
+                                    : true;
+                                return matchQuest && matchUser && matchDate;
+                            });
+
+                            const itemsPerPage = 10;
+                            const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+                            const paginated = filtered.slice((submissionsPage - 1) * itemsPerPage, submissionsPage * itemsPerPage);
+
+                            return (
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-zinc-950/20 border border-amber-500/10 p-4 rounded-lg font-mono">
+                                        <div>
+                                            <label className="block text-[10px] uppercase font-bold text-amber-500/60 mb-1.5">Filter by Quest Title</label>
+                                            <select
+                                                value={subFilterQuest}
+                                                onChange={(e) => {
+                                                    setSubFilterQuest(e.target.value);
+                                                    setSubmissionsPage(1);
+                                                }}
+                                                className="bg-black border border-amber-500/20 focus:border-amber-400 text-zinc-300 text-xs px-3 py-2 rounded focus:outline-none w-full cursor-pointer"
+                                            >
+                                                <option value="">-- ALL QUESTS --</option>
+                                                {uniqueQuests.map((q) => (
+                                                    <option key={q} value={q}>{q}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] uppercase font-bold text-amber-500/60 mb-1.5">Filter by User / Scout</label>
+                                            <select
+                                                value={subFilterUser}
+                                                onChange={(e) => {
+                                                    setSubFilterUser(e.target.value);
+                                                    setSubmissionsPage(1);
+                                                }}
+                                                className="bg-black border border-amber-500/20 focus:border-amber-400 text-zinc-300 text-xs px-3 py-2 rounded focus:outline-none w-full cursor-pointer"
+                                            >
+                                                <option value="">-- ALL SCOUTS --</option>
+                                                {uniqueUsers.map((u) => (
+                                                    <option key={u} value={u}>{u}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] uppercase font-bold text-amber-500/60 mb-1.5">Filter by Date</label>
+                                            <input
+                                                type="date"
+                                                value={subFilterDate}
+                                                onChange={(e) => {
+                                                    setSubFilterDate(e.target.value);
+                                                    setSubmissionsPage(1);
+                                                }}
+                                                className="bg-black border border-amber-500/20 focus:border-amber-400 text-zinc-300 text-xs px-3 py-2 rounded focus:outline-none w-full"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* List */}
+                                    <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-x-auto shadow-lg">
+                                        <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
+                                            <thead>
+                                                <tr className="border-b border-amber-500/20 bg-black/60 text-amber-500 uppercase text-[10px] tracking-wider font-mono">
+                                                    <th className="p-3 bg-black/40">Scout Name</th>
+                                                    <th className="p-3 bg-black/40">Unit</th>
+                                                    <th className="p-3 bg-black/40">Quest Title</th>
+                                                    <th className="p-3 bg-black/40">Reward</th>
+                                                    <th className="p-3 bg-black/40">Verification</th>
+                                                    <th className="p-3 bg-black/40">Date Completed</th>
+                                                    <th className="p-3 bg-black/40">Verification State</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {paginated.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={7} className="p-8 text-center text-zinc-600 uppercase font-mono">No quest completions match the criteria.</td>
+                                                    </tr>
+                                                ) : (
+                                                    paginated.map((c) => (
+                                                        <tr key={c.id} className="border-b border-amber-500/10 hover:bg-amber-950/5">
+                                                            <td className="p-3 font-bold text-zinc-200">{c.rover.fullName}</td>
+                                                            <td className="p-3 uppercase text-[10px] text-zinc-400">{c.rover.unit || "-"}</td>
+                                                            <td className="p-3 font-bold text-zinc-200">{c.quest.title}</td>
+                                                            <td className="p-3 text-amber-400 font-bold">{c.quest.creditReward} CR</td>
+                                                            <td className="p-3 text-[10px] text-zinc-500 font-mono uppercase">{c.quest.verificationType}</td>
+                                                            <td className="p-3 text-zinc-400 font-mono">
+                                                                <LocalDateStr date={c.completedAt} />
+                                                            </td>
+                                                            <td className="p-3 font-mono">
+                                                                <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${
+                                                                    c.isVerified 
+                                                                        ? "bg-green-950/30 border border-green-500/30 text-green-400"
+                                                                        : "bg-red-950/30 border border-red-500/30 text-red-400"
+                                                                }`}>
+                                                                    {c.isVerified ? "✓ APPROVED" : "✗ REJECTED / PENDING"}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Pagination Controls */}
+                                    {totalPages > 1 && (
+                                        <div className="flex items-center justify-between bg-zinc-950/40 border border-amber-500/20 p-3 rounded-lg mt-4 font-mono text-xs">
+                                            <button
+                                                onClick={() => setSubmissionsPage((prev) => Math.max(prev - 1, 1))}
+                                                disabled={submissionsPage === 1}
+                                                className="px-3 py-1.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-black transition-all cursor-pointer font-extrabold uppercase disabled:opacity-30 disabled:pointer-events-none"
+                                            >
+                                                PREV
+                                            </button>
+                                            <span className="text-zinc-400">
+                                                PAGE <strong className="text-amber-400">{submissionsPage}</strong> OF <strong className="text-amber-400">{totalPages}</strong>
+                                            </span>
+                                            <button
+                                                onClick={() => setSubmissionsPage((prev) => Math.min(prev + 1, totalPages))}
+                                                disabled={submissionsPage === totalPages}
+                                                className="px-3 py-1.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-black transition-all cursor-pointer font-extrabold uppercase disabled:opacity-30 disabled:pointer-events-none"
+                                            >
+                                                NEXT
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
+                    </div>
+                )}
+
+                {/* Tab: Marketplace Purchases */}
+                {activeTab === "purchases" && (
+                    <div className="flex flex-col gap-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+                            <div>
+                                <h3 className="text-xs font-bold text-amber-400/90 tracking-widest uppercase bg-amber-950/20 border border-amber-500/20 px-3 py-1.5 rounded inline-block">
+                                    🛍️ MARKETPLACE_PURCHASE_LEDGER
+                                </h3>
+                                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-1">
+                                    Redeem scout rewards, deliver inventory perks, and toggle delivery state.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* List */}
+                        <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-x-auto shadow-lg">
+                            <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
+                                <thead>
+                                    <tr className="border-b border-amber-500/20 bg-black/60 text-amber-500 uppercase text-[10px] tracking-wider">
+                                        <th className="p-3 bg-black/40">Buyer (Scout)</th>
+                                        <th className="p-3 bg-black/40">Item Title</th>
+                                        <th className="p-3 bg-black/40">Type</th>
+                                        <th className="p-3 bg-black/40">Price paid</th>
+                                        <th className="p-3 bg-black/40">Purchase Date</th>
+                                        <th className="p-3 bg-black/40">Delivery Status</th>
+                                        <th className="p-3 text-right bg-black/40">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {purchasesList.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} className="p-8 text-center text-zinc-600 uppercase">No marketplace purchases found.</td>
+                                        </tr>
+                                    ) : (
+                                        purchasesList.map((p) => (
+                                            <tr key={p.id} className="border-b border-amber-500/10 hover:bg-amber-950/5">
+                                                <td className="p-3 font-bold text-zinc-200">{p.rover.fullName}</td>
+                                                <td className="p-3 font-bold text-zinc-200">{p.shopItem.title}</td>
+                                                <td className="p-3 text-[10px] text-zinc-500 font-mono uppercase">{p.shopItem.type}</td>
+                                                <td className="p-3 text-amber-400 font-bold">{p.pricePaid} CR</td>
+                                                <td className="p-3 text-zinc-400 font-mono">
+                                                    <LocalDateStr date={p.createdAt} />
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${
+                                                        p.isDelivered
+                                                            ? "bg-green-950/30 border border-green-500/30 text-green-400"
+                                                            : "bg-amber-950/30 border border-amber-500/30 text-amber-400"
+                                                    }`}>
+                                                        {p.isDelivered ? "✓ DELIVERED / GIVEN" : "⏳ PENDING COLLECTION"}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 text-right">
+                                                    <button
+                                                        onClick={async () => {
+                                                            setLoading(`toggle-deliver-${p.id}`);
+                                                            const res = await adminTogglePurchaseDelivery(p.id);
+                                                            if (res.success && res.purchase) {
+                                                                setPurchasesList((prev) =>
+                                                                    prev.map((item) => item.id === p.id ? res.purchase : item)
+                                                                );
+                                                            } else {
+                                                                alert(res.error || "Failed to update delivery status");
+                                                            }
+                                                            setLoading(null);
+                                                        }}
+                                                        disabled={loading !== null}
+                                                        className={`px-2 py-1 rounded text-[10px] font-extrabold uppercase transition cursor-pointer border ${
+                                                            p.isDelivered
+                                                                ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black font-mono"
+                                                                : "bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500 hover:text-black font-mono"
+                                                        }`}
+                                                    >
+                                                        {p.isDelivered ? "Mark Pending" : "Mark Delivered"}
                                                     </button>
                                                 </td>
                                             </tr>

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { Faction } from "@prisma/client";
 import RoversNavbar from "./RoversNavbar";
 import ForcePasswordChange from "./ForcePasswordChange";
+import UserProfileWidget from "./UserProfileWidget";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -83,32 +84,12 @@ export default async function RoversLayout({ children, params }: LayoutProps) {
           </div>
 
           {/* User Details */}
-          <div className="flex items-center gap-4 text-xs md:text-sm">
-            <div className="text-right">
-              <div className="font-bold text-amber-300">{session.profile.fullName}</div>
-              <div className="text-[9px] text-amber-500/55 uppercase tracking-widest mt-0.5">
-                ROVER_USER_LINK
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded flex flex-col items-center min-w-[80px] shadow-[inset_0_0_6px_rgba(245,158,11,0.1)]">
-                <span className="text-[9px] text-amber-500/60 uppercase tracking-wider">Credits</span>
-                <span className="text-amber-400 font-extrabold text-lg animate-pulse">
-                  {currentCredits}
-                </span>
-              </div>
-              <form action={logoutRover}>
-                <button
-                  type="submit"
-                  className="bg-red-950/20 hover:bg-red-900/40 border border-red-500/30 hover:border-red-500 text-red-500 hover:text-red-400 font-extrabold text-[10px] px-2.5 py-3 rounded transition cursor-pointer uppercase tracking-wider"
-                  title="Disconnect Link"
-                >
-                  EXIT_
-                </button>
-              </form>
-            </div>
-          </div>
+          <UserProfileWidget
+            fullName={session.profile.fullName}
+            faction={userFaction}
+            credits={currentCredits}
+            logoutAction={logoutRover}
+          />
         </div>
       </header>
 

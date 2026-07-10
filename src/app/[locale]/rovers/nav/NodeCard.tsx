@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { captureNodeByPasscode, captureNodeByGPS } from "@/app/actions/rovers";
+import { captureNodeByPasscode, captureNodeByGPS, activateCaptureShield } from "@/app/actions/rovers";
+import { cyberAudio } from "@/utils/audio";
 
 interface NodeCardProps {
   node: {
@@ -12,6 +13,8 @@ interface NodeCardProps {
     radiusMeters: number;
     controllingFaction: "ALPHA" | "BRAVO" | null;
     isHotSpot?: boolean;
+    isDecoy?: boolean;
+    shieldExpiresAt?: string | Date | null;
     activeFaction?: "ALPHA" | "BRAVO" | null;
     activeCount?: number;
     requiredCount?: number;
@@ -23,6 +26,8 @@ interface NodeCardProps {
   locale: string;
   userId: string;
   onScanClick?: () => void;
+  shieldsAvailable?: number;
+  onShieldActivated?: () => void;
 }
 
 // Client-side Haversine helper
@@ -41,11 +46,51 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-export default function NodeCard({ node, userFaction, userCoords, locale, userId, onScanClick }: NodeCardProps) {
+export default function NodeCard({ 
+  node, 
+  userFaction, 
+  userCoords, 
+  locale, 
+  userId, 
+  onScanClick,
+  shieldsAvailable = 0,
+  onShieldActivated
+}: NodeCardProps) {
   const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [shielding, setShielding] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
+
+  const handleActivateShield = async () => {
+    setShielding(true);
+    setMessage(null);
+    try {
+      const res = await activateCaptureShield(node.id);
+      if (res.success) {
+        cyberAudio.playSuccess();
+        setMessage({
+          type: "success",
+          text: "SHIELD_ACTIVATED: Electromagnetic defense grid active for 2 hours."
+        });
+        if (onShieldActivated) onShieldActivated();
+      } else {
+        cyberAudio.playFailure();
+        setMessage({
+          type: "error",
+          text: `SHIELD_FAILED: ${res.error || "Failed to activate shield."}`
+        });
+      }
+    } catch (err: any) {
+      cyberAudio.playFailure();
+      setMessage({
+        type: "error",
+        text: `SYSTEM_ERROR: ${err.message || "Failed to connect to shield matrix."}`
+      });
+    } finally {
+      setShielding(false);
+    }
+  };
 
   // Recalculate distance dynamically when user location changes
   useEffect(() => {
@@ -86,18 +131,21 @@ export default function NodeCard({ node, userFaction, userCoords, locale, userId
         userCoords.longitude
       );
       if (res.success) {
+        cyberAudio.playSuccess();
         setMessage({
           type: "success",
           text: res.message || "NODE_CAPTURED: Grid territory updated.",
         });
         setPasscode("");
       } else {
+        cyberAudio.playFailure();
         setMessage({
           type: "error",
           text: `HACK_FAILED: ${res.error || "Incorrect passcode."}`,
         });
       }
     } catch (err: any) {
+      cyberAudio.playFailure();
       setMessage({
         type: "error",
         text: `SYSTEM_ERROR: ${err.message || "Failed to reach node gateway."}`,
@@ -123,17 +171,20 @@ export default function NodeCard({ node, userFaction, userCoords, locale, userId
     try {
       const res = await captureNodeByGPS(node.id, userCoords.latitude, userCoords.longitude);
       if (res.success) {
+        cyberAudio.playSuccess();
         setMessage({
           type: "success",
           text: res.message || "NODE_CAPTURED: Grid coordinates verified.",
         });
       } else {
+        cyberAudio.playFailure();
         setMessage({
           type: "error",
           text: `GPS_HACK_FAILED: ${res.error || "Verification failed."}`,
         });
       }
     } catch (err: any) {
+      cyberAudio.playFailure();
       setMessage({
         type: "error",
         text: `SYSTEM_ERROR: ${err.message || "Failed to query GPS server."}`,
@@ -146,7 +197,8 @@ export default function NodeCard({ node, userFaction, userCoords, locale, userId
   const isControlledBySelf = node.controllingFaction === userFaction;
   const isAlpha = node.controllingFaction === "ALPHA";
   const isBravo = node.controllingFaction === "BRAVO";
-  const canCapture = userFaction && userFaction !== "UNASSIGNED" && (!isControlledBySelf || node.isHotSpot);
+  const isShielded = !!(node.shieldExpiresAt && new Date(node.shieldExpiresAt) > new Date());
+  const canCapture = userFaction && userFaction !== "UNASSIGNED" && (!isControlledBySelf || node.isHotSpot) && !isShielded;
   const isOpposingFactionHacking = !!(node.isHotSpot && node.activeFaction && node.activeFaction !== userFaction);
   const hasAlreadyCheckedIn = !!(node.isHotSpot && node.checkedInRovers && node.checkedInRovers.includes(userId));
 
@@ -188,6 +240,22 @@ export default function NodeCard({ node, userFaction, userCoords, locale, userId
         </div>
       </div>
 
+      {isShielded && (
+        <div className="text-[11px] bg-cyan-950/20 border border-cyan-500/35 p-3 rounded flex flex-col gap-1 font-mono text-cyan-400">
+          <div className="flex justify-between items-center text-xs font-extrabold uppercase">
+            <span>🛡️ DEFENSE GRID ONLINE:</span>
+            <span className="bg-cyan-500 text-black px-1.5 py-0.5 rounded text-[9px] font-black">SHIELDED</span>
+          </div>
+          <p className="text-[10px] text-cyan-500/70 uppercase">
+            Electromagnetic shield active. Enemy capture protocols blocked.
+          </p>
+          <div className="flex justify-between mt-1 text-[9px] text-zinc-500">
+            <span>EXPIRES:</span>
+            <span className="text-cyan-400 font-extrabold">{new Date(node.shieldExpiresAt!).toLocaleTimeString()}</span>
+          </div>
+        </div>
+      )}
+
       {node.isHotSpot && node.activeFaction && (
         <div className="text-xs bg-amber-500/10 border border-amber-500/35 p-3 rounded flex flex-col gap-1.5 animate-pulse">
           <div className="flex justify-between items-center border-b border-amber-500/20 pb-1.5 mb-0.5">
@@ -206,7 +274,17 @@ export default function NodeCard({ node, userFaction, userCoords, locale, userId
       )}
 
       {/* Live Coordinates Radar / Range */}
-      <div className="text-xs bg-black/40 border border-amber-500/10 p-3 rounded flex flex-col gap-1">
+      <div className="text-xs bg-black/40 border border-amber-500/10 p-3 rounded flex flex-col gap-1.5">
+        <div className="flex justify-between">
+          <span className="text-amber-500/60 uppercase">Grid Control:</span>
+          {isAlpha ? (
+            <span className="text-red-400 font-extrabold shadow-[0_0_10px_rgba(220,38,38,0.2)]">ALPHA FACTION</span>
+          ) : isBravo ? (
+            <span className="text-blue-400 font-extrabold shadow-[0_0_10px_rgba(37,99,235,0.2)]">BRAVO FACTION</span>
+          ) : (
+            <span className="text-zinc-500 font-extrabold uppercase">UNCLAIMED (NEUTRAL)</span>
+          )}
+        </div>
         <div className="flex justify-between">
           <span className="text-amber-500/60 uppercase">Target Range:</span>
           <span className="text-amber-400 font-bold">200 Meters</span>
@@ -282,7 +360,10 @@ export default function NodeCard({ node, userFaction, userCoords, locale, userId
           {onScanClick && (
             <button
               type="button"
-              onClick={onScanClick}
+              onClick={() => {
+                cyberAudio.playScan();
+                onScanClick();
+              }}
               disabled={loading || isOpposingFactionHacking || hasAlreadyCheckedIn}
               className="mt-2 w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 hover:border-blue-400 text-blue-400 font-extrabold text-[10px] py-2 rounded transition cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5 disabled:opacity-30"
             >
@@ -293,8 +374,20 @@ export default function NodeCard({ node, userFaction, userCoords, locale, userId
       ) : (
         <div className="mt-auto pt-2 text-center">
           {isControlledBySelf ? (
-            <div className="bg-green-950/20 border border-green-500/30 text-green-400 text-xs font-bold py-2 rounded uppercase tracking-wider">
-              ✓ SECURED BY YOUR FACTION
+            <div className="flex flex-col gap-2">
+              <div className="bg-green-950/20 border border-green-500/30 text-green-400 text-xs font-bold py-2 rounded uppercase tracking-wider">
+                ✓ SECURED BY YOUR FACTION
+              </div>
+              {shieldsAvailable > 0 && !isShielded && (
+                <button
+                  type="button"
+                  onClick={handleActivateShield}
+                  disabled={shielding}
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-[10px] py-2 rounded transition cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(6,182,212,0.2)] disabled:opacity-50 font-mono"
+                >
+                  🛡️ {shielding ? "ACTIVATING DEFENSES..." : "DEPLOY CAPTURE SHIELD"}
+                </button>
+              )}
             </div>
           ) : (
             <div className="bg-zinc-900 border border-zinc-800 text-zinc-600 text-xs font-bold py-2 rounded uppercase tracking-wider">

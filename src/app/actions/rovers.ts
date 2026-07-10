@@ -256,6 +256,16 @@ export async function purchaseShopItem(itemId: string) {
         data: { stock: { decrement: 1 } },
       });
 
+      // Create Purchase record
+      await tx.shopPurchase.create({
+        data: {
+          shopItemId: itemId,
+          roverId: session.profile.id,
+          pricePaid: item.priceOrCurrentBid,
+          isDelivered: false
+        }
+      });
+
       return { updatedRover, item };
     }, { timeout: 15000 });
 
@@ -331,6 +341,8 @@ export async function placeBid(itemId: string, bidAmount: number) {
         data: { roverCredits: { decrement: bidAmount } },
       });
 
+      const isInitialBid = !item.highestBidderId;
+
       // Update auction state
       const updatedItem = await tx.shopItem.update({
         where: { id: itemId },
@@ -340,7 +352,7 @@ export async function placeBid(itemId: string, bidAmount: number) {
         },
       });
 
-      return { updatedRover, updatedItem, outbidUserPhone, outbidItemTitle };
+      return { updatedRover, updatedItem, outbidUserPhone, outbidItemTitle, isInitialBid };
     }, { timeout: 15000 });
 
     // Notify outbid user outside the transaction to prevent holding locks
@@ -366,6 +378,17 @@ export async function placeBid(itemId: string, bidAmount: number) {
       await sendWhatsAppMessage(leaderPhone, leaderMessage);
     } catch (waErr) {
       console.error("[WAHA] Failed to notify leader about new bid:", waErr);
+    }
+
+    // Send WhatsApp Group notification on initial bid
+    if (transactionResult.isInitialBid) {
+      try {
+        const groupId = await getOperationHeliosGroupId();
+        const groupMessage = `💸 *HELIOS MARKET: INITIAL BID PLACED* 💸\n\nScout *${session.profile.fullName}* placed the initial bid of *${bidAmount} CR* on auction item *"${transactionResult.outbidItemTitle}"*!`;
+        await sendWhatsAppMessage(groupId, groupMessage);
+      } catch (waErr) {
+        console.error("[WAHA] Failed to send initial bid group notification:", waErr);
+      }
     }
 
     revalidatePath("/rovers/shop");
@@ -403,6 +426,10 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
 
   const node = await prisma.geoNode.findUnique({ where: { id: nodeId } });
   if (!node) return { success: false, error: "Node not found" };
+
+  if (node.shieldExpiresAt && node.shieldExpiresAt > new Date()) {
+    return { success: false, error: "SHIELD_ACTIVE: Target node is shielded by an electromagnetic defense grid." };
+  }
 
   if (lat !== undefined && lng !== undefined) {
     const distance = getDistanceMeters(lat, lng, node.latitude, node.longitude);
@@ -511,8 +538,10 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
           };
         }
 
+        const isNewQueue = activeCheckIns.length === 0;
         return {
           status: "PROGRESSING",
+          isNewQueue,
           message: `📡 Secured check-in. Faction: ${activeUniqueScouts}/${requiredCount} Scouts. Stay in range!`
         };
       }, { timeout: 15000 });
@@ -535,6 +564,15 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
           });
         });
         sendWhatsAppMessage("+961700078138", alertMessage).catch(waErr => console.error("[WAHA] Failed to notify admin:", waErr));
+      }
+
+      if (result.status === "PROGRESSING" && result.isNewQueue) {
+        const alertMsg = `🚨 *HELIOS SECURITY BREACH: UNDER SIEGE!* 🚨\n\nFaction *${faction}* has initiated a hack on Hot-Spot *"${node.name}"*!\n\nOccupying Faction: *${node.controllingFaction || "NEUTRAL"}*\nTime remaining to defend: *60 seconds*!\nNavigate: https://sdcsaintjeanmarc.space/rovers/nav`;
+        getOperationHeliosGroupId().then(groupId => {
+          sendWhatsAppMessage(groupId, alertMsg).catch(waErr => 
+            console.error("[WAHA] Failed to broadcast siege notification:", waErr)
+          );
+        }).catch(err => console.error("Failed to query group JID:", err));
       }
 
       if (result.status === "BLOCKED") {
@@ -628,6 +666,10 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
 
   const node = await prisma.geoNode.findUnique({ where: { id: nodeId } });
   if (!node) return { success: false, error: "Node not found" };
+
+  if (node.shieldExpiresAt && node.shieldExpiresAt > new Date()) {
+    return { success: false, error: "SHIELD_ACTIVE: Target node is shielded by an electromagnetic defense grid." };
+  }
 
   if (node.controllingFaction === faction) {
     return { success: false, error: `This node is already controlled by your faction (${faction})` };
@@ -730,8 +772,10 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
           };
         }
 
+        const isNewQueue = activeCheckIns.length === 0;
         return {
           status: "PROGRESSING",
+          isNewQueue,
           message: `📡 Secured check-in. Faction: ${activeUniqueScouts}/${requiredCount} Scouts. Stay in range!`
         };
       }, { timeout: 15000 });
@@ -754,6 +798,15 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
           });
         });
         sendWhatsAppMessage("+961700078138", alertMessage).catch(waErr => console.error("Failed to send admin notification:", waErr));
+      }
+
+      if (result.status === "PROGRESSING" && result.isNewQueue) {
+        const alertMsg = `🚨 *HELIOS SECURITY BREACH: UNDER SIEGE!* 🚨\n\nFaction *${faction}* has initiated a hack on Hot-Spot *"${node.name}"*!\n\nOccupying Faction: *${node.controllingFaction || "NEUTRAL"}*\nTime remaining to defend: *60 seconds*!\nNavigate: https://sdcsaintjeanmarc.space/rovers/nav`;
+        getOperationHeliosGroupId().then(groupId => {
+          sendWhatsAppMessage(groupId, alertMsg).catch(waErr => 
+            console.error("[WAHA] Failed to broadcast siege notification:", waErr)
+          );
+        }).catch(err => console.error("Failed to query group JID:", err));
         return { success: true, message: result.message };
       } else if (result.status === "INTERRUPTED" || result.status === "BLOCKED" || result.status === "ALREADY_CHECKED_IN") {
         await logSystemAction("GEONODE_HOTSPOT_BLOCKED", `Rover "${session.profile.fullName}" attempted check-in at Hot-Spot "${node.name}", but check-in failed or was blocked: ${result.message}`);
@@ -1056,6 +1109,27 @@ export async function adminToggleNightNav(active: boolean) {
   }
 }
 
+// 13b. Admin Toggle Lucky Wheel
+export async function adminToggleLuckyWheel(active: boolean) {
+  try {
+    await checkAdminSession();
+
+    await prisma.systemSetting.upsert({
+      where: { key: "lucky_wheel_active" },
+      update: { value: String(active) },
+      create: { key: "lucky_wheel_active", value: String(active) },
+    });
+
+    await logSystemAction("ADMIN_LUCKY_WHEEL_TOGGLED", `Admin toggled lucky spin wheel status to: ${active}.`);
+
+    revalidatePath("/rovers/admin");
+    revalidatePath("/rovers/shop");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to update Lucky Wheel status" };
+  }
+}
+
 // 14. Admin Invite User via WhatsApp
 export async function adminInviteUser(userId: string, tempPassword?: string) {
   try {
@@ -1243,6 +1317,16 @@ export async function adminCloseAuction(itemId: string) {
     await logSystemAction("MARKETPLACE_AUCTION_CLOSED", `Admin closed auction for item "${item.title}". Winner: "${winner?.fullName || "None"}". Final Bid: ${finalBid} CR.`);
 
     if (winner) {
+      // Create ShopPurchase record
+      await prisma.shopPurchase.create({
+        data: {
+          shopItemId: itemId,
+          roverId: winner.id,
+          pricePaid: finalBid,
+          isDelivered: false
+        }
+      });
+
       // 1. Notify the winner
       if (winner.roverProfile?.phoneNumber) {
         try {
@@ -1866,7 +1950,24 @@ export async function getLiveGeoNodes() {
       orderBy: { createdAt: "asc" }
     });
 
+    // Cleanup expired decoy nodes
+    await prisma.geoNode.deleteMany({
+      where: {
+        isDecoy: true,
+        expiresAt: { lt: now }
+      }
+    });
+
     const nodes = await prisma.geoNode.findMany({
+      where: {
+        OR: [
+          { isDecoy: false },
+          {
+            isDecoy: true,
+            expiresAt: { gte: now }
+          }
+        ]
+      },
       orderBy: { name: "asc" },
     });
 
@@ -1907,6 +2008,9 @@ export async function getLiveGeoNodes() {
         controllingFaction: node.controllingFaction,
         isHotSpot: node.isHotSpot,
         secretPasscode: node.secretPasscode,
+        isDecoy: node.isDecoy,
+        expiresAt: node.expiresAt,
+        shieldExpiresAt: node.shieldExpiresAt,
         activeFaction,
         activeCount,
         requiredCount,
@@ -2047,10 +2151,9 @@ export async function adminSendLeaderboardUpdate() {
     // Build leaderboard message
     let message = `🏆 *HELIOS LEADERBOARD STATUS UPDATE* 🏆\n\n`;
     message += `📊 *Faction Stats:*\n🔴 ALPHA: *${alphaTotal} CR*\n🔵 BRAVO: *${bravoTotal} CR*\n\n`;
-    message += `🥇 *Top 5 Scouts:*\n`;
+    message += `🥇 *Scout Rankings (Full Leaderboard):*\n`;
 
-    const topFive = leaderboard.slice(0, 5);
-    topFive.forEach((rover, index) => {
+    leaderboard.forEach((rover, index) => {
       const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🔸";
       message += `${medal} ${index + 1}. *${rover.profile.fullName}* (${rover.faction}): *${rover.roverCredits} CR*\n`;
     });
@@ -2065,3 +2168,467 @@ export async function adminSendLeaderboardUpdate() {
     return { success: false, error: err.message || "Failed to broadcast leaderboard update" };
   }
 }
+
+// 32. Admin Get All Quest Completions Flat List
+export async function adminGetQuestCompletions() {
+  try {
+    await checkAdminSession();
+    const completions = await prisma.questCompletion.findMany({
+      include: {
+        rover: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            unit: true,
+          }
+        },
+        quest: {
+          select: {
+            id: true,
+            title: true,
+            verificationType: true,
+            creditReward: true,
+          }
+        }
+      },
+      orderBy: { completedAt: "desc" }
+    });
+    return { success: true, completions };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch quest completions" };
+  }
+}
+
+// 33. Admin Get Marketplace Purchases List
+export async function adminGetMarketplacePurchases() {
+  try {
+    await checkAdminSession();
+    const purchases = await prisma.shopPurchase.findMany({
+      include: {
+        rover: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            unit: true,
+          }
+        },
+        shopItem: {
+          select: {
+            id: true,
+            title: true,
+            type: true,
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+    return { success: true, purchases };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch purchases" };
+  }
+}
+
+// 34. Admin Toggle Purchase Delivery Status
+export async function adminTogglePurchaseDelivery(purchaseId: string) {
+  try {
+    await checkAdminSession();
+    const purchase = await prisma.shopPurchase.findUnique({
+      where: { id: purchaseId }
+    });
+    if (!purchase) throw new Error("Purchase not found");
+
+    const updated = await prisma.shopPurchase.update({
+      where: { id: purchaseId },
+      data: { isDelivered: !purchase.isDelivered },
+      include: {
+        rover: {
+          select: {
+            id: true,
+            fullName: true,
+          }
+        },
+        shopItem: {
+          select: {
+            id: true,
+            title: true,
+          }
+        }
+      }
+    });
+
+    await logSystemAction(
+      "MARKETPLACE_DELIVERY_TOGGLED",
+      `Admin toggled delivery status of item "${updated.shopItem.title}" purchased by "${updated.rover.fullName}" to ${updated.isDelivered ? "GIVEN" : "PENDING"}.`
+    );
+
+    return { success: true, purchase: updated };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to toggle delivery status" };
+  }
+}
+
+// 35. Deploy Decoy Node
+export async function deployDecoyNode(latitude: number, longitude: number) {
+  const session = await getRoverSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const faction = session.profile.roverProfile?.faction;
+  if (!faction) {
+    return { success: false, error: "You must be assigned to a faction to deploy decoys." };
+  }
+
+  try {
+    // Find an unused purchase of a Decoy Node Launcher
+    const purchase = await prisma.shopPurchase.findFirst({
+      where: {
+        roverId: session.profile.id,
+        shopItem: {
+          title: { contains: "Decoy", mode: "insensitive" }
+        },
+        isDelivered: false
+      }
+    });
+
+    if (!purchase) {
+      return { success: false, error: "Deployment failed: No available Decoy Node Launcher in your inventory." };
+    }
+
+    const decoyName = `SECTOR_${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    const decoyPasscode = `SEC-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+    // Create the temporary decoy GeoNode
+    await prisma.geoNode.create({
+      data: {
+        name: decoyName,
+        latitude,
+        longitude,
+        radiusMeters: 20,
+        secretPasscode: decoyPasscode,
+        controllingFaction: faction,
+        isHotSpot: true,
+        isDecoy: true,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+      }
+    });
+
+    // Mark the launcher item as consumed/delivered
+    await prisma.shopPurchase.update({
+      where: { id: purchase.id },
+      data: { isDelivered: true }
+    });
+
+    // Send deceptive WhatsApp Group notification
+    try {
+      const groupId = await getOperationHeliosGroupId();
+      const message = `🚨 *HELIOS SATELLITE INTERCEPT: NEW GRID SECTOR* 🚨\n\nFaction *${faction}* has secured a new active Hot-Spot: *"${decoyName}"*!\n\nCoordinates locked: [${latitude.toFixed(5)}, ${longitude.toFixed(5)}]. Grid territory updated.`;
+      await sendWhatsAppMessage(groupId, message);
+    } catch (waErr) {
+      console.error("[WAHA] Failed to send decoy group notification:", waErr);
+    }
+
+    await logSystemAction(
+      "DECOY_DEPLOYED",
+      `Rover "${session.profile.fullName}" deployed a decoy node "${decoyName}" at [${latitude}, ${longitude}] expiring in 30 minutes.`
+    );
+
+    revalidatePath("/rovers/nav");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to deploy decoy node" };
+  }
+}
+
+// 36. Activate Capture Shield
+export async function activateCaptureShield(nodeId: string) {
+  const session = await getRoverSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const faction = session.profile.roverProfile?.faction;
+  if (!faction) {
+    return { success: false, error: "You must be assigned to a faction to activate shields." };
+  }
+
+  try {
+    const node = await prisma.geoNode.findUnique({
+      where: { id: nodeId }
+    });
+
+    if (!node) return { success: false, error: "Node not found." };
+    if (node.controllingFaction !== faction) {
+      return { success: false, error: "You can only shield nodes controlled by your own faction." };
+    }
+
+    // Find an unused purchase of a Capture Shield Generator
+    const purchase = await prisma.shopPurchase.findFirst({
+      where: {
+        roverId: session.profile.id,
+        shopItem: {
+          title: { contains: "Shield", mode: "insensitive" }
+        },
+        isDelivered: false
+      }
+    });
+
+    if (!purchase) {
+      return { success: false, error: "Shield activation failed: No available Capture Shield Generator in your inventory." };
+    }
+
+    // Update the node's shield expiration to 2 hours from now
+    await prisma.geoNode.update({
+      where: { id: nodeId },
+      data: {
+        shieldExpiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000)
+      }
+    });
+
+    // Mark the shield item as consumed/delivered
+    await prisma.shopPurchase.update({
+      where: { id: purchase.id },
+      data: { isDelivered: true }
+    });
+
+    await logSystemAction(
+      "SHIELD_ACTIVATED",
+      `Rover "${session.profile.fullName}" activated a 2-hour capture shield on node "${node.name}".`
+    );
+
+    revalidatePath("/rovers/nav");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to activate capture shield" };
+  }
+}
+
+// 37. Get Rover Inventory (Counts available decoy launchers and shield generators)
+export async function getRoverInventory() {
+  const session = await getRoverSession();
+  if (!session) return { success: false, decoys: 0, shields: 0 };
+
+  try {
+    const decoys = await prisma.shopPurchase.count({
+      where: {
+        roverId: session.profile.id,
+        shopItem: {
+          title: { contains: "Decoy", mode: "insensitive" }
+        },
+        isDelivered: false
+      }
+    });
+
+    const shields = await prisma.shopPurchase.count({
+      where: {
+        roverId: session.profile.id,
+        shopItem: {
+          title: { contains: "Shield", mode: "insensitive" }
+        },
+        isDelivered: false
+      }
+    });
+
+    return { success: true, decoys, shields };
+  } catch (err) {
+    console.error("Failed to fetch rover inventory:", err);
+    return { success: false, decoys: 0, shields: 0 };
+  }
+}
+
+// 38. Spin Cyber-Spin Lucky Wheel
+export async function spinLuckyWheel() {
+  const session = await getRoverSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const wheelSetting = await prisma.systemSetting.findUnique({
+    where: { key: "lucky_wheel_active" },
+  });
+  const luckyWheelActive = wheelSetting?.value === "true";
+  if (!luckyWheelActive) {
+    return { success: false, error: "ACCESS_DENIED: The Cyber-Spin Wheel has been temporarily disabled by Command." };
+  }
+
+  const profile = await prisma.profile.findUnique({
+    where: { id: session.profile.id },
+    include: { roverProfile: true }
+  });
+
+  if (!profile || !profile.roverProfile) {
+    return { success: false, error: "Rover profile not found." };
+  }
+
+  const SPIN_COST = 25;
+  if (profile.roverProfile.roverCredits < SPIN_COST) {
+    return { success: false, error: `INSUFFICIENT_CREDITS: You need ${SPIN_COST} CR to spin the Cyber-Wheel.` };
+  }
+
+  // Deduct credits first
+  await prisma.roverProfile.update({
+    where: { id: profile.roverProfile.id },
+    data: { roverCredits: { decrement: SPIN_COST } }
+  });
+
+  // Weighted Selection
+  const outcomes = [
+    { type: "LOSE", label: "Better luck next time!", weight: 350 },
+    { type: "SMALL_CREDITS", label: "Won +5 CR!", weight: 250 },
+    { type: "SOCIAL_ANTHEM", label: "Challenge: Sing SDC Anthem (+50 CR)", weight: 200 },
+    { type: "MED_CREDITS", label: "Won +20 CR!", weight: 100 },
+    { type: "BIG_CREDITS", label: "Won +50 CR!", weight: 50 },
+    { type: "SOCIAL_LEAVES", label: "Challenge: Leaf Collector (+30 CR)", weight: 50 },
+    { type: "DECOY_LAUNCHER", label: "Won 1x Decoy Node Launcher!", weight: 25 },
+    { type: "SHIELD_GENERATOR", label: "Won 1x Capture Shield Generator!", weight: 20 },
+    { type: "JACKPOT", label: "JACKPOT! Won +150 CR!", weight: 5 }
+  ];
+
+  const totalWeight = outcomes.reduce((acc, curr) => acc + curr.weight, 0);
+  let random = Math.floor(Math.random() * totalWeight);
+  
+  let selected = outcomes[0];
+  for (const outcome of outcomes) {
+    if (random < outcome.weight) {
+      selected = outcome;
+      break;
+    }
+    random -= outcome.weight;
+  }
+
+  let creditReward = 0;
+  let wonItemTitle = "";
+  let pendingQuestTitle = "";
+  let pendingQuestDescription = "";
+  let pendingQuestReward = 0;
+
+  if (selected.type === "SMALL_CREDITS") creditReward = 5;
+  else if (selected.type === "MED_CREDITS") creditReward = 20;
+  else if (selected.type === "BIG_CREDITS") creditReward = 50;
+  else if (selected.type === "JACKPOT") creditReward = 150;
+  else if (selected.type === "DECOY_LAUNCHER") wonItemTitle = "Decoy Node Launcher";
+  else if (selected.type === "SHIELD_GENERATOR") wonItemTitle = "Capture Shield Generator";
+  else if (selected.type === "SOCIAL_ANTHEM") {
+    pendingQuestTitle = "Social Challenge: Sing SDC Anthem";
+    pendingQuestDescription = "Sing the official Scouts des Cèdres anthem in front of a Leader to claim your reward.";
+    pendingQuestReward = 50;
+  } else if (selected.type === "SOCIAL_LEAVES") {
+    pendingQuestTitle = "Social Challenge: Leaf Collector";
+    pendingQuestDescription = "Collect 3 different leaves from the camp grounds and present them to the Command Tent.";
+    pendingQuestReward = 30;
+  }
+
+  // Apply rewards
+  if (creditReward > 0) {
+    await prisma.roverProfile.update({
+      where: { id: profile.roverProfile.id },
+      data: { roverCredits: { increment: creditReward } }
+    });
+  } else if (wonItemTitle) {
+    const shopItem = await prisma.shopItem.findFirst({
+      where: { title: { contains: wonItemTitle, mode: "insensitive" } }
+    });
+    if (shopItem) {
+      await prisma.shopPurchase.create({
+        data: {
+          roverId: profile.id,
+          shopItemId: shopItem.id,
+          isDelivered: false,
+          pricePaid: 0
+        }
+      });
+    }
+  } else if (pendingQuestTitle) {
+    let quest = await prisma.quest.findFirst({
+      where: { title: pendingQuestTitle }
+    });
+
+    if (!quest) {
+      quest = await prisma.quest.create({
+        data: {
+          title: pendingQuestTitle,
+          description: pendingQuestDescription,
+          verificationType: "LEADER_SIGN_OFF",
+          creditReward: pendingQuestReward,
+          isReleased: true,
+          unlockedAtDate: new Date(),
+          phase: "LIVE_CAMP"
+        }
+      });
+    }
+
+    const existingCompletion = await prisma.questCompletion.findUnique({
+      where: {
+        roverId_questId: {
+          roverId: profile.id,
+          questId: quest.id
+        }
+      }
+    });
+
+    if (!existingCompletion) {
+      await prisma.questCompletion.create({
+        data: {
+          roverId: profile.id,
+          questId: quest.id,
+          isVerified: false
+        }
+      });
+    }
+  }
+
+  const updatedProfile = await prisma.roverProfile.findUnique({
+    where: { id: profile.roverProfile.id }
+  });
+
+  await logSystemAction(
+    "LUCKY_WHEEL_SPIN",
+    `Rover "${profile.fullName}" spun the Cyber-Wheel, paid 25 CR, and outcome was "${selected.label}".`
+  );
+
+  return {
+    success: true,
+    outcome: selected.type,
+    label: selected.label,
+    remainingCredits: updatedProfile?.roverCredits || 0
+  };
+}
+
+// 39. Get Rover Identity Data (for Cyber-ID Badge)
+export async function getRoverIdentityData() {
+  const session = await getRoverSession();
+  if (!session) return null;
+
+  try {
+    const profile = await prisma.profile.findUnique({
+      where: { id: session.profile.id },
+      include: {
+        roverProfile: true,
+        questCompletions: {
+          where: { isVerified: true },
+          include: {
+            quest: {
+              select: { id: true, title: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!profile || !profile.roverProfile) return null;
+
+    const completedQuests = profile.questCompletions.map(c => ({
+      id: c.quest.id,
+      title: c.quest.title,
+      category: "CURRICULUM"
+    }));
+
+    return {
+      fullName: profile.fullName,
+      faction: profile.roverProfile.faction || "UNASSIGNED",
+      credits: profile.roverProfile.roverCredits,
+      completedQuests
+    };
+  } catch (err) {
+    console.error("Failed to load rover identity data:", err);
+    return null;
+  }
+}
+
+
