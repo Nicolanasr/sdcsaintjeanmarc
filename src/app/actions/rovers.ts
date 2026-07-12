@@ -308,44 +308,47 @@ export async function purchaseShopItem(itemId: string) {
 
     revalidatePath("/rovers/shop");
 
+    // Log synchronously (fast, no network)
     console.log(`[AuditLog] Rover "${session.profile.fullName}" (${session.profile.id}) purchased item "${result.item.title}" for ${result.item.priceOrCurrentBid} CR. New balance: ${result.updatedRover.roverCredits} CR.`);
-    await logSystemAction("MARKETPLACE_PURCHASE", `Rover "${session.profile.fullName}" (${session.profile.id}) purchased item "${result.item.title}" for ${result.item.priceOrCurrentBid} CR. New balance: ${result.updatedRover.roverCredits} CR.`);
+    // Fire-and-forget: log to DB in background, don't block the response
+    logSystemAction("MARKETPLACE_PURCHASE", `Rover "${session.profile.fullName}" (${session.profile.id}) purchased item "${result.item.title}" for ${result.item.priceOrCurrentBid} CR. New balance: ${result.updatedRover.roverCredits} CR.`)
+      .catch(err => console.error("[Log] Failed to write system action:", err));
 
-    // Notify the rover via WhatsApp
-    if (session.roverProfile?.phoneNumber) {
-      try {
-        const isHintItem = !!result.item.hintText;
-        const roverMessage = isHintItem
-          ? `🔑 *HELIOS MARKETPLACE: HINT UNLOCKED* 🔑\n\nYou purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.\n\nYour new balance is *${result.updatedRover.roverCredits} CR*.\n\n✅ Your hint has been revealed on-screen in the marketplace. Check your device now!`
-          : `🛍️ *HELIOS MARKETPLACE: PURCHASE PERK* 🛍️\n\nCongratulations! You purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.\n\nYour new balance is *${result.updatedRover.roverCredits} CR*. Present this message to the Command Tent to collect your perk.`;
-        await sendWhatsAppMessage(session.roverProfile.phoneNumber, roverMessage);
-      } catch (waErr) {
-        console.error("[WAHA] Failed to send purchase confirmation to rover:", waErr);
-      }
+    // ── Fire-and-forget WhatsApp notifications ──────────────────────────────
+    // Build messages first (sync), then dispatch all sends without awaiting.
+    const isHintItem = !!result.item.hintText;
+    const roverPhone = session.roverProfile?.phoneNumber;
+
+    if (roverPhone) {
+      const roverMessage = isHintItem
+        ? `🔑 *HELIOS MARKETPLACE: HINT UNLOCKED* 🔑\n\nYou purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.\n\nYour new balance is *${result.updatedRover.roverCredits} CR*.\n\n✅ Your hint has been revealed on-screen in the marketplace. Check your device now!`
+        : `🛍️ *HELIOS MARKETPLACE: PURCHASE PERK* 🛍️\n\nCongratulations! You purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.\n\nYour new balance is *${result.updatedRover.roverCredits} CR*. Present this message to the Command Tent to collect your perk.`;
+      sendWhatsAppMessage(roverPhone, roverMessage)
+        .catch(err => console.error("[WAHA] Failed to send purchase confirmation to rover:", err));
     }
 
-    // Notify the admins via WhatsApp
-    try {
-      const hintSection = result.item.hintText
-        ? `\n\n🔑 *HINT TO DELIVER:*\n_${result.item.hintText}_\n\nPlease send this hint privately to the scout and mark as delivered.`
-        : "";
-      const adminMessage = `🛒 *HELIOS MARKETPLACE: NEW PURCHASE* 🛒\n\nScout *${session.profile.fullName}* purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.${hintSection}\n\nManage purchases here: https://sdcsaintjeanmarc.org/en/rovers/admin`;
-      await sendWhatsAppMessage("+96170078138", adminMessage).catch(err => console.error("[WAHA] Failed to notify main admin:", err));
+    const hintSection = result.item.hintText
+      ? `\n\n🔑 *HINT TO DELIVER:*\n_${result.item.hintText}_\n\nScout has already seen this on-screen. Mark as delivered when done.`
+      : "";
+    const adminMessage = `🛒 *HELIOS MARKETPLACE: NEW PURCHASE* 🛒\n\nScout *${session.profile.fullName}* purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.${hintSection}\n\nManage purchases here: https://sdcsaintjeanmarc.org/en/rovers/admin`;
 
-      const admins = await prisma.profile.findMany({
-        where: { role: "admin" },
-        include: { roverProfile: true }
-      });
-      for (const admin of admins) {
-        if (admin.roverProfile?.phoneNumber && admin.roverProfile.phoneNumber !== "+96170078138") {
-          await sendWhatsAppMessage(admin.roverProfile.phoneNumber, adminMessage).catch(err => console.error("[WAHA] Failed to notify admin:", err));
+    sendWhatsAppMessage("+96170078138", adminMessage)
+      .catch(err => console.error("[WAHA] Failed to notify main admin:", err));
+
+    prisma.profile.findMany({ where: { role: "admin" }, include: { roverProfile: true } })
+      .then(admins => {
+        for (const admin of admins) {
+          if (admin.roverProfile?.phoneNumber && admin.roverProfile.phoneNumber !== "+96170078138") {
+            sendWhatsAppMessage(admin.roverProfile.phoneNumber, adminMessage)
+              .catch(err => console.error("[WAHA] Failed to notify admin:", err));
+          }
         }
-      }
-    } catch (waErr) {
-      console.error("[WAHA] Failed to notify admins about purchase:", waErr);
-    }
+      })
+      .catch(err => console.error("[WAHA] Failed to fetch admins for notification:", err));
+    // ────────────────────────────────────────────────────────────────────────
 
     return { success: true, newCredits: result.updatedRover.roverCredits, hintText: result.item.hintText ?? null };
+
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to purchase item" };
   }
