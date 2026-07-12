@@ -314,8 +314,11 @@ export async function purchaseShopItem(itemId: string) {
     // Notify the rover via WhatsApp
     if (session.roverProfile?.phoneNumber) {
       try {
-        const message = `🛍️ *HELIOS MARKETPLACE: PURCHASE PERK* 🛍️\n\nCongratulations! You purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.\n\nYour new balance is *${result.updatedRover.roverCredits} CR*. Present this message to the Command Tent to collect your perk.`;
-        await sendWhatsAppMessage(session.roverProfile.phoneNumber, message);
+        const isHintItem = !!result.item.hintText;
+        const roverMessage = isHintItem
+          ? `🔑 *HELIOS MARKETPLACE: HINT UNLOCKED* 🔑\n\nYou purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.\n\nYour new balance is *${result.updatedRover.roverCredits} CR*.\n\n✅ Your hint has been revealed on-screen in the marketplace. Check your device now!`
+          : `🛍️ *HELIOS MARKETPLACE: PURCHASE PERK* 🛍️\n\nCongratulations! You purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.\n\nYour new balance is *${result.updatedRover.roverCredits} CR*. Present this message to the Command Tent to collect your perk.`;
+        await sendWhatsAppMessage(session.roverProfile.phoneNumber, roverMessage);
       } catch (waErr) {
         console.error("[WAHA] Failed to send purchase confirmation to rover:", waErr);
       }
@@ -323,7 +326,10 @@ export async function purchaseShopItem(itemId: string) {
 
     // Notify the admins via WhatsApp
     try {
-      const adminMessage = `🛒 *HELIOS MARKETPLACE: NEW PURCHASE* 🛒\n\nScout *${session.profile.fullName}* purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.\n\nManage purchases here: https://sdcsaintjeanmarc.org/en/rovers/admin`;
+      const hintSection = result.item.hintText
+        ? `\n\n🔑 *HINT TO DELIVER:*\n_${result.item.hintText}_\n\nPlease send this hint privately to the scout and mark as delivered.`
+        : "";
+      const adminMessage = `🛒 *HELIOS MARKETPLACE: NEW PURCHASE* 🛒\n\nScout *${session.profile.fullName}* purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.${hintSection}\n\nManage purchases here: https://sdcsaintjeanmarc.org/en/rovers/admin`;
       await sendWhatsAppMessage("+96170078138", adminMessage).catch(err => console.error("[WAHA] Failed to notify main admin:", err));
 
       const admins = await prisma.profile.findMany({
@@ -339,7 +345,7 @@ export async function purchaseShopItem(itemId: string) {
       console.error("[WAHA] Failed to notify admins about purchase:", waErr);
     }
 
-    return { success: true, newCredits: result.updatedRover.roverCredits };
+    return { success: true, newCredits: result.updatedRover.roverCredits, hintText: result.item.hintText ?? null };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to purchase item" };
   }
@@ -1634,6 +1640,7 @@ export async function adminCreateShopItem(data: {
   priceOrCurrentBid: number;
   stock: number;
   isAvailable: boolean;
+  hintText?: string;
 }) {
   try {
     await checkAdminSession();
@@ -1646,6 +1653,7 @@ export async function adminCreateShopItem(data: {
         priceOrCurrentBid: Number(data.priceOrCurrentBid),
         stock: Number(data.stock),
         isAvailable: data.isAvailable,
+        hintText: data.hintText?.trim() || null,
       },
     });
 
@@ -1669,6 +1677,7 @@ export async function adminUpdateShopItem(
     priceOrCurrentBid: number;
     stock: number;
     isAvailable: boolean;
+    hintText?: string;
   }
 ) {
   try {
@@ -1683,6 +1692,7 @@ export async function adminUpdateShopItem(
         priceOrCurrentBid: Number(data.priceOrCurrentBid),
         stock: Number(data.stock),
         isAvailable: data.isAvailable,
+        hintText: data.hintText?.trim() || null,
       },
     });
 
@@ -2421,6 +2431,81 @@ export async function adminGetQuestSubmissions() {
     return { success: true, submissions };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to fetch quest submissions" };
+  }
+}
+
+// 32c. Admin Get Blind Quest Submissions for a specific quest (with correct/incorrect status)
+export async function adminGetBlindQuestSubmissions(questId: string) {
+  try {
+    await checkAdminSession();
+
+    const quest = await prisma.quest.findUnique({
+      where: { id: questId },
+      select: { id: true, title: true, encryptedAnswerHash: true, isBlind: true }
+    });
+    if (!quest) return { success: false, error: "Quest not found" };
+
+    const submissions = await prisma.questSubmission.findMany({
+      where: { questId },
+      include: {
+        rover: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            unit: true,
+          }
+        }
+      },
+      orderBy: { submittedAt: "asc" }
+    });
+
+    // Also load completions for this quest to know who was awarded
+    const completions = await prisma.questCompletion.findMany({
+      where: { questId },
+      select: { roverId: true, isVerified: true }
+    });
+    const completedRoverIds = new Set(completions.filter(c => c.isVerified).map(c => c.roverId));
+
+    // Group by rover
+    const grouped: Record<string, {
+      rover: typeof submissions[0]["rover"];
+      answers: { answer: string; submittedAt: Date }[];
+      isCorrect: boolean | null;
+      wasAwarded: boolean;
+    }> = {};
+
+    for (const sub of submissions) {
+      if (!grouped[sub.roverId]) {
+        grouped[sub.roverId] = {
+          rover: sub.rover,
+          answers: [],
+          isCorrect: null,
+          wasAwarded: completedRoverIds.has(sub.roverId),
+        };
+      }
+      grouped[sub.roverId].answers.push({ answer: sub.answer, submittedAt: sub.submittedAt });
+    }
+
+    // Determine isCorrect per rover using hash if available
+    if (quest.encryptedAnswerHash) {
+      for (const roverId of Object.keys(grouped)) {
+        const anyCorrect = grouped[roverId].answers.some(
+          a => hashAnswer(a.answer) === quest.encryptedAnswerHash
+        );
+        grouped[roverId].isCorrect = anyCorrect;
+      }
+    }
+
+    return {
+      success: true,
+      questTitle: quest.title,
+      isBlind: quest.isBlind,
+      isRevealed: !!quest.encryptedAnswerHash,
+      groups: Object.values(grouped)
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch blind quest submissions" };
   }
 }
 

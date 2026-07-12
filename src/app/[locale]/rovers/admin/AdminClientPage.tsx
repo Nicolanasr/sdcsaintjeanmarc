@@ -32,7 +32,9 @@ import {
     adminGetItemPurchaseHistory,
     adminGetQuestCompletions,
     adminGetQuestSubmissions,
+    adminGetBlindQuestSubmissions,
     adminGetMarketplacePurchases,
+
     adminTogglePurchaseDelivery,
 } from "@/app/actions/rovers";
 
@@ -90,6 +92,7 @@ interface ShopItem {
     priceOrCurrentBid: number;
     stock: number;
     isAvailable: boolean;
+    hintText: string | null;
     highestBidder: {
         id: string;
         fullName: string;
@@ -279,6 +282,7 @@ export default function AdminClientPage({
     const [editShopPrice, setEditShopPrice] = useState<number | "">("");
     const [editShopStock, setEditShopStock] = useState<number | "">("");
     const [editShopAvailable, setEditShopAvailable] = useState(true);
+    const [editShopHintText, setEditShopHintText] = useState("");
 
     // ShopItem Creation form state
     const [newShopTitle, setNewShopTitle] = useState("");
@@ -287,6 +291,7 @@ export default function AdminClientPage({
     const [newShopPrice, setNewShopPrice] = useState<number | "">("");
     const [newShopStock, setNewShopStock] = useState<number | "">("");
     const [newShopAvailable, setNewShopAvailable] = useState(true);
+    const [newShopHintText, setNewShopHintText] = useState("");
 
     // Modal creation visibility states
     const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -309,6 +314,9 @@ export default function AdminClientPage({
     const [loading, setLoading] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
     const [purchaseHistory, setPurchaseHistory] = useState<{ title: string; logs: any[] } | null>(null);
+    const [expandedQuestId, setExpandedQuestId] = useState<string | null>(null);
+    const [questSubmissionsMap, setQuestSubmissionsMap] = useState<Record<string, any>>({}); // questId -> data
+
 
     const startEditPhone = (roverId: string, currentPhone: string) => {
         setEditingPhoneId(roverId);
@@ -1476,6 +1484,12 @@ export default function AdminClientPage({
                 setQuests((prev) =>
                     prev.map((q) => (q.id === questId ? { ...q, isBlind: false } : q))
                 );
+                // Refresh the submissions panel if it's open for this quest
+                setQuestSubmissionsMap((prev) => {
+                    const next = { ...prev };
+                    delete next[questId];
+                    return next;
+                });
             } else {
                 setMessage({
                     type: "error",
@@ -1489,6 +1503,37 @@ export default function AdminClientPage({
             });
         } finally {
             setLoading(null);
+        }
+    };
+
+    const handleViewQuestSubmissions = async (questId: string) => {
+        // Toggle off
+        if (expandedQuestId === questId) {
+            setExpandedQuestId(null);
+            return;
+        }
+        setExpandedQuestId(questId);
+        // Load if not cached
+        if (!questSubmissionsMap[questId]) {
+            setLoading(`subs-${questId}`);
+            try {
+                const res = await adminGetBlindQuestSubmissions(questId);
+                if (res.success) {
+                    setQuestSubmissionsMap((prev) => ({ ...prev, [questId]: res }));
+                } else {
+                    setQuestSubmissionsMap((prev) => ({
+                        ...prev,
+                        [questId]: { error: res.error }
+                    }));
+                }
+            } catch (err: any) {
+                setQuestSubmissionsMap((prev) => ({
+                    ...prev,
+                    [questId]: { error: err.message }
+                }));
+            } finally {
+                setLoading(null);
+            }
         }
     };
 
@@ -1508,6 +1553,7 @@ export default function AdminClientPage({
                 priceOrCurrentBid: Number(newShopPrice),
                 stock: newShopType === "FIXED_PRICE" ? Number(newShopStock || 0) : 0,
                 isAvailable: newShopAvailable,
+                hintText: newShopHintText || undefined,
             });
 
             if (res.success) {
@@ -1524,6 +1570,7 @@ export default function AdminClientPage({
                     priceOrCurrentBid: Number(newShopPrice),
                     stock: newShopType === "FIXED_PRICE" ? Number(newShopStock || 0) : 0,
                     isAvailable: newShopAvailable,
+                    hintText: newShopHintText || null,
                     highestBidder: null,
                 };
 
@@ -1537,6 +1584,7 @@ export default function AdminClientPage({
                 setNewShopPrice("");
                 setNewShopStock("");
                 setNewShopAvailable(true);
+                setNewShopHintText("");
             } else {
                 setMessage({
                     type: "error",
@@ -1561,6 +1609,7 @@ export default function AdminClientPage({
         setEditShopPrice(item.priceOrCurrentBid);
         setEditShopStock(item.stock);
         setEditShopAvailable(item.isAvailable);
+        setEditShopHintText(item.hintText || "");
     };
 
     const handleEditShopSubmit = async (e: React.FormEvent) => {
@@ -1578,6 +1627,7 @@ export default function AdminClientPage({
                 priceOrCurrentBid: Number(editShopPrice),
                 stock: editShopType === "FIXED_PRICE" ? Number(editShopStock || 0) : 0,
                 isAvailable: editShopAvailable,
+                hintText: editShopHintText || undefined,
             });
 
             if (res.success) {
@@ -1597,6 +1647,7 @@ export default function AdminClientPage({
                                 priceOrCurrentBid: Number(editShopPrice),
                                 stock: editShopType === "FIXED_PRICE" ? Number(editShopStock || 0) : 0,
                                 isAvailable: editShopAvailable,
+                                hintText: editShopHintText || null,
                             };
                         }
                         return item;
@@ -2097,7 +2148,8 @@ export default function AdminClientPage({
                                             </tr>
                                         ) : (
                                             quests.map((quest) => (
-                                                <tr key={quest.id} className="hover:bg-amber-950/5 transition">
+                                                <React.Fragment key={quest.id}>
+                                                <tr className="hover:bg-amber-950/5 transition">
                                                     <td className="p-3.5">
                                                         <div className="font-bold text-zinc-100">{quest.title}</div>
                                                         <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
@@ -2126,6 +2178,17 @@ export default function AdminClientPage({
                                                     </td>
                                                     <td className="p-3.5 text-right">
                                                         <div className="flex justify-end gap-2">
+                                                            {/* Submissions toggle — available on all quests */}
+                                                            <button
+                                                                onClick={() => handleViewQuestSubmissions(quest.id)}
+                                                                disabled={loading === `subs-${quest.id}`}
+                                                                className={`px-2 py-1 rounded font-extrabold transition cursor-pointer text-[10px] uppercase border ${expandedQuestId === quest.id
+                                                                    ? "bg-cyan-700 border-cyan-500 text-white"
+                                                                    : "bg-cyan-950/30 border-cyan-500/30 text-cyan-400 hover:bg-cyan-800/40"
+                                                                    }`}
+                                                            >
+                                                                {loading === `subs-${quest.id}` ? "LOADING..." : expandedQuestId === quest.id ? "▲ CLOSE" : "📋 SUBS"}
+                                                            </button>
                                                             {quest.isBlind && (
                                                                 <button
                                                                     onClick={() => handleRevealBlindQuest(quest.id, quest.title)}
@@ -2157,7 +2220,83 @@ export default function AdminClientPage({
                                                         </div>
                                                     </td>
                                                 </tr>
+                                                {/* Inline submissions drawer */}
+                                                {expandedQuestId === quest.id && (
+                                                    <tr key={`subs-${quest.id}`}>
+                                                        <td colSpan={5} className="p-0 bg-zinc-950/70 border-t border-b border-cyan-500/20">
+                                                            <div className="p-4">
+                                                                <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-400 mb-3 flex items-center gap-2">
+                                                                    📋 SUBMISSION INTAKE LOG — {quest.title}
+                                                                    {questSubmissionsMap[quest.id]?.isRevealed === false && (
+                                                                        <span className="bg-yellow-950/40 border border-yellow-500/30 text-yellow-400 px-2 py-0.5 rounded text-[9px]">
+                                                                            ⚠️ BLIND — correct/incorrect visible after REVEAL
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {!questSubmissionsMap[quest.id] ? (
+                                                                    <div className="text-zinc-500 italic text-xs">Loading submissions...</div>
+                                                                ) : questSubmissionsMap[quest.id].error ? (
+                                                                    <div className="text-red-400 text-xs">Error: {questSubmissionsMap[quest.id].error}</div>
+                                                                ) : questSubmissionsMap[quest.id].groups?.length === 0 ? (
+                                                                    <div className="text-zinc-500 italic text-xs">No submissions yet for this challenge.</div>
+                                                                ) : (
+                                                                    <table className="w-full text-xs border-collapse">
+                                                                        <thead>
+                                                                            <tr className="text-[10px] uppercase tracking-wider text-zinc-500 border-b border-zinc-700/50">
+                                                                                <th className="text-left py-2 pr-4">Scout</th>
+                                                                                <th className="text-left py-2 pr-4">Unit</th>
+                                                                                <th className="text-left py-2 pr-4">Attempt #</th>
+                                                                                <th className="text-left py-2 pr-4">Submitted Answer(s)</th>
+                                                                                <th className="text-center py-2 pr-4">Status</th>
+                                                                                <th className="text-center py-2">Awarded</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody className="divide-y divide-zinc-800/60">
+                                                                            {questSubmissionsMap[quest.id].groups.map((g: any, gi: number) => (
+                                                                                <tr key={gi} className="hover:bg-zinc-800/20">
+                                                                                    <td className="py-2 pr-4 font-bold text-zinc-200">{g.rover?.fullName ?? "Unknown"}</td>
+                                                                                    <td className="py-2 pr-4 text-zinc-400">{g.rover?.unit ?? "—"}</td>
+                                                                                    <td className="py-2 pr-4 text-zinc-400">{g.answers.length}x</td>
+                                                                                    <td className="py-2 pr-4">
+                                                                                        <div className="flex flex-col gap-0.5">
+                                                                                            {g.answers.map((a: any, ai: number) => (
+                                                                                                <span key={ai} className="font-mono text-amber-300 bg-amber-950/20 px-1.5 py-0.5 rounded text-[10px]">
+                                                                                                    {a.answer}
+                                                                                                    <span className="text-zinc-600 ml-1.5 text-[9px]">
+                                                                                                        {new Date(a.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                                                                    </span>
+                                                                                                </span>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="py-2 pr-4 text-center">
+                                                                                        {g.isCorrect === null ? (
+                                                                                            <span className="text-zinc-500 text-[10px] uppercase">Pending</span>
+                                                                                        ) : g.isCorrect ? (
+                                                                                            <span className="text-green-400 font-extrabold text-[10px] uppercase bg-green-950/30 border border-green-500/30 px-2 py-0.5 rounded">✓ Correct</span>
+                                                                                        ) : (
+                                                                                            <span className="text-red-400 font-extrabold text-[10px] uppercase bg-red-950/30 border border-red-500/30 px-2 py-0.5 rounded">✗ Wrong</span>
+                                                                                        )}
+                                                                                    </td>
+                                                                                    <td className="py-2 text-center">
+                                                                                        {g.wasAwarded ? (
+                                                                                            <span className="text-amber-400 text-[10px] font-bold">💰 Yes</span>
+                                                                                        ) : (
+                                                                                            <span className="text-zinc-600 text-[10px]">—</span>
+                                                                                        )}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                </React.Fragment>
                                             ))
+
                                         )}
                                     </tbody>
                                 </table>
@@ -2380,9 +2519,17 @@ export default function AdminClientPage({
                                         shopItems.map((item) => (
                                             <tr key={item.id} className="border-b border-amber-500/10 hover:bg-amber-950/5">
                                                 <td className="p-3">
-                                                    <div className="font-bold text-zinc-200">{item.title}</div>
+                                                    <div className="font-bold text-zinc-200 flex items-center gap-2">
+                                                        {item.title}
+                                                        {item.hintText && (
+                                                            <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-purple-950/50 border border-purple-500/30 text-purple-400 tracking-wider">
+                                                                🔑 HINT
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div className="text-[10px] text-zinc-500 line-clamp-1">{item.description}</div>
                                                 </td>
+
                                                 <td className="p-3">
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.type === "AUCTION"
                                                             ? "bg-purple-950/50 border border-purple-500/30 text-purple-400"
@@ -3187,6 +3334,25 @@ export default function AdminClientPage({
                                 </label>
                             </div>
 
+                            {/* Hint Text — only for hint items */}
+                            <div className="flex flex-col gap-1.5 border-t border-amber-500/10 pt-3">
+                                <label className="text-[10px] uppercase text-purple-400/80 font-bold flex items-center gap-1.5">
+                                    🔑 Hint Text <span className="text-zinc-600 normal-case font-normal">(optional — for quest hint items only)</span>
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="The secret hint content that will be sent privately to the admin when a scout purchases this item..."
+                                    value={editShopHintText}
+                                    onChange={(e) => setEditShopHintText(e.target.value)}
+                                    className="bg-purple-950/20 border border-purple-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-purple-400 font-semibold resize-none font-sans placeholder:text-zinc-700"
+                                />
+                                {editShopHintText && (
+                                    <div className="text-[9px] text-purple-400/60 uppercase tracking-wider">
+                                        ✓ Admin will receive this hint in their WhatsApp notification when a scout purchases
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex gap-3 justify-end mt-2">
                                 <button
                                     type="button"
@@ -3751,6 +3917,25 @@ export default function AdminClientPage({
                                 <label htmlFor="newShopAvailable" className="text-[10px] uppercase text-amber-500/80 font-bold cursor-pointer select-none">
                                     Is Available for purchase / bidding
                                 </label>
+                            </div>
+
+                            {/* Hint Text — only for hint items */}
+                            <div className="flex flex-col gap-1.5 border-t border-amber-500/10 pt-3">
+                                <label className="text-[10px] uppercase text-purple-400/80 font-bold flex items-center gap-1.5">
+                                    🔑 Hint Text <span className="text-zinc-600 normal-case font-normal">(optional — for quest hint items only)</span>
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="The secret hint content that will be sent privately to the admin when a scout purchases this item..."
+                                    value={newShopHintText}
+                                    onChange={(e) => setNewShopHintText(e.target.value)}
+                                    className="bg-purple-950/20 border border-purple-500/30 text-zinc-200 px-3 py-2 text-xs rounded focus:outline-none focus:border-purple-400 font-semibold resize-none font-sans placeholder:text-zinc-700"
+                                />
+                                {newShopHintText && (
+                                    <div className="text-[9px] text-purple-400/60 uppercase tracking-wider">
+                                        ✓ Admin will receive this hint in their WhatsApp notification when a scout purchases
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex gap-3 justify-end mt-2">

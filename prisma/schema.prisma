@@ -169,6 +169,7 @@ model ShopItem {
   highestBidderId   String?      @map("highest_bidder_id")
   highestBidder     Profile?     @relation("HighestBidder", fields: [highestBidderId], references: [id], onDelete: SetNull)
   isAvailable       Boolean      @default(true) @map("is_available")
+  hintText          String?      @map("hint_text")  // Populated for quest hint items; admin sees this when delivering
   stock             Int          @default(0)
   purchases         ShopPurchase[]
   createdAt         DateTime     @default(now())

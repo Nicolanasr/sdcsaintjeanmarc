@@ -150,7 +150,7 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
-                                        placeholder="ENTER_DECRYPTION_KEY_"
+                                        placeholder="answer of TERMINAL_DECRYPT_KEY"
                                         value={code}
                                         onChange={(e) => setCode(e.target.value)}
                                         disabled={loading}
@@ -203,8 +203,8 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
                 {message && (
                     <div
                         className={`text-[11px] p-2 rounded border uppercase font-semibold ${message.type === "success"
-                                ? "bg-green-950/20 border-green-500/30 text-green-400"
-                                : "bg-red-950/20 border-red-500/30 text-red-400"
+                            ? "bg-green-950/20 border-green-500/30 text-green-400"
+                            : "bg-red-950/20 border-red-500/30 text-red-400"
                             }`}
                     >
                         {message.text}
@@ -230,7 +230,7 @@ function renderQuestDescription(text: string) {
 
         const parts: React.ReactNode[] = [];
         let currentPos = 0;
-        
+
         const regex = /(\*\*.*?\*\*|`.*?`|\*.*?\*)/g;
         let match;
         let keyCounter = 0;
@@ -257,13 +257,12 @@ function renderQuestDescription(text: string) {
                 parts.push(
                     <code
                         key={keyCounter++}
-                        className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
-                            isAlertVar
-                                ? "bg-red-950/20 border-red-500/20 text-red-400 font-bold"
-                                : isFormula
+                        className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${isAlertVar
+                            ? "bg-red-950/20 border-red-500/20 text-red-400 font-bold"
+                            : isFormula
                                 ? "bg-purple-950/20 border-purple-500/20 text-purple-300 font-bold font-semibold"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-300"
-                        }`}
+                            }`}
                     >
                         {codeVal}
                     </code>

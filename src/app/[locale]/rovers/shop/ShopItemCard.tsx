@@ -12,6 +12,7 @@ interface ShopItemProps {
     priceOrCurrentBid: number;
     stock: number;
     isAvailable: boolean;
+    hintText: string | null;
     highestBidder: {
       id: string;
       fullName: string;
@@ -26,10 +27,12 @@ export default function ShopItemCard({ item, currentUserId, locale, isAdmin = fa
   const [bidAmount, setBidAmount] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [revealedHint, setRevealedHint] = useState<string | null>(null);
 
   const handlePurchase = async () => {
     setLoading(true);
     setMessage(null);
+    setRevealedHint(null);
 
     try {
       const res = await purchaseShopItem(item.id);
@@ -38,6 +41,9 @@ export default function ShopItemCard({ item, currentUserId, locale, isAdmin = fa
           type: "success",
           text: `PURCHASE_SUCCESS: Item purchased successfully. New balance: ${res.newCredits} CR.`,
         });
+        if (res.hintText) {
+          setRevealedHint(res.hintText);
+        }
       } else {
         setMessage({
           type: "error",
@@ -132,9 +138,19 @@ export default function ShopItemCard({ item, currentUserId, locale, isAdmin = fa
           <h3 className="text-zinc-100 font-extrabold text-base tracking-wide group-hover:text-amber-400 transition-colors">
             {item.title}
           </h3>
-          <div className="text-[10px] text-amber-500/50 uppercase mt-0.5">
+          <div className="text-[10px] text-amber-500/50 uppercase mt-0.5 flex items-center gap-2">
             Category: {isFixed ? "Fixed Price Perk" : "Camp Auction"}
+            {item.hintText && (
+              <span className="bg-purple-950/50 border border-purple-500/40 text-purple-400 text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider animate-pulse">
+                🔑 Quest Hint
+              </span>
+            )}
           </div>
+          {item.hintText && (
+            <div className="text-[10px] text-purple-300/60 mt-1 font-sans">
+              Purchase to receive a private hint from the command team
+            </div>
+          )}
         </div>
         <div className="bg-amber-950/30 text-amber-400 border border-amber-500/30 text-xs px-2.5 py-1 rounded font-bold whitespace-nowrap">
           {isFixed ? `${item.priceOrCurrentBid} CR` : `BID: ${item.priceOrCurrentBid} CR`}
@@ -229,6 +245,25 @@ export default function ShopItemCard({ item, currentUserId, locale, isAdmin = fa
             }`}
           >
             {message.text}
+          </div>
+        )}
+
+        {/* Hint Reveal Panel — shown on-screen immediately after purchase */}
+        {revealedHint && (
+          <div className="mt-1 rounded-lg border-2 border-purple-500/60 bg-purple-950/30 shadow-[0_0_20px_rgba(147,51,234,0.3)] overflow-hidden">
+            <div className="bg-purple-500/10 border-b border-purple-500/30 px-3 py-2 flex items-center gap-2">
+              <span className="text-purple-400 text-[10px] font-extrabold uppercase tracking-widest animate-pulse">🔑 HINT UNLOCKED</span>
+            </div>
+            <div className="px-3 py-3">
+              <p className="text-purple-100 text-sm font-semibold leading-relaxed font-sans whitespace-pre-wrap">
+                {revealedHint}
+              </p>
+            </div>
+            <div className="bg-black/30 px-3 py-1.5 border-t border-purple-500/20">
+              <p className="text-purple-400/50 text-[9px] uppercase tracking-wider">
+                Screenshot this — it will not appear again after you leave this page
+              </p>
+            </div>
           </div>
         )}
       </div>
