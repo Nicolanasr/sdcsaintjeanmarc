@@ -23,6 +23,7 @@ model Profile {
   // Rovers camp portal fields
   roverProfile     RoverProfile?
   questCompletions QuestCompletion[]
+  questSubmissions QuestSubmission[]
   bids             ShopItem[]       @relation("HighestBidder")
   purchases        ShopPurchase[]
 }
@@ -122,10 +123,12 @@ model Quest {
   encryptedAnswerHash String?           @map("encrypted_answer_hash")
   creditReward        Int               @map("credit_reward")
   isReleased          Boolean           @default(false) @map("is_released")
+  isBlind             Boolean           @default(false) @map("is_blind")
   unlockedAtDate      DateTime          @map("unlocked_at_date")
   expiresAt           DateTime?         @map("expires_at")
   phase               QuestPhase
   completions         QuestCompletion[]
+  submissions         QuestSubmission[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 }
@@ -140,6 +143,16 @@ model QuestCompletion {
   completedAt DateTime @default(now()) @map("completed_at")
 
   @@unique([roverId, questId])
+}
+
+model QuestSubmission {
+  id          String   @id @default(uuid())
+  roverId     String   @map("rover_id")
+  rover       Profile  @relation(fields: [roverId], references: [id], onDelete: Cascade)
+  questId     String   @map("quest_id")
+  quest       Quest    @relation(fields: [questId], references: [id], onDelete: Cascade)
+  answer      String
+  submittedAt DateTime @default(now()) @map("submitted_at")
 }
 
 enum ShopItemType {

@@ -88,6 +88,12 @@ export default async function AdminPage({ params }: PageProps) {
   });
   const hotspotThreshold = thresholdSetting ? parseInt(thresholdSetting.value, 10) : null;
 
+  // Load system setting for GPS capture perimeter
+  const perimeterSetting = await prisma.systemSetting.findUnique({
+    where: { key: "capture_perimeter_meters" },
+  });
+  const capturePerimeter = perimeterSetting ? parseInt(perimeterSetting.value, 10) : 100;
+
   // Load all geoNodes
   const nodes = await prisma.geoNode.findMany({
     orderBy: { name: "asc" },
@@ -104,6 +110,7 @@ export default async function AdminPage({ params }: PageProps) {
       initialNightNavActive={nightNavActive}
       initialHotspotThreshold={hotspotThreshold}
       initialLuckyWheelActive={luckyWheelActive}
+      initialCapturePerimeter={capturePerimeter}
     />
   );
 }

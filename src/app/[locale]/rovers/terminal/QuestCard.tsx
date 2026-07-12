@@ -12,6 +12,7 @@ interface QuestCardProps {
         verificationType: "DIGITAL_CODE" | "LEADER_SIGN_OFF";
         creditReward: number;
         expiresAt?: Date | string | null;
+        isBlind?: boolean;
     };
     completion: {
         isVerified: boolean;
@@ -36,7 +37,7 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
             if (res.success) {
                 setMessage({
                     type: "success",
-                    text: `DECRYPTION_SUCCESSFUL: Awarded +${res.reward} credits! Terminal updated.`,
+                    text: res.isBlind ? res.message : `DECRYPTION_SUCCESSFUL: Awarded +${res.reward} credits! Terminal updated.`,
                 });
                 setCode("");
             } else {
@@ -121,9 +122,9 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
             </div>
 
             {/* Description */}
-            <p className="text-zinc-400 leading-relaxed whitespace-pre-line">
-                {quest.description}
-            </p>
+            <div className="flex flex-col gap-2">
+                {renderQuestDescription(quest.description)}
+            </div>
 
             {/* Clue Hint */}
             {quest.clueHint && !isCompleted && !isExpired && (
@@ -145,22 +146,29 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
                                 ✓ Decrypted & Completed
                             </div>
                         ) : (
-                            <form onSubmit={handleSubmitCode} className="flex gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="ENTER_DECRYPTION_KEY_"
-                                    value={code}
-                                    onChange={(e) => setCode(e.target.value)}
-                                    disabled={loading}
-                                    className="bg-black border border-amber-500/30 focus:border-amber-400 text-zinc-200 placeholder-zinc-700 text-xs px-3 py-2 rounded focus:outline-none transition w-full uppercase tracking-wider font-semibold disabled:opacity-50"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={loading || !code.trim()}
-                                    className="bg-amber-500 text-black hover:bg-amber-400 font-extrabold text-xs px-4 py-2 rounded transition shadow-[0_0_8px_rgba(245,158,11,0.2)] hover:shadow-[0_0_12px_rgba(245,158,11,0.4)] disabled:opacity-30 cursor-pointer whitespace-nowrap uppercase"
-                                >
-                                    {loading ? "LOAD..." : "DECRYPT_"}
-                                </button>
+                            <form onSubmit={handleSubmitCode} className="flex flex-col gap-2">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="ENTER_DECRYPTION_KEY_"
+                                        value={code}
+                                        onChange={(e) => setCode(e.target.value)}
+                                        disabled={loading}
+                                        className="bg-black border border-amber-500/30 focus:border-amber-400 text-zinc-200 placeholder-zinc-700 text-xs px-3 py-2 rounded focus:outline-none transition w-full uppercase tracking-wider font-semibold disabled:opacity-50"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={loading || !code.trim()}
+                                        className="bg-amber-500 text-black hover:bg-amber-400 font-extrabold text-xs px-4 py-2 rounded transition shadow-[0_0_8px_rgba(245,158,11,0.2)] hover:shadow-[0_0_12px_rgba(245,158,11,0.4)] disabled:opacity-30 cursor-pointer whitespace-nowrap uppercase"
+                                    >
+                                        {loading ? "LOAD..." : "DECRYPT_"}
+                                    </button>
+                                </div>
+                                {quest.isBlind && (
+                                    <div className="text-[9px] text-purple-400 font-mono uppercase tracking-widest text-center mt-1 animate-pulse">
+                                        🚨 BLIND INTAKE GRID ACTIVE // MAX 2 SUBMISSIONS
+                                    </div>
+                                )}
                             </form>
                         )}
                     </div>
@@ -205,4 +213,101 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
             </div>
         </div>
     );
+}
+
+function renderQuestDescription(text: string) {
+    if (!text) return null;
+
+    const lines = text.split("\n");
+
+    return lines.map((line, idx) => {
+        if (!line.trim()) {
+            return <div key={idx} className="h-2.5" />;
+        }
+
+        const isBullet = line.trim().startsWith("* ") || line.trim().startsWith("- ");
+        let content = isBullet ? line.trim().substring(2) : line;
+
+        const parts: React.ReactNode[] = [];
+        let currentPos = 0;
+        
+        const regex = /(\*\*.*?\*\*|`.*?`|\*.*?\*)/g;
+        let match;
+        let keyCounter = 0;
+
+        while ((match = regex.exec(content)) !== null) {
+            const matchIndex = match.index;
+            const matchedText = match[0];
+
+            if (matchIndex > currentPos) {
+                parts.push(content.substring(currentPos, matchIndex));
+            }
+
+            if (matchedText.startsWith("**") && matchedText.endsWith("**")) {
+                const boldVal = matchedText.slice(2, -2);
+                parts.push(
+                    <strong key={keyCounter++} className="text-amber-400 font-extrabold">
+                        {boldVal}
+                    </strong>
+                );
+            } else if (matchedText.startsWith("`") && matchedText.endsWith("`")) {
+                const codeVal = matchedText.slice(1, -1);
+                const isAlertVar = codeVal.includes("SYS_LOG") || codeVal.includes("CONTEXT_MASK");
+                const isFormula = codeVal.includes("TERMINAL_DECRYPT_KEY") || codeVal.includes("VECTOR_DELTA") || codeVal.includes("OFFICIAL_FOJ_REGISTRY_COUNT") || codeVal.includes("Freeze_Duration_Days");
+                parts.push(
+                    <code
+                        key={keyCounter++}
+                        className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
+                            isAlertVar
+                                ? "bg-red-950/20 border-red-500/20 text-red-400 font-bold"
+                                : isFormula
+                                ? "bg-purple-950/20 border-purple-500/20 text-purple-300 font-bold font-semibold"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-300"
+                        }`}
+                    >
+                        {codeVal}
+                    </code>
+                );
+            } else if (matchedText.startsWith("*") && matchedText.endsWith("*")) {
+                const italicVal = matchedText.slice(1, -1);
+                parts.push(
+                    <em key={keyCounter++} className="text-zinc-300 italic">
+                        {italicVal}
+                    </em>
+                );
+            }
+
+            currentPos = regex.lastIndex;
+        }
+
+        if (currentPos < content.length) {
+            parts.push(content.substring(currentPos));
+        }
+
+        if (isBullet) {
+            return (
+                <div key={idx} className="flex gap-2 items-start pl-2 text-zinc-400 text-xs">
+                    <span className="text-amber-500/60 mt-1.5 text-[8px]">■</span>
+                    <span className="flex-1 leading-relaxed">{parts}</span>
+                </div>
+            );
+        }
+
+        const isSystemAlert = line.startsWith("🚨") || line.includes("SYSTEM INTEGRITY");
+        if (isSystemAlert) {
+            return (
+                <div key={idx} className="bg-red-950/10 border border-red-500/20 rounded p-3 text-center my-1.5">
+                    <div className="flex items-center justify-center gap-2 text-xs font-bold text-red-400 uppercase tracking-widest">
+                        {parts}
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <p key={idx} className="text-zinc-400 text-xs leading-relaxed">
+                {parts}
+            </p>
+        );
+    });
 }

@@ -151,6 +151,7 @@ export default function LuckyWheel({ currentCredits, onSpinCompleted }: LuckyWhe
 
             let startTimestamp: number | null = null;
             const duration = 4000; // 4 seconds spin
+            let lastTickSlice = -1;
 
             const animate = (timestamp: number) => {
                 if (!startTimestamp) startTimestamp = timestamp;
@@ -162,6 +163,16 @@ export default function LuckyWheel({ currentCredits, onSpinCompleted }: LuckyWhe
 
                 drawWheel(currentAngle);
 
+                // Audio ticking logic
+                const sliceAngleRad = (Math.PI * 2) / OUTCOMES.length;
+                const normalizedAngle = (currentAngle - Math.PI / 2) % (Math.PI * 2);
+                const positiveAngle = normalizedAngle < 0 ? normalizedAngle + Math.PI * 2 : normalizedAngle;
+                const currentSlice = Math.floor(positiveAngle / sliceAngleRad) % OUTCOMES.length;
+                if (currentSlice !== lastTickSlice) {
+                    cyberAudio.playTick();
+                    lastTickSlice = currentSlice;
+                }
+
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
@@ -172,6 +183,8 @@ export default function LuckyWheel({ currentCredits, onSpinCompleted }: LuckyWhe
 
                     if (res.outcome === "LOSE") {
                         cyberAudio.playFailure();
+                    } else if (res.outcome === "JACKPOT") {
+                        cyberAudio.playJackpot();
                     } else {
                         cyberAudio.playSuccess();
                     }

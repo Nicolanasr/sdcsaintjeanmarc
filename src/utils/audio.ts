@@ -99,6 +99,52 @@ class CyberAudioSynthesizer {
     osc.start(now);
     osc.stop(now + 0.08);
   }
+
+  playTick() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "triangle";
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+    osc.frequency.setValueAtTime(1500, now);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+    osc.start(now);
+    osc.stop(now + 0.02);
+  }
+
+  playJackpot() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    const now = ctx.currentTime;
+
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      gain.gain.setValueAtTime(0, now + idx * 0.1);
+      gain.gain.linearRampToValueAtTime(0.12, now + idx * 0.1 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.35);
+
+      osc.start(now + idx * 0.1);
+      osc.stop(now + idx * 0.1 + 0.35);
+    });
+  }
 }
 
 export const cyberAudio = new CyberAudioSynthesizer();

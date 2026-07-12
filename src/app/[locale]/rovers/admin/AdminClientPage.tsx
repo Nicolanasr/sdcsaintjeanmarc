@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from "react";
 import {
     adminReleaseQuest,
+    adminRevealBlindQuestResults,
     adminApproveSignOff,
     adminAdjustCredits,
     updateRoverPhoneNumber,
     adminToggleNightNav,
     adminToggleLuckyWheel,
+    adminUpdateCapturePerimeter,
     adminCreateRover,
     adminCreateQuest,
     adminDeleteQuest,
@@ -29,6 +31,7 @@ import {
     adminUpdateHotspotThreshold,
     adminGetItemPurchaseHistory,
     adminGetQuestCompletions,
+    adminGetQuestSubmissions,
     adminGetMarketplacePurchases,
     adminTogglePurchaseDelivery,
 } from "@/app/actions/rovers";
@@ -53,6 +56,7 @@ interface Quest {
     clueHint?: string | null;
     creditReward: number;
     isReleased: boolean;
+    isBlind?: boolean;
     unlockedAtDate: Date;
     expiresAt?: Date | string | null;
     verificationType: "DIGITAL_CODE" | "LEADER_SIGN_OFF";
@@ -122,6 +126,7 @@ interface AdminClientPageProps {
     initialNightNavActive: boolean;
     initialHotspotThreshold?: number | null;
     initialLuckyWheelActive: boolean;
+    initialCapturePerimeter: number;
 }
 
 export default function AdminClientPage({
@@ -134,6 +139,7 @@ export default function AdminClientPage({
     initialNightNavActive,
     initialHotspotThreshold = null,
     initialLuckyWheelActive,
+    initialCapturePerimeter,
 }: AdminClientPageProps) {
     const [quests, setQuests] = useState<Quest[]>(initialQuests);
     const [rovers, setRovers] = useState<Rover[]>(initialRovers);
@@ -146,6 +152,7 @@ export default function AdminClientPage({
     const [logsLimit] = useState(50);
     const [nightNavActive, setNightNavActive] = useState(initialNightNavActive);
     const [luckyWheelActive, setLuckyWheelActive] = useState(initialLuckyWheelActive);
+    const [capturePerimeter, setCapturePerimeter] = useState<number | "">(initialCapturePerimeter);
     const [hotspotThreshold, setHotspotThreshold] = useState<number | "">(initialHotspotThreshold ?? "");
 
     // Workstation active tab state
@@ -153,6 +160,7 @@ export default function AdminClientPage({
 
     // Submissions and Purchases states
     const [completions, setCompletions] = useState<any[]>([]);
+    const [submissionsList, setSubmissionsList] = useState<any[]>([]);
     const [purchasesList, setPurchasesList] = useState<any[]>([]);
 
     // Filters for Quest Submissions
@@ -164,11 +172,19 @@ export default function AdminClientPage({
     useEffect(() => {
         if (activeTab === "submissions") {
             setLoading("load-submissions");
-            adminGetQuestCompletions().then((res) => {
-                if (res.success && res.completions) {
-                    setCompletions(res.completions);
+            Promise.all([
+                adminGetQuestCompletions(),
+                adminGetQuestSubmissions()
+            ]).then(([compRes, subRes]) => {
+                if (compRes.success && compRes.completions) {
+                    setCompletions(compRes.completions);
                 } else {
-                    alert(res.error || "Failed to load quest completions");
+                    alert(compRes.error || "Failed to load quest completions");
+                }
+                if (subRes.success && subRes.submissions) {
+                    setSubmissionsList(subRes.submissions);
+                } else {
+                    console.error("Failed to load blind submissions:", subRes.error);
                 }
             }).catch(err => console.error(err))
             .finally(() => setLoading(null));
@@ -214,6 +230,7 @@ export default function AdminClientPage({
     const [newQuestDate, setNewQuestDate] = useState("");
     const [newQuestExpiry, setNewQuestExpiry] = useState("");
     const [newQuestReleased, setNewQuestReleased] = useState(false);
+    const [newQuestIsBlind, setNewQuestIsBlind] = useState(false);
 
     // Hot Spot form state
     const [hotspotName, setHotspotName] = useState("");
@@ -247,6 +264,7 @@ export default function AdminClientPage({
     const [editQuestExpiry, setEditQuestExpiry] = useState("");
     const [editQuestPhase, setEditQuestPhase] = useState<"PRE_CAMP" | "LIVE_CAMP">("PRE_CAMP");
     const [editQuestReleased, setEditQuestReleased] = useState(false);
+    const [editQuestIsBlind, setEditQuestIsBlind] = useState(false);
 
     const [decliningSignOff, setDecliningSignOff] = useState<{ roverId: string; questId: string; questTitle: string; roverName: string } | null>(null);
     const [declineReasonText, setDeclineReasonText] = useState("");
@@ -728,6 +746,34 @@ export default function AdminClientPage({
         }
     };
 
+    const handleUpdatePerimeter = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading("update-perimeter");
+        setMessage(null);
+        try {
+            const val = capturePerimeter === "" ? 100 : Number(capturePerimeter);
+            const res = await adminUpdateCapturePerimeter(val);
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `SYSTEM_CONFIG: GPS Capture Perimeter has been updated to ${val} meters.`,
+                });
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `SYSTEM_CONFIG_FAILED: ${res.error || "Failed to update capture perimeter."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to update capture perimeter."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
     // Add User Form Submission
     const handleAddUser = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -1077,6 +1123,7 @@ export default function AdminClientPage({
                 expiresAt: newQuestExpiry ? new Date(newQuestExpiry).toISOString() : null,
                 phase: newQuestPhase,
                 isReleased: newQuestReleased,
+                isBlind: newQuestIsBlind,
             });
 
             if (res.success) {
@@ -1089,6 +1136,7 @@ export default function AdminClientPage({
                     title: newQuestTitle,
                     creditReward: Number(newQuestReward),
                     isReleased: newQuestReleased,
+                    isBlind: newQuestIsBlind,
                     unlockedAtDate: new Date(newQuestDate),
                     expiresAt: newQuestExpiry ? new Date(newQuestExpiry) : null,
                     verificationType: newQuestType,
@@ -1294,6 +1342,7 @@ export default function AdminClientPage({
         setEditQuestAnswer("");
         setEditQuestPhase(quest.phase || "PRE_CAMP");
         setEditQuestReleased(quest.isReleased);
+        setEditQuestIsBlind(quest.isBlind || false);
 
         // Format date for datetime-local input
         if (quest.unlockedAtDate) {
@@ -1334,6 +1383,7 @@ export default function AdminClientPage({
                 expiresAt: editQuestExpiry ? new Date(editQuestExpiry).toISOString() : null,
                 phase: editQuestPhase,
                 isReleased: editQuestReleased,
+                isBlind: editQuestIsBlind,
             });
 
             if (res.success) {
@@ -1356,6 +1406,7 @@ export default function AdminClientPage({
                                 expiresAt: editQuestExpiry ? new Date(editQuestExpiry) : null,
                                 phase: editQuestPhase,
                                 isReleased: editQuestReleased,
+                                isBlind: editQuestIsBlind,
                             };
                         }
                         return q;
@@ -1403,6 +1454,38 @@ export default function AdminClientPage({
             setMessage({
                 type: "error",
                 text: `SYSTEM_ERROR: ${err.message || "Delete transaction failed."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const handleRevealBlindQuest = async (questId: string, questTitle: string) => {
+        const answer = window.prompt(`Enter the correct decryption answer key for "${questTitle}":`);
+        if (!answer || !answer.trim()) return;
+
+        setLoading(`reveal-quest-${questId}`);
+        setMessage(null);
+        try {
+            const res = await adminRevealBlindQuestResults(questId, answer.trim());
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `BLIND_RESULTS_REVEALED: Successfully evaluated blind submissions. Correct: ${res.correctCount}, Incorrect: ${res.incorrectCount}.`,
+                });
+                setQuests((prev) =>
+                    prev.map((q) => (q.id === questId ? { ...q, isBlind: false } : q))
+                );
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `REVEAL_FAILED: ${res.error || "Failed to process results."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to contact gateway."}`,
             });
         } finally {
             setLoading(null);
@@ -1643,6 +1726,35 @@ export default function AdminClientPage({
                             className="px-4 py-1.5 text-xs bg-amber-500 text-black hover:bg-amber-400 font-extrabold rounded uppercase tracking-wider transition cursor-pointer"
                         >
                             {loading === "update-threshold" ? "SAVING..." : "SAVE"}
+                        </button>
+                    </div>
+                </form>
+
+                {/* GPS Capture Perimeter Override */}
+                <form onSubmit={handleUpdatePerimeter} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
+                    <div>
+                        <div className="text-xs font-bold text-zinc-300 uppercase">🛰️ GPS Capture Perimeter (meters):</div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                            Maximum distance in meters a scout can be from a node to capture it.
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <input
+                            type="number"
+                            placeholder="100"
+                            value={capturePerimeter}
+                            onChange={(e) => setCapturePerimeter(e.target.value === "" ? "" : Number(e.target.value))}
+                            className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-1.5 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold w-24"
+                            min="10"
+                            max="500"
+                            required
+                        />
+                        <button
+                            type="submit"
+                            disabled={loading === "update-perimeter"}
+                            className="px-4 py-1.5 text-xs bg-amber-500 text-black hover:bg-amber-400 font-extrabold rounded uppercase tracking-wider transition cursor-pointer"
+                        >
+                            {loading === "update-perimeter" ? "SAVING..." : "SAVE"}
                         </button>
                     </div>
                 </form>
@@ -2014,6 +2126,15 @@ export default function AdminClientPage({
                                                     </td>
                                                     <td className="p-3.5 text-right">
                                                         <div className="flex justify-end gap-2">
+                                                            {quest.isBlind && (
+                                                                <button
+                                                                    onClick={() => handleRevealBlindQuest(quest.id, quest.title)}
+                                                                    disabled={loading === `reveal-quest-${quest.id}`}
+                                                                    className="px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-extrabold transition cursor-pointer text-[10px] uppercase animate-pulse shadow-[0_0_10px_rgba(147,51,234,0.4)]"
+                                                                >
+                                                                    {loading === `reveal-quest-${quest.id}` ? "REVEALING..." : "👁️ REVEAL"}
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => handleSendReminderClick(quest)}
                                                                 className="px-2 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-extrabold transition cursor-pointer text-[10px] uppercase"
@@ -2465,6 +2586,55 @@ export default function AdminClientPage({
                                             </button>
                                         </div>
                                     )}
+
+                                    {/* Blind Submissions Log Table */}
+                                    <div className="flex flex-col gap-3 mt-8">
+                                        <div>
+                                            <h4 className="text-[11px] font-extrabold text-purple-400 tracking-wider uppercase font-mono bg-purple-950/20 border border-purple-500/20 px-3 py-1.5 rounded inline-block">
+                                                🚨 Blind Submission Intake Logs
+                                            </h4>
+                                            <p className="text-[9px] text-zinc-500 uppercase tracking-wider mt-1 font-mono">
+                                                Raw entries submitted by rovers under the blind-intake matrix (max 2 entries per candidate).
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-zinc-950/40 border border-purple-500/20 rounded-lg overflow-x-auto shadow-lg">
+                                            <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
+                                                <thead>
+                                                    <tr className="border-b border-purple-500/20 bg-black/60 text-purple-400 uppercase text-[10px] tracking-wider font-mono">
+                                                        <th className="p-3 bg-black/40">Scout Name</th>
+                                                        <th className="p-3 bg-black/40">Unit</th>
+                                                        <th className="p-3 bg-black/40">Quest Title</th>
+                                                        <th className="p-3 bg-black/40">Submitted Value</th>
+                                                        <th className="p-3 bg-black/40">Date / Time Submitted</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {submissionsList.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan={5} className="p-8 text-center text-zinc-600 uppercase font-mono">No blind submissions recorded yet.</td>
+                                                        </tr>
+                                                    ) : (
+                                                        submissionsList.map((s) => (
+                                                            <tr key={s.id} className="border-b border-purple-500/10 hover:bg-purple-950/5">
+                                                                <td className="p-3 font-bold text-zinc-200">{s.rover.fullName}</td>
+                                                                <td className="p-3 uppercase text-[10px] text-zinc-400">{s.rover.unit || "-"}</td>
+                                                                <td className="p-3 font-bold text-zinc-200">{s.quest.title}</td>
+                                                                <td className="p-3">
+                                                                    <code className="bg-purple-950/30 border border-purple-500/20 px-2 py-0.5 rounded text-[11px] text-purple-300 font-mono font-bold">
+                                                                        {s.answer}
+                                                                    </code>
+                                                                </td>
+                                                                <td className="p-3 text-zinc-400 font-mono">
+                                                                    <LocalDateStr date={s.submittedAt} />
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </>
                             );
                         })()}
@@ -2899,6 +3069,19 @@ export default function AdminClientPage({
                                 </label>
                             </div>
 
+                            <div className="flex items-center gap-2 mt-1">
+                                <input
+                                    type="checkbox"
+                                    id="editQuestIsBlind"
+                                    checked={editQuestIsBlind}
+                                    onChange={(e) => setEditQuestIsBlind(e.target.checked)}
+                                    className="accent-amber-500"
+                                />
+                                <label htmlFor="editQuestIsBlind" className="text-[10px] uppercase text-amber-500/80 font-bold cursor-pointer select-none">
+                                    🚨 Blind Submission (Hide check-in result)
+                                </label>
+                            </div>
+
                             <div className="flex gap-3 justify-end mt-2">
                                 <button
                                     type="button"
@@ -3217,9 +3400,24 @@ export default function AdminClientPage({
                                     checked={newQuestReleased}
                                     onChange={(e) => setNewQuestReleased(e.target.checked)}
                                     className="w-4 h-4 rounded text-amber-500 bg-black border-amber-500/30 focus:ring-0 cursor-pointer"
+                                    style={{ accentColor: "#f59e0b" }}
                                 />
                                 <label htmlFor="newQuestReleased" className="text-xs uppercase text-zinc-300 font-bold cursor-pointer">
                                     Release immediately
+                                </label>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-1">
+                                <input
+                                    type="checkbox"
+                                    id="newQuestIsBlind"
+                                    checked={newQuestIsBlind}
+                                    onChange={(e) => setNewQuestIsBlind(e.target.checked)}
+                                    className="w-4 h-4 rounded text-amber-500 bg-black border-amber-500/30 focus:ring-0 cursor-pointer"
+                                    style={{ accentColor: "#f59e0b" }}
+                                />
+                                <label htmlFor="newQuestIsBlind" className="text-xs uppercase text-zinc-300 font-bold cursor-pointer">
+                                    🚨 Blind Submission (Hide check-in result)
                                 </label>
                             </div>
 

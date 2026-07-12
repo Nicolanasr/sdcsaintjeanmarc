@@ -99,6 +99,43 @@ export async function submitQuestCode(questId: string, answerCode: string) {
     return { success: false, error: "Quest requires leader sign-off verification" };
   }
 
+  // Blind intake matrix check
+  if (quest.isBlind) {
+    const existingCompletion = await prisma.questCompletion.findUnique({
+      where: {
+        roverId_questId: {
+          roverId: session.profile.id,
+          questId,
+        },
+      },
+    });
+    if (existingCompletion) {
+      return { success: false, error: "Quest already completed and verified." };
+    }
+
+    const submissionsCount = await prisma.questSubmission.count({
+      where: { roverId: session.profile.id, questId }
+    });
+
+    if (submissionsCount >= 2) {
+      return { success: false, error: "LIMIT_REACHED: You have already submitted 2 answers for this blind quest." };
+    }
+
+    await prisma.questSubmission.create({
+      data: {
+        roverId: session.profile.id,
+        questId,
+        answer: answerCode
+      }
+    });
+
+    return {
+      success: true,
+      isBlind: true,
+      message: `SUBMISSION_RECEIVED: Answer logged in the Black-Box matrix (Attempt ${submissionsCount + 1}/2). Results will be processed at midnight.`
+    };
+  }
+
   const hashedAnswer = hashAnswer(answerCode);
   if (hashedAnswer !== quest.encryptedAnswerHash) {
     return { success: false, error: "Incorrect answer code. Cipher verification failed." };
@@ -284,6 +321,24 @@ export async function purchaseShopItem(itemId: string) {
       }
     }
 
+    // Notify the admins via WhatsApp
+    try {
+      const adminMessage = `🛒 *HELIOS MARKETPLACE: NEW PURCHASE* 🛒\n\nScout *${session.profile.fullName}* purchased *"${result.item.title}"* for *${result.item.priceOrCurrentBid} CR*.\n\nManage purchases here: https://sdcsaintjeanmarc.org/en/rovers/admin`;
+      await sendWhatsAppMessage("+96170078138", adminMessage).catch(err => console.error("[WAHA] Failed to notify main admin:", err));
+
+      const admins = await prisma.profile.findMany({
+        where: { role: "admin" },
+        include: { roverProfile: true }
+      });
+      for (const admin of admins) {
+        if (admin.roverProfile?.phoneNumber && admin.roverProfile.phoneNumber !== "+96170078138") {
+          await sendWhatsAppMessage(admin.roverProfile.phoneNumber, adminMessage).catch(err => console.error("[WAHA] Failed to notify admin:", err));
+        }
+      }
+    } catch (waErr) {
+      console.error("[WAHA] Failed to notify admins about purchase:", waErr);
+    }
+
     return { success: true, newCredits: result.updatedRover.roverCredits };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to purchase item" };
@@ -433,10 +488,14 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
 
   if (lat !== undefined && lng !== undefined) {
     const distance = getDistanceMeters(lat, lng, node.latitude, node.longitude);
-    if (distance > 200) {
+    const perimeterSetting = await prisma.systemSetting.findUnique({
+      where: { key: "capture_perimeter_meters" },
+    });
+    const maxDistance = perimeterSetting ? parseInt(perimeterSetting.value, 10) : 100;
+    if (distance > maxDistance) {
       return {
         success: false,
-        error: `You are too far away (${Math.round(distance)}m). You must be physically near the node (within 200m) to check in.`,
+        error: `You are too far away (${Math.round(distance)}m). You must be physically near the node (within ${maxDistance}m) to check in.`,
       };
     }
   }
@@ -676,10 +735,14 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
   }
 
   const distance = getDistanceMeters(lat, lng, node.latitude, node.longitude);
-  if (distance > 200) {
+  const perimeterSetting = await prisma.systemSetting.findUnique({
+    where: { key: "capture_perimeter_meters" },
+  });
+  const maxDistance = perimeterSetting ? parseInt(perimeterSetting.value, 10) : 100;
+  if (distance > maxDistance) {
     return {
       success: false,
-      error: `You are out of range (${Math.round(distance)}m away). Must be physically near the node (within 200m) to check in.`,
+      error: `You are out of range (${Math.round(distance)}m away). Must be physically near the node (within ${maxDistance}m) to check in.`,
     };
   }
 
@@ -898,6 +961,111 @@ export async function adminReleaseQuest(questId: string, isReleased: boolean) {
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to update quest release status" };
+  }
+}
+
+// 8b. Admin Reveal Blind Quest Results
+export async function adminRevealBlindQuestResults(questId: string, correctAnswer: string) {
+  try {
+    await checkAdminSession();
+
+    const quest = await prisma.quest.findUnique({
+      where: { id: questId },
+      include: { completions: true }
+    });
+    if (!quest) return { success: false, error: "Quest not found" };
+    if (!quest.isBlind) return { success: false, error: "Quest is not a blind submission challenge" };
+
+    const hashedCorrect = hashAnswer(correctAnswer);
+
+    // Get all submissions for this quest
+    const submissions = await prisma.questSubmission.findMany({
+      where: { questId },
+      include: {
+        rover: {
+          include: { roverProfile: true }
+        }
+      }
+    });
+
+    // Group submissions by scout ID
+    const submissionsByRover: Record<string, typeof submissions> = {};
+    submissions.forEach(sub => {
+      if (!submissionsByRover[sub.roverId]) {
+        submissionsByRover[sub.roverId] = [];
+      }
+      submissionsByRover[sub.roverId].push(sub);
+    });
+
+    let correctCount = 0;
+    let incorrectCount = 0;
+
+    for (const roverId of Object.keys(submissionsByRover)) {
+      const roverSubs = submissionsByRover[roverId];
+      const hasCorrectAnswer = roverSubs.some(sub => sub.answer.trim().toLowerCase() === correctAnswer.trim().toLowerCase());
+      
+      const scout = roverSubs[0].rover;
+      const phone = scout.roverProfile?.phoneNumber;
+
+      if (hasCorrectAnswer) {
+        correctCount++;
+        // Check if completion already exists
+        const existing = await prisma.questCompletion.findUnique({
+          where: {
+            roverId_questId: {
+              roverId,
+              questId
+            }
+          }
+        });
+
+        if (!existing) {
+          await prisma.$transaction(async (tx) => {
+            await tx.questCompletion.create({
+              data: {
+                roverId,
+                questId,
+                isVerified: true
+              }
+            });
+            await tx.roverProfile.update({
+              where: { profileId: roverId },
+              data: { roverCredits: { increment: quest.creditReward } }
+            });
+          });
+        }
+
+        // Notify winner
+        if (phone) {
+          const successMessage = `🎉 *HELIOS CYBER-INTEGRITY STATUS* 🎉\n\nYour blind submission for *"${quest.title}"* has been decrypted! You got it *CORRECT*! *${quest.creditReward} CR* has been successfully credited to your account.\n\nThank you for securing the timeline.`;
+          await sendWhatsAppMessage(phone, successMessage).catch(err => console.error(err));
+        }
+      } else {
+        incorrectCount++;
+        // Notify loser
+        if (phone) {
+          const failMessage = `❌ *HELIOS CYBER-INTEGRITY STATUS* ❌\n\nYour blind submission for *"${quest.title}"* has been decrypted. Unfortunately, your calculations were *INCORRECT*. Keep tracking the timeline for future decrypt keys.`;
+          await sendWhatsAppMessage(phone, failMessage).catch(err => console.error(err));
+        }
+      }
+    }
+
+    // Set quest's answer hash and turn off isBlind so it acts like a normal solved quest now
+    await prisma.quest.update({
+      where: { id: questId },
+      data: {
+        isBlind: false,
+        encryptedAnswerHash: hashedCorrect
+      }
+    });
+
+    await logSystemAction("ADMIN_BLIND_QUEST_REVEALED", `Admin processed blind quest "${quest.title}" results: ${correctCount} correct, ${incorrectCount} incorrect.`);
+
+    revalidatePath("/rovers/admin");
+    revalidatePath("/rovers/terminal");
+    return { success: true, correctCount, incorrectCount };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to reveal results." };
   }
 }
 
@@ -1130,6 +1298,27 @@ export async function adminToggleLuckyWheel(active: boolean) {
   }
 }
 
+// 13c. Admin Update Capture Perimeter
+export async function adminUpdateCapturePerimeter(meters: number) {
+  try {
+    await checkAdminSession();
+
+    await prisma.systemSetting.upsert({
+      where: { key: "capture_perimeter_meters" },
+      update: { value: String(meters) },
+      create: { key: "capture_perimeter_meters", value: String(meters) },
+    });
+
+    await logSystemAction("ADMIN_PERIMETER_UPDATED", `Admin updated GPS capture perimeter to: ${meters} meters.`);
+
+    revalidatePath("/rovers/admin");
+    revalidatePath("/rovers/nav");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to update capture perimeter." };
+  }
+}
+
 // 14. Admin Invite User via WhatsApp
 export async function adminInviteUser(userId: string, tempPassword?: string) {
   try {
@@ -1238,6 +1427,7 @@ export async function adminCreateQuest(data: {
   expiresAt?: string | null; // ISO string or null
   phase: QuestPhase;
   isReleased: boolean;
+  isBlind?: boolean;
 }) {
   try {
     await checkAdminSession();
@@ -1255,6 +1445,7 @@ export async function adminCreateQuest(data: {
         verificationType: data.verificationType,
         encryptedAnswerHash,
         creditReward: Number(data.creditReward),
+        isBlind: !!data.isBlind,
         unlockedAtDate: new Date(data.unlockedAtDate),
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
         phase: data.phase,
@@ -1400,6 +1591,7 @@ export async function adminUpdateQuest(
     expiresAt?: string | null;
     phase: "PRE_CAMP" | "LIVE_CAMP";
     isReleased: boolean;
+    isBlind?: boolean;
   }
 ) {
   try {
@@ -1416,6 +1608,7 @@ export async function adminUpdateQuest(
         verificationType: data.verificationType,
         ...(encryptedAnswerHash ? { encryptedAnswerHash } : {}),
         creditReward: Number(data.creditReward),
+        isBlind: !!data.isBlind,
         unlockedAtDate: new Date(data.unlockedAtDate),
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
         phase: data.phase,
@@ -2197,6 +2390,37 @@ export async function adminGetQuestCompletions() {
     return { success: true, completions };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to fetch quest completions" };
+  }
+}
+
+// 32b. Admin Get All Quest Submissions (Blind entries)
+export async function adminGetQuestSubmissions() {
+  try {
+    await checkAdminSession();
+    const submissions = await prisma.questSubmission.findMany({
+      include: {
+        rover: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            unit: true,
+          }
+        },
+        quest: {
+          select: {
+            id: true,
+            title: true,
+            verificationType: true,
+            creditReward: true,
+          }
+        }
+      },
+      orderBy: { submittedAt: "desc" }
+    });
+    return { success: true, submissions };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch quest submissions" };
   }
 }
 
