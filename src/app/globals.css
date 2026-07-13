@@ -118,3 +118,22 @@ html[lang="ar"] .font-display {
 [dir="rtl"] .rtl-flip {
   transform: scaleX(-1);
 }
+
+/* Live Feed Marquee Animation */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: inline-flex;
+  animation: marquee 150s linear infinite;
+  white-space: nowrap;
+  min-width: max-content;
+}
+
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
