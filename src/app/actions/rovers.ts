@@ -2603,6 +2603,94 @@ export async function adminGetUserPointHistory(userId: string) {
   }
 }
 
+// 31b. Get Scout own point history
+export async function getScoutPointHistory() {
+  const session = await getRoverSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+  const userId = session.profile.id;
+
+  try {
+    const completions = await prisma.questCompletion.findMany({
+      where: { roverId: userId, isVerified: true },
+      include: { quest: true },
+      orderBy: { completedAt: "desc" },
+    });
+
+    const purchases = await prisma.shopPurchase.findMany({
+      where: { roverId: userId },
+      include: { shopItem: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const logs = await prisma.whatsAppLog.findMany({
+      where: {
+        phone: "SYSTEM",
+        body: { in: ["ADMIN_CREDITS_ADJUSTED", "GEONODE_CAPTURED", "GEONODE_GPS_CAPTURED"] },
+        error: { contains: userId }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    const history: Array<{
+      id: string | number;
+      type: "QUEST" | "PURCHASE" | "ADJUSTMENT" | "CAPTURE";
+      description: string;
+      change: number;
+      timestamp: Date;
+    }> = [];
+
+    completions.forEach((c) => {
+      history.push({
+        id: c.id,
+        type: "QUEST",
+        description: `Quest completed: ${c.quest.title}`,
+        change: c.quest.creditReward,
+        timestamp: c.completedAt,
+      });
+    });
+
+    purchases.forEach((p) => {
+      history.push({
+        id: p.id,
+        type: "PURCHASE",
+        description: `Purchased from Shop: ${p.shopItem.title}`,
+        change: -p.pricePaid,
+        timestamp: p.createdAt,
+      });
+    });
+
+    logs.forEach((log) => {
+      if (log.body === "ADMIN_CREDITS_ADJUSTED") {
+        const valMatch = log.error?.match(/by (-?\d+)/);
+        const change = valMatch ? parseInt(valMatch[1], 10) : 0;
+        history.push({
+          id: log.id,
+          type: "ADJUSTMENT",
+          description: "System credits adjustment by Command",
+          change,
+          timestamp: log.createdAt,
+        });
+      } else if (log.body === "GEONODE_CAPTURED" || log.body === "GEONODE_GPS_CAPTURED") {
+        const nodeMatch = log.error?.match(/node "([^"]+)"/);
+        const nodeName = nodeMatch ? nodeMatch[1] : "Unknown Node";
+        history.push({
+          id: log.id,
+          type: "CAPTURE",
+          description: `Captured Sector: ${nodeName}`,
+          change: 50,
+          timestamp: log.createdAt,
+        });
+      }
+    });
+
+    history.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return { success: true, history };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch points history" };
+  }
+}
+
+
 // 32. Admin Get All Quest Completions Flat List
 export async function adminGetQuestCompletions() {
   try {

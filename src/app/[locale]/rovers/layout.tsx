@@ -89,6 +89,7 @@ export default async function RoversLayout({ children, params }: LayoutProps) {
             faction={userFaction}
             credits={currentCredits}
             logoutAction={logoutRover}
+            locale={locale}
           />
         </div>
       </header>

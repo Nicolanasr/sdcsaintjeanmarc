@@ -11,9 +11,10 @@ interface UserProfileWidgetProps {
     faction: string;
     credits: number;
     logoutAction: () => void;
+    locale: string;
 }
 
-export default function UserProfileWidget({ fullName, faction, credits, logoutAction }: UserProfileWidgetProps) {
+export default function UserProfileWidget({ fullName, faction, credits, logoutAction, locale }: UserProfileWidgetProps) {
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [identityData, setIdentityData] = useState<{ completedQuests: any[] } | null>(null);
@@ -56,13 +57,17 @@ export default function UserProfileWidget({ fullName, faction, credits, logoutAc
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {/* Credits Display */}
-                    <div className="bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded flex flex-col items-center min-w-[80px] shadow-[inset_0_0_6px_rgba(245,158,11,0.1)]">
+                    {/* Clickable Credits Display */}
+                    <a
+                        href={`/${locale}/rovers/terminal/points`}
+                        className="bg-amber-950/40 border border-amber-500/30 hover:border-amber-400 hover:bg-amber-950/60 px-3 py-1.5 rounded flex flex-col items-center min-w-[80px] shadow-[inset_0_0_6px_rgba(245,158,11,0.1)] transition duration-200 cursor-pointer"
+                        title="View Points Ledger History"
+                    >
                         <span className="text-[9px] text-amber-500/60 uppercase tracking-wider font-mono">Credits</span>
                         <span className="text-amber-400 font-extrabold text-lg animate-pulse font-mono">
                             {credits}
                         </span>
-                    </div>
+                    </a>
 
                     {/* Exit Link */}
                     <form action={logoutAction}>
@@ -76,6 +81,7 @@ export default function UserProfileWidget({ fullName, faction, credits, logoutAc
                     </form>
                 </div>
             </div>
+
 
             {/* Cyber-ID Global Modal */}
             {showModal && mounted && createPortal(
