@@ -285,7 +285,7 @@ function renderQuestDescription(text: string) {
 
         if (isBullet) {
             return (
-                <div key={idx} className="flex gap-2 items-start pl-2 text-zinc-400 text-xs">
+                <div key={idx} className="flex gap-2 items-start pl-2 text-zinc-200 text-xs">
                     <span className="text-amber-500/60 mt-1.5 text-[8px]">■</span>
                     <span className="flex-1 leading-relaxed">{parts}</span>
                 </div>
@@ -304,7 +304,7 @@ function renderQuestDescription(text: string) {
         }
 
         return (
-            <p key={idx} className="text-zinc-400 text-xs leading-relaxed">
+            <p key={idx} className="text-zinc-200 text-xs leading-relaxed">
                 {parts}
             </p>
         );
