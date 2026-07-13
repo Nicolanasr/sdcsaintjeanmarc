@@ -312,9 +312,27 @@ export default function NodeCard({
       {/* Hack inputs & Validation */}
       {canCapture ? (
         <div className="flex flex-col gap-3.5 mt-auto pt-2">
+          {isControlledBySelf && !isShielded && (
+            shieldsAvailable > 0 ? (
+              <button
+                type="button"
+                onClick={handleActivateShield}
+                disabled={shielding}
+                className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-[10px] py-2 rounded transition cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(6,182,212,0.2)] disabled:opacity-50 font-mono mb-2"
+              >
+                🛡️ {shielding ? "ACTIVATING DEFENSES..." : "DEPLOY CAPTURE SHIELD"}
+              </button>
+            ) : (
+              <div className="text-[9px] text-zinc-500 font-mono text-center mb-2 uppercase border border-cyan-500/10 p-1.5 rounded bg-cyan-950/5">
+                🛡️ No shields available in inventory. Buy one in the shop!
+              </div>
+            )
+          )}
+
           {isOpposingFactionHacking && (
+
             <div className="text-[10px] bg-red-950/20 border border-red-500/30 text-red-400 p-2 rounded uppercase font-bold text-center tracking-wide">
-              ⚠️ Opposing Faction {node.activeFaction} is actively hacking! Wait for queue to expire.
+              🚨 Opposing Faction {node.activeFaction} is actively hacking! Check in or enter passcode to disrupt.
             </div>
           )}
 
@@ -327,10 +345,10 @@ export default function NodeCard({
           {/* Method 1: GPS Verify Hack */}
           <button
             onClick={handleGPSCapture}
-            disabled={loading || distance === null || distance > 200 || isOpposingFactionHacking || hasAlreadyCheckedIn}
+            disabled={loading || distance === null || distance > 200 || hasAlreadyCheckedIn}
             className="w-full bg-amber-500 text-black hover:bg-amber-400 disabled:opacity-30 font-extrabold text-xs py-2.5 rounded transition cursor-pointer uppercase tracking-wider"
           >
-            {loading ? "CHECKING IN..." : node.isHotSpot ? "🚨 CHECK IN TO HOT-ZONE_" : "CAPTURE_VIA_GPS_GATEWAY_"}
+            {loading ? "CHECKING IN..." : isOpposingFactionHacking ? "🚨 INTERRUPT HACK_" : node.isHotSpot ? "🚨 CHECK IN TO HOT-ZONE_" : "CAPTURE_VIA_GPS_GATEWAY_"}
           </button>
 
           <div className="flex items-center gap-2">
@@ -346,12 +364,12 @@ export default function NodeCard({
               placeholder="INPUT_PHYSICAL_PASSCODE_"
               value={passcode}
               onChange={(e) => setPasscode(e.target.value)}
-              disabled={loading || isOpposingFactionHacking || hasAlreadyCheckedIn}
+              disabled={loading || hasAlreadyCheckedIn}
               className="bg-black border border-amber-500/30 focus:border-amber-400 text-zinc-200 placeholder-zinc-700 text-xs px-3 py-2 rounded focus:outline-none transition w-full uppercase tracking-wider font-semibold disabled:opacity-50"
             />
             <button
               type="submit"
-              disabled={loading || !passcode.trim() || isOpposingFactionHacking || hasAlreadyCheckedIn}
+              disabled={loading || !passcode.trim() || hasAlreadyCheckedIn}
               className="bg-amber-500/15 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400 font-extrabold text-xs px-4 py-2 rounded transition cursor-pointer uppercase"
             >
               {loading ? "SUBMITTING..." : "SUBMIT_"}
@@ -364,13 +382,14 @@ export default function NodeCard({
                 cyberAudio.playScan();
                 onScanClick();
               }}
-              disabled={loading || isOpposingFactionHacking || hasAlreadyCheckedIn}
+              disabled={loading || hasAlreadyCheckedIn}
               className="mt-2 w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 hover:border-blue-400 text-blue-400 font-extrabold text-[10px] py-2 rounded transition cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5 disabled:opacity-30"
             >
               📷 Scan Offline QR Code
             </button>
           )}
         </div>
+
       ) : (
         <div className="mt-auto pt-2 text-center">
           {isControlledBySelf ? (
@@ -378,16 +397,23 @@ export default function NodeCard({
               <div className="bg-green-950/20 border border-green-500/30 text-green-400 text-xs font-bold py-2 rounded uppercase tracking-wider">
                 ✓ SECURED BY YOUR FACTION
               </div>
-              {shieldsAvailable > 0 && !isShielded && (
-                <button
-                  type="button"
-                  onClick={handleActivateShield}
-                  disabled={shielding}
-                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-[10px] py-2 rounded transition cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(6,182,212,0.2)] disabled:opacity-50 font-mono"
-                >
-                  🛡️ {shielding ? "ACTIVATING DEFENSES..." : "DEPLOY CAPTURE SHIELD"}
-                </button>
+              {!isShielded && (
+                shieldsAvailable > 0 ? (
+                  <button
+                    type="button"
+                    onClick={handleActivateShield}
+                    disabled={shielding}
+                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-[10px] py-2 rounded transition cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(6,182,212,0.2)] disabled:opacity-50 font-mono"
+                  >
+                    🛡️ {shielding ? "ACTIVATING DEFENSES..." : "DEPLOY CAPTURE SHIELD"}
+                  </button>
+                ) : (
+                  <div className="text-[9px] text-zinc-500 font-mono text-center uppercase border border-cyan-500/10 p-1.5 rounded bg-cyan-950/5">
+                    🛡️ No shields available in inventory. Buy one in the shop!
+                  </div>
+                )
               )}
+
             </div>
           ) : (
             <div className="bg-zinc-900 border border-zinc-800 text-zinc-600 text-xs font-bold py-2 rounded uppercase tracking-wider">

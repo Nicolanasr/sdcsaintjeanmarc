@@ -94,6 +94,12 @@ export default async function AdminPage({ params }: PageProps) {
   });
   const capturePerimeter = perimeterSetting ? parseInt(perimeterSetting.value, 10) : 100;
 
+  // Load system setting for Hotspot recapture cooldown
+  const cooldownSetting = await prisma.systemSetting.findUnique({
+    where: { key: "hotspot_cooldown_hours" },
+  });
+  const hotspotCooldown = cooldownSetting ? parseFloat(cooldownSetting.value) : 6;
+
   // Load all geoNodes
   const nodes = await prisma.geoNode.findMany({
     orderBy: { name: "asc" },
@@ -111,6 +117,7 @@ export default async function AdminPage({ params }: PageProps) {
       initialHotspotThreshold={hotspotThreshold}
       initialLuckyWheelActive={luckyWheelActive}
       initialCapturePerimeter={capturePerimeter}
+      initialHotspotCooldown={hotspotCooldown}
     />
   );
 }

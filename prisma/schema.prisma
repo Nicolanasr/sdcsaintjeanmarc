@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
 }
 
 datasource db {
@@ -177,19 +177,20 @@ model ShopItem {
 }
 
 model GeoNode {
-  id                 String   @id @default(uuid())
+  id                 String    @id @default(uuid())
   name               String
   latitude           Float
   longitude          Float
-  radiusMeters       Int      @default(20) @map("radius_meters")
-  secretPasscode     String   @map("secret_passcode")
-  controllingFaction Faction? @map("controlling_faction")
-  isHotSpot          Boolean  @default(false) @map("is_hot_spot")
-  isDecoy            Boolean  @default(false) @map("is_decoy")
+  radiusMeters       Int       @default(20) @map("radius_meters")
+  secretPasscode     String    @map("secret_passcode")
+  controllingFaction Faction?  @map("controlling_faction")
+  isHotSpot          Boolean   @default(false) @map("is_hot_spot")
+  isDecoy            Boolean   @default(false) @map("is_decoy")
   expiresAt          DateTime? @map("expires_at")
   shieldExpiresAt    DateTime? @map("shield_expires_at")
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  capturedAt         DateTime? @map("captured_at")  // Set when a hotspot is conquered; blocks re-capture for 6h
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model NodeCheckIn {

@@ -23,7 +23,6 @@ const JWT_SECRET = new TextEncoder().encode(
 function hashAnswer(answer: string): string {
   return createHash("sha256").update(answer.trim().toLowerCase()).digest("hex");
 }
-
 // Helper to log system audits in database
 export async function logSystemAction(action: string, details: string) {
   try {
@@ -82,6 +81,8 @@ export async function getRoverSession() {
     return null;
   }
 }
+
+
 
 // 2. Submit Quest Code
 export async function submitQuestCode(questId: string, answerCode: string) {
@@ -513,9 +514,40 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
     return { success: false, error: "Incorrect secret passcode for this node location." };
   }
 
-  if (node.controllingFaction === faction) {
+  // Check if there is an active opposing hack to allow defense disruption
+  const windowStart = new Date(Date.now() - 60000);
+  const activeOpposingHack = await prisma.nodeCheckIn.findFirst({
+    where: {
+      nodeId,
+      faction: { not: faction },
+      createdAt: { gte: windowStart }
+    }
+  });
+
+  if (node.controllingFaction === faction && !activeOpposingHack) {
     return { success: false, error: `This node is already controlled by your faction (${faction})` };
   }
+
+
+  // Dynamic recapture cooldown: opposing faction cannot retake a hotspot for X hours after it was captured
+  if (node.isHotSpot && node.capturedAt && node.controllingFaction && node.controllingFaction !== faction) {
+    const cooldownSetting = await prisma.systemSetting.findUnique({
+      where: { key: "hotspot_cooldown_hours" },
+    });
+    const cooldownHours = cooldownSetting ? parseFloat(cooldownSetting.value) : 6;
+    const cooldownMs = cooldownHours * 60 * 60 * 1000;
+    const elapsed = Date.now() - new Date(node.capturedAt).getTime();
+    if (elapsed < cooldownMs) {
+      const remainingMs = cooldownMs - elapsed;
+      const remainingHrs = Math.floor(remainingMs / 3600000);
+      const remainingMins = Math.floor((remainingMs % 3600000) / 60000);
+      return {
+        success: false,
+        error: `🔒 COOLDOWN_ACTIVE: This Hot-Spot was recently captured by Faction ${node.controllingFaction}. Recapture is locked for ${remainingHrs}h ${remainingMins}m.`,
+      };
+    }
+  }
+
 
   if (node.isHotSpot) {
     try {
@@ -539,11 +571,17 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
         // 3. Check for opposing faction active queue
         const opposingCheckIn = activeCheckIns.find(c => c.faction !== faction);
         if (opposingCheckIn) {
+          // INTERRUPTION EVENT: Wipes check-in queue to abort the hack.
+          await tx.nodeCheckIn.deleteMany({
+            where: { nodeId }
+          });
           return {
-            status: "BLOCKED",
-            message: `⚠️ Faction ${opposingCheckIn.faction} is actively capturing this Hot-Spot! You must wait for their queue to expire.`
+            status: "INTERRUPTED",
+            opposingFaction: opposingCheckIn.faction,
+            message: `🛡️ HACK INTERRUPTED! You successfully disrupted Faction ${opposingCheckIn.faction}'s capture attempt on Hot-Spot "${node.name}"! The zone has been secured.`
           };
         }
+
 
         // 4. Block duplicate check-in
         const alreadyCheckedIn = activeCheckIns.some(c => c.roverId === session.profile.id);
@@ -587,6 +625,7 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
             where: { id: nodeId },
             data: {
               controllingFaction: faction,
+              capturedAt: now,
             }
           });
 
@@ -643,9 +682,21 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
         }).catch(err => console.error("Failed to query group JID:", err));
       }
 
+      if (result.status === "INTERRUPTED") {
+        logSystemAction("GEONODE_HOTSPOT_DEFENDED", `Faction ${faction} disrupted Faction ${result.opposingFaction}'s capture attempt on Hot-Spot "${node.name}".`);
+        const alertMsg = `🛡️ *HELIOS DEFENSE SECURED!* 🛡️\n\nFaction *${faction}* has successfully intercepted and disrupted Faction *${result.opposingFaction}*'s hack on Hot-Spot *"${node.name}"*!\n\nThe zone has been secured.`;
+        getOperationHeliosGroupId().then(groupId => {
+          sendWhatsAppMessage(groupId, alertMsg).catch(waErr => 
+            console.error("[WAHA] Failed to broadcast defense notification:", waErr)
+          );
+        }).catch(err => console.error("Failed to query group JID:", err));
+        return { success: true, message: result.message };
+      }
+
       if (result.status === "BLOCKED") {
         return { success: false, error: result.message };
       }
+
 
       return {
         success: result.status === "CAPTURED" || result.status === "PROGRESSING",
@@ -739,9 +790,20 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
     return { success: false, error: "SHIELD_ACTIVE: Target node is shielded by an electromagnetic defense grid." };
   }
 
-  if (node.controllingFaction === faction) {
+  // Check if there is an active opposing hack to allow defense disruption
+  const windowStart = new Date(Date.now() - 60000);
+  const activeOpposingHack = await prisma.nodeCheckIn.findFirst({
+    where: {
+      nodeId,
+      faction: { not: faction },
+      createdAt: { gte: windowStart }
+    }
+  });
+
+  if (node.controllingFaction === faction && !activeOpposingHack) {
     return { success: false, error: `This node is already controlled by your faction (${faction})` };
   }
+
 
   const distance = getDistanceMeters(lat, lng, node.latitude, node.longitude);
   const perimeterSetting = await prisma.systemSetting.findUnique({
@@ -754,6 +816,26 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
       error: `You are out of range (${Math.round(distance)}m away). Must be physically near the node (within ${maxDistance}m) to check in.`,
     };
   }
+
+  // Dynamic recapture cooldown: opposing faction cannot retake a hotspot for X hours after it was captured
+  if (node.isHotSpot && node.capturedAt && node.controllingFaction && node.controllingFaction !== faction) {
+    const cooldownSetting = await prisma.systemSetting.findUnique({
+      where: { key: "hotspot_cooldown_hours" },
+    });
+    const cooldownHours = cooldownSetting ? parseFloat(cooldownSetting.value) : 6;
+    const cooldownMs = cooldownHours * 60 * 60 * 1000;
+    const elapsed = Date.now() - new Date(node.capturedAt).getTime();
+    if (elapsed < cooldownMs) {
+      const remainingMs = cooldownMs - elapsed;
+      const remainingHrs = Math.floor(remainingMs / 3600000);
+      const remainingMins = Math.floor((remainingMs % 3600000) / 60000);
+      return {
+        success: false,
+        error: `🔒 COOLDOWN_ACTIVE: This Hot-Spot was recently captured by Faction ${node.controllingFaction}. Recapture is locked for ${remainingHrs}h ${remainingMins}m.`,
+      };
+    }
+  }
+
 
   if (node.isHotSpot) {
     try {
@@ -777,11 +859,17 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
         // 3. Check for opposing faction active queue
         const opposingCheckIn = activeCheckIns.find(c => c.faction !== faction);
         if (opposingCheckIn) {
+          // INTERRUPTION EVENT: Wipes check-in queue to abort the hack.
+          await tx.nodeCheckIn.deleteMany({
+            where: { nodeId }
+          });
           return {
-            status: "BLOCKED",
-            message: `⚠️ Faction ${opposingCheckIn.faction} is actively capturing this Hot-Spot! You must wait for their queue to expire.`
+            status: "INTERRUPTED",
+            opposingFaction: opposingCheckIn.faction,
+            message: `🛡️ HACK INTERRUPTED! You successfully disrupted Faction ${opposingCheckIn.faction}'s capture attempt on Hot-Spot "${node.name}"! The zone has been secured.`
           };
         }
+
 
         // 4. Block duplicate check-in
         const alreadyCheckedIn = activeCheckIns.some(c => c.roverId === session.profile.id);
@@ -825,6 +913,7 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
             where: { id: nodeId },
             data: {
               controllingFaction: faction,
+              capturedAt: now,
             }
           });
 
@@ -872,6 +961,17 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
         sendWhatsAppMessage("+961700078138", alertMessage).catch(waErr => console.error("Failed to send admin notification:", waErr));
       }
 
+      if (result.status === "INTERRUPTED") {
+        logSystemAction("GEONODE_HOTSPOT_DEFENDED", `Faction ${faction} disrupted Faction ${result.opposingFaction}'s capture attempt on Hot-Spot "${node.name}".`);
+        const alertMsg = `🛡️ *HELIOS DEFENSE SECURED!* 🛡️\n\nFaction *${faction}* has successfully intercepted and disrupted Faction *${result.opposingFaction}*'s hack on Hot-Spot *"${node.name}"*!\n\nThe zone has been secured.`;
+        getOperationHeliosGroupId().then(groupId => {
+          sendWhatsAppMessage(groupId, alertMsg).catch(waErr => 
+            console.error("[WAHA] Failed to broadcast defense notification:", waErr)
+          );
+        }).catch(err => console.error("Failed to query group JID:", err));
+        return { success: true, message: result.message };
+      }
+
       if (result.status === "PROGRESSING" && result.isNewQueue) {
         const alertMsg = `🚨 *HELIOS SECURITY BREACH: UNDER SIEGE!* 🚨\n\nFaction *${faction}* has initiated a hack on Hot-Spot *"${node.name}"*!\n\nOccupying Faction: *${node.controllingFaction || "NEUTRAL"}*\nTime remaining to defend: *60 seconds*!\nNavigate: https://sdcsaintjeanmarc.space/rovers/nav`;
         getOperationHeliosGroupId().then(groupId => {
@@ -880,12 +980,13 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
           );
         }).catch(err => console.error("Failed to query group JID:", err));
         return { success: true, message: result.message };
-      } else if (result.status === "INTERRUPTED" || result.status === "BLOCKED" || result.status === "ALREADY_CHECKED_IN") {
+      } else if (result.status === "BLOCKED" || result.status === "ALREADY_CHECKED_IN") {
         await logSystemAction("GEONODE_HOTSPOT_BLOCKED", `Rover "${session.profile.fullName}" attempted check-in at Hot-Spot "${node.name}", but check-in failed or was blocked: ${result.message}`);
         return { success: false, error: result.message };
       } else {
         return { success: true, message: result.message };
       }
+
     } catch (err: any) {
       return { success: false, error: err.message || "Failed to check in to Hot-Spot" };
     }
@@ -945,6 +1046,8 @@ async function checkAdminSession() {
   }
   return session;
 }
+
+
 
 // 8. Admin Release/Toggle Quest
 export async function adminReleaseQuest(questId: string, isReleased: boolean) {
@@ -2311,6 +2414,30 @@ export async function adminUpdateHotspotThreshold(threshold: number | null) {
   }
 }
 
+// 29b. Admin Update Hotspot Cooldown
+export async function adminUpdateHotspotCooldown(cooldownHours: number | null) {
+  try {
+    await checkAdminSession();
+    if (cooldownHours === null || isNaN(cooldownHours)) {
+      await prisma.systemSetting.deleteMany({
+        where: { key: "hotspot_cooldown_hours" }
+      });
+    } else {
+      await prisma.systemSetting.upsert({
+        where: { key: "hotspot_cooldown_hours" },
+        update: { value: String(cooldownHours) },
+        create: { key: "hotspot_cooldown_hours", value: String(cooldownHours) },
+      });
+    }
+    revalidatePath("/rovers/admin");
+    revalidatePath("/rovers/nav");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to update cooldown setting" };
+  }
+}
+
+
 // 30. Admin Get Item Purchase History
 export async function adminGetItemPurchaseHistory(itemTitle: string) {
   try {
@@ -2372,6 +2499,107 @@ export async function adminSendLeaderboardUpdate() {
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to broadcast leaderboard update" };
+  }
+}
+
+// 31b. Admin Get User Credit Transaction History
+export async function adminGetUserPointHistory(userId: string) {
+  try {
+    await checkAdminSession();
+
+    // 1. Fetch Quest Completions
+    const completions = await prisma.questCompletion.findMany({
+      where: { roverId: userId, isVerified: true },
+      include: { quest: true },
+      orderBy: { completedAt: "desc" },
+    });
+
+    // 2. Fetch Shop Purchases
+    const purchases = await prisma.shopPurchase.findMany({
+      where: { roverId: userId },
+      include: { shopItem: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // 3. Fetch manual admin adjustments and node captures from whatsAppLog system logs
+    const logs = await prisma.whatsAppLog.findMany({
+      where: {
+        phone: "SYSTEM",
+        body: { in: ["ADMIN_CREDITS_ADJUSTED", "GEONODE_CAPTURED", "GEONODE_GPS_CAPTURED"] },
+        error: { contains: userId }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    // Map and combine them into a single timeline
+    const history: Array<{
+      id: string | number;
+      type: "QUEST" | "PURCHASE" | "ADJUSTMENT" | "CAPTURE";
+      description: string;
+      change: number;
+      timestamp: Date;
+    }> = [];
+
+    // Add Quest Completions
+    completions.forEach((c) => {
+      history.push({
+        id: c.id,
+        type: "QUEST",
+        description: `Quest completed: ${c.quest.title}`,
+        change: c.quest.creditReward,
+        timestamp: c.completedAt,
+      });
+    });
+
+    // Add Purchases
+    purchases.forEach((p) => {
+      history.push({
+        id: p.id,
+        type: "PURCHASE",
+        description: `Purchased from Shop: ${p.shopItem.title}`,
+        change: -p.pricePaid,
+        timestamp: p.createdAt,
+      });
+    });
+
+    // Add Logs (Adjustments / Captures)
+    logs.forEach((log) => {
+      if (log.body === "ADMIN_CREDITS_ADJUSTED") {
+        // Try parsing the amount
+        // Details look like: Admin adjusted Rover "..." credits by [amount]. Reason: "[reason]"...
+        const amountMatch = log.error?.match(/credits by (-?\d+)/);
+        const reasonMatch = log.error?.match(/Reason: "([^"]+)"/);
+        const amount = amountMatch ? parseInt(amountMatch[1], 10) : 0;
+        const reason = reasonMatch ? reasonMatch[1] : "Manual admin adjustment";
+
+        history.push({
+          id: log.id,
+          type: "ADJUSTMENT",
+          description: `Admin Adjustment: ${reason}`,
+          change: amount,
+          timestamp: log.createdAt,
+        });
+      } else if (log.body === "GEONODE_CAPTURED" || log.body === "GEONODE_GPS_CAPTURED") {
+        // Extract node name
+        const nodeMatch = log.error?.match(/node "([^"]+)"/);
+        const nodeName = nodeMatch ? nodeMatch[1] : "Unknown Node";
+
+        history.push({
+          id: log.id,
+          type: "CAPTURE",
+          description: `Captured Sector: ${nodeName}`,
+          change: 50,
+          timestamp: log.createdAt,
+        });
+      }
+    });
+
+    // Sort by timestamp descending
+    history.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    return { success: true, history };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch points history" };
   }
 }
 

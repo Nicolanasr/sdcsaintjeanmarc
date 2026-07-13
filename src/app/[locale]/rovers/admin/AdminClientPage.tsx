@@ -29,6 +29,7 @@ import {
     adminGetOperationHeliosGroup,
     adminSendQuestReminder,
     adminUpdateHotspotThreshold,
+    adminUpdateHotspotCooldown,
     adminGetItemPurchaseHistory,
     adminGetQuestCompletions,
     adminGetQuestSubmissions,
@@ -36,7 +37,9 @@ import {
     adminGetMarketplacePurchases,
 
     adminTogglePurchaseDelivery,
+    adminGetUserPointHistory,
 } from "@/app/actions/rovers";
+
 
 const LocalDateStr = ({ date }: { date: string | Date }) => {
     const [mounted, setMounted] = React.useState(false);
@@ -130,6 +133,7 @@ interface AdminClientPageProps {
     initialHotspotThreshold?: number | null;
     initialLuckyWheelActive: boolean;
     initialCapturePerimeter: number;
+    initialHotspotCooldown: number;
 }
 
 export default function AdminClientPage({
@@ -143,6 +147,7 @@ export default function AdminClientPage({
     initialHotspotThreshold = null,
     initialLuckyWheelActive,
     initialCapturePerimeter,
+    initialHotspotCooldown = 6,
 }: AdminClientPageProps) {
     const [quests, setQuests] = useState<Quest[]>(initialQuests);
     const [rovers, setRovers] = useState<Rover[]>(initialRovers);
@@ -157,6 +162,8 @@ export default function AdminClientPage({
     const [luckyWheelActive, setLuckyWheelActive] = useState(initialLuckyWheelActive);
     const [capturePerimeter, setCapturePerimeter] = useState<number | "">(initialCapturePerimeter);
     const [hotspotThreshold, setHotspotThreshold] = useState<number | "">(initialHotspotThreshold ?? "");
+    const [hotspotCooldown, setHotspotCooldown] = useState<number | "">(initialHotspotCooldown);
+
 
     // Workstation active tab state
     const [activeTab, setActiveTab] = useState<"scouts" | "challenges" | "registry" | "marketplace" | "submissions" | "purchases" | "logs">("scouts");
@@ -190,7 +197,7 @@ export default function AdminClientPage({
                     console.error("Failed to load blind submissions:", subRes.error);
                 }
             }).catch(err => console.error(err))
-            .finally(() => setLoading(null));
+                .finally(() => setLoading(null));
         } else if (activeTab === "purchases") {
             setLoading("load-purchases");
             adminGetMarketplacePurchases().then((res) => {
@@ -200,7 +207,7 @@ export default function AdminClientPage({
                     alert(res.error || "Failed to load purchases");
                 }
             }).catch(err => console.error(err))
-            .finally(() => setLoading(null));
+                .finally(() => setLoading(null));
         }
     }, [activeTab]);
 
@@ -316,6 +323,13 @@ export default function AdminClientPage({
     const [purchaseHistory, setPurchaseHistory] = useState<{ title: string; logs: any[] } | null>(null);
     const [expandedQuestId, setExpandedQuestId] = useState<string | null>(null);
     const [questSubmissionsMap, setQuestSubmissionsMap] = useState<Record<string, any>>({}); // questId -> data
+    const [historyScoutId, setHistoryScoutId] = useState<string | null>(null);
+    const [historyScoutName, setHistoryScoutName] = useState<string | null>(null);
+    const [historyItems, setHistoryItems] = useState<any[]>([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+    const [showConfigMatrix, setShowConfigMatrix] = useState(false);
+
+
 
 
     const startEditPhone = (roverId: string, currentPhone: string) => {
@@ -782,7 +796,36 @@ export default function AdminClientPage({
         }
     };
 
+    const handleUpdateCooldown = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading("update-cooldown");
+        setMessage(null);
+        try {
+            const val = hotspotCooldown === "" ? null : Number(hotspotCooldown);
+            const res = await adminUpdateHotspotCooldown(val);
+            if (res.success) {
+                setMessage({
+                    type: "success",
+                    text: `SYSTEM_CONFIG: Hot-Spot recapture cooldown has been updated successfully.`,
+                });
+            } else {
+                setMessage({
+                    type: "error",
+                    text: `SYSTEM_CONFIG_FAILED: ${res.error || "Failed to update cooldown setting."}`,
+                });
+            }
+        } catch (err: any) {
+            setMessage({
+                type: "error",
+                text: `SYSTEM_ERROR: ${err.message || "Failed to contact gateway."}`,
+            });
+        } finally {
+            setLoading(null);
+        }
+    };
+
     // Add User Form Submission
+
     const handleAddUser = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newUserEmail || !newUserFullName || !newUserPassword) return;
@@ -1671,6 +1714,28 @@ export default function AdminClientPage({
         }
     };
 
+    const handleViewPointHistory = async (userId: string, fullName: string) => {
+        setHistoryScoutId(userId);
+        setHistoryScoutName(fullName);
+        setHistoryItems([]);
+        setLoadingHistory(true);
+        try {
+            const res = await adminGetUserPointHistory(userId);
+            if (res.success && res.history) {
+                setHistoryItems(res.history);
+            } else {
+                alert(`Error loading history: ${res.error || "Unknown error"}`);
+                setHistoryScoutId(null);
+            }
+        } catch (err: any) {
+            alert(`Error: ${err.message}`);
+            setHistoryScoutId(null);
+        } finally {
+            setLoadingHistory(false);
+        }
+    };
+
+
     const handleDeleteShopItem = async (itemId: string, title: string) => {
         if (!confirm(`CAUTION: Are you sure you want to permanently delete item "${title}"?`)) return;
 
@@ -1704,111 +1769,154 @@ export default function AdminClientPage({
     return (
         <div className="flex flex-col gap-6">
             {/* Top Diagnostics Header / Warning Banner */}
+            {/* Top Diagnostics Header / Warning Banner */}
             <section className="bg-amber-950/20 border border-amber-500/40 rounded-lg p-5 shadow-[0_0_15px_rgba(245,158,11,0.05)] flex flex-col gap-4">
-                <div>
-                    <h2 className="text-xl font-bold tracking-widest text-amber-400 uppercase">
-                        🛡️ SYSTEM_CONTROL_MATRIX_
-                    </h2>
-                    <p className="text-zinc-500 text-xs mt-1">
-                        Authorized Admin Gateway: Modify daily quest releases, review physical scout milestones, and apply manual credit overrides.
-                    </p>
+                <div className="flex justify-between items-center cursor-pointer select-none" onClick={() => setShowConfigMatrix(!showConfigMatrix)}>
+                    <div>
+                        <h2 className="text-xl font-bold tracking-widest text-amber-400 uppercase flex items-center gap-2">
+                            🛡️ SYSTEM_CONTROL_MATRIX_
+                            <span className="text-[10px] text-zinc-500 font-mono font-normal normal-case">
+                                {showConfigMatrix ? "[Click to collapse settings]" : "[Click to expand settings]"}
+                            </span>
+                        </h2>
+                        <p className="text-zinc-500 text-xs mt-1 font-sans">
+                            Authorized Admin Gateway: Modify daily quest releases, review physical scout milestones, and apply manual credit overrides.
+                        </p>
+                    </div>
+                    <span className="text-amber-500 text-xs font-mono font-bold border border-amber-500/30 px-2 py-1 rounded bg-amber-950/30">
+                        {showConfigMatrix ? "HIDE ▲" : "SHOW ▼"}
+                    </span>
                 </div>
 
-                {/* Live GPS Map Access Toggler */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
-                    <div>
-                        <div className="text-xs font-bold text-zinc-300 uppercase">🗺️ Live GPS Map Access:</div>
-                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
-                            Current state: {nightNavActive ? "ONLINE (ALL ROVERS AUTHORIZED)" : "OFFLINE (RESTRICTED TO ADMINS)"}
+                {showConfigMatrix && (
+                    <div className="flex flex-col gap-4 border-t border-amber-500/10 pt-2">
+                        {/* Live GPS Map Access Toggler */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4">
+                            <div>
+                                <div className="text-xs font-bold text-zinc-300 uppercase">🗺️ Live GPS Map Access:</div>
+                                <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                                    Current state: {nightNavActive ? "ONLINE (ALL ROVERS AUTHORIZED)" : "OFFLINE (RESTRICTED TO ADMINS)"}
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleToggleNightNav}
+                                disabled={loading === "toggle-nav"}
+                                className={`px-4 py-2 text-xs font-extrabold rounded uppercase tracking-wider transition cursor-pointer ${nightNavActive
+                                    ? "bg-red-950/20 border border-red-500/40 text-red-500 hover:bg-red-950/40 hover:text-red-400"
+                                    : "bg-green-950/20 border border-green-500/40 text-green-500 hover:bg-green-950/40 hover:text-green-400"
+                                    }`}
+                            >
+                                {loading === "toggle-nav" ? "PROCESSING..." : nightNavActive ? "LOCK GPS MAP" : "UNLOCK GPS MAP"}
+                            </button>
                         </div>
-                    </div>
-                    <button
-                        onClick={handleToggleNightNav}
-                        disabled={loading === "toggle-nav"}
-                        className={`px-4 py-2 text-xs font-extrabold rounded uppercase tracking-wider transition cursor-pointer ${nightNavActive
-                            ? "bg-red-950/20 border border-red-500/40 text-red-500 hover:bg-red-950/40 hover:text-red-400"
-                            : "bg-green-950/20 border border-green-500/40 text-green-500 hover:bg-green-950/40 hover:text-green-400"
-                            }`}
-                    >
-                        {loading === "toggle-nav" ? "PROCESSING..." : nightNavActive ? "LOCK GPS MAP" : "UNLOCK GPS MAP"}
-                    </button>
-                </div>
 
-                {/* Lucky Wheel Active Toggler */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
-                    <div>
-                        <div className="text-xs font-bold text-zinc-300 uppercase">🎡 Cyber-Spin Lucky Wheel:</div>
-                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
-                            Current state: {luckyWheelActive ? "ONLINE (PLAYERS CAN SPIN)" : "OFFLINE (SPINNING IS LOCKED)"}
+                        {/* Lucky Wheel Active Toggler */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
+                            <div>
+                                <div className="text-xs font-bold text-zinc-300 uppercase">🎡 Cyber-Spin Lucky Wheel:</div>
+                                <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                                    Current state: {luckyWheelActive ? "ONLINE (PLAYERS CAN SPIN)" : "OFFLINE (SPINNING IS LOCKED)"}
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleToggleLuckyWheel}
+                                disabled={loading === "toggle-wheel"}
+                                className={`px-4 py-2 text-xs font-extrabold rounded uppercase tracking-wider transition cursor-pointer ${luckyWheelActive
+                                    ? "bg-red-950/20 border border-red-500/40 text-red-500 hover:bg-red-950/40 hover:text-red-400"
+                                    : "bg-green-950/20 border border-green-500/40 text-green-500 hover:bg-green-950/40 hover:text-green-400"
+                                    }`}
+                            >
+                                {loading === "toggle-wheel" ? "PROCESSING..." : luckyWheelActive ? "DISABLE SPIN WHEEL" : "ENABLE SPIN WHEEL"}
+                            </button>
                         </div>
-                    </div>
-                    <button
-                        onClick={handleToggleLuckyWheel}
-                        disabled={loading === "toggle-wheel"}
-                        className={`px-4 py-2 text-xs font-extrabold rounded uppercase tracking-wider transition cursor-pointer ${luckyWheelActive
-                            ? "bg-red-950/20 border border-red-500/40 text-red-500 hover:bg-red-950/40 hover:text-red-400"
-                            : "bg-green-950/20 border border-green-500/40 text-green-500 hover:bg-green-950/40 hover:text-green-400"
-                            }`}
-                    >
-                        {loading === "toggle-wheel" ? "PROCESSING..." : luckyWheelActive ? "DISABLE SPIN WHEEL" : "ENABLE SPIN WHEEL"}
-                    </button>
-                </div>
 
-                {/* Hotspot Capture Threshold Override */}
-                <form onSubmit={handleUpdateThreshold} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
-                    <div>
-                        <div className="text-xs font-bold text-zinc-300 uppercase">🔥 Hotspot Capture Threshold:</div>
-                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
-                            Number of scouts required to capture a Hotspot (leave blank to require all faction scouts).
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <input
-                            type="number"
-                            placeholder="ALL"
-                            value={hotspotThreshold}
-                            onChange={(e) => setHotspotThreshold(e.target.value === "" ? "" : Number(e.target.value))}
-                            className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-1.5 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold w-24"
-                            min="1"
-                        />
-                        <button
-                            type="submit"
-                            disabled={loading === "update-threshold"}
-                            className="px-4 py-1.5 text-xs bg-amber-500 text-black hover:bg-amber-400 font-extrabold rounded uppercase tracking-wider transition cursor-pointer"
-                        >
-                            {loading === "update-threshold" ? "SAVING..." : "SAVE"}
-                        </button>
-                    </div>
-                </form>
+                        {/* Hotspot Capture Threshold Override */}
+                        <form onSubmit={handleUpdateThreshold} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
+                            <div>
+                                <div className="text-xs font-bold text-zinc-300 uppercase">🔥 Hotspot Capture Threshold:</div>
+                                <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                                    Number of scouts required to capture a Hotspot (leave blank to require all faction scouts).
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="ALL"
+                                    value={hotspotThreshold}
+                                    onChange={(e) => setHotspotThreshold(e.target.value === "" ? "" : Number(e.target.value))}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-1.5 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold w-24"
+                                    min="1"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={loading === "update-threshold"}
+                                    className="px-4 py-1.5 text-xs bg-amber-500 text-black hover:bg-amber-400 font-extrabold rounded uppercase tracking-wider transition cursor-pointer"
+                                >
+                                    {loading === "update-threshold" ? "SAVING..." : "SAVE"}
+                                </button>
+                            </div>
+                        </form>
 
-                {/* GPS Capture Perimeter Override */}
-                <form onSubmit={handleUpdatePerimeter} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
-                    <div>
-                        <div className="text-xs font-bold text-zinc-300 uppercase">🛰️ GPS Capture Perimeter (meters):</div>
-                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
-                            Maximum distance in meters a scout can be from a node to capture it.
-                        </div>
+                        {/* GPS Capture Perimeter Override */}
+                        <form onSubmit={handleUpdatePerimeter} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
+                            <div>
+                                <div className="text-xs font-bold text-zinc-300 uppercase">🛰️ GPS Capture Perimeter (meters):</div>
+                                <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                                    Maximum distance in meters a scout can be from a node to capture it.
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="100"
+                                    value={capturePerimeter}
+                                    onChange={(e) => setCapturePerimeter(e.target.value === "" ? "" : Number(e.target.value))}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-1.5 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold w-24"
+                                    min="10"
+                                    max="500"
+                                    required
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={loading === "update-perimeter"}
+                                    className="px-4 py-1.5 text-xs bg-amber-500 text-black hover:bg-amber-400 font-extrabold rounded uppercase tracking-wider transition cursor-pointer"
+                                >
+                                    {loading === "update-perimeter" ? "SAVING..." : "SAVE"}
+                                </button>
+                            </div>
+                        </form>
+
+                        {/* Hotspot Recapture Cooldown Override */}
+                        <form onSubmit={handleUpdateCooldown} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-amber-500/10">
+                            <div>
+                                <div className="text-xs font-bold text-zinc-300 uppercase">🔒 Hotspot Recapture Cooldown (hours):</div>
+                                <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                                    Number of hours during which opposing factions cannot retake a recently captured Hotspot.
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    step="0.5"
+                                    placeholder="6"
+                                    value={hotspotCooldown}
+                                    onChange={(e) => setHotspotCooldown(e.target.value === "" ? "" : Number(e.target.value))}
+                                    className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-1.5 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold w-24"
+                                    min="0"
+                                    max="72"
+                                    required
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={loading === "update-cooldown"}
+                                    className="px-4 py-1.5 text-xs bg-amber-500 text-black hover:bg-amber-400 font-extrabold rounded uppercase tracking-wider transition cursor-pointer"
+                                >
+                                    {loading === "update-cooldown" ? "SAVING..." : "SAVE"}
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                    <div className="flex gap-2">
-                        <input
-                            type="number"
-                            placeholder="100"
-                            value={capturePerimeter}
-                            onChange={(e) => setCapturePerimeter(e.target.value === "" ? "" : Number(e.target.value))}
-                            className="bg-black border border-amber-500/30 text-zinc-200 px-3 py-1.5 text-xs rounded focus:outline-none focus:border-amber-400 font-semibold w-24"
-                            min="10"
-                            max="500"
-                            required
-                        />
-                        <button
-                            type="submit"
-                            disabled={loading === "update-perimeter"}
-                            className="px-4 py-1.5 text-xs bg-amber-500 text-black hover:bg-amber-400 font-extrabold rounded uppercase tracking-wider transition cursor-pointer"
-                        >
-                            {loading === "update-perimeter" ? "SAVING..." : "SAVE"}
-                        </button>
-                    </div>
-                </form>
+                )}
 
                 {message && (
                     <div
@@ -1821,6 +1929,7 @@ export default function AdminClientPage({
                     </div>
                 )}
             </section>
+
 
             {/* Workstation Console Tabs */}
             <div className="flex flex-wrap border-b border-amber-500/20 bg-zinc-950/40 p-1.5 rounded-t-lg gap-2 text-xs font-bold uppercase tracking-wider">
@@ -2029,16 +2138,25 @@ export default function AdminClientPage({
                                                                 <span className="text-[8px] text-amber-500/60 uppercase">Credits</span>
                                                                 <span className="text-amber-400 font-extrabold text-sm">{rover.roverProfile?.roverCredits || 0}</span>
                                                             </div>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setAdjustingCreditsId(rover.id);
-                                                                    setInlineCreditsAmount("");
-                                                                    setInlineAdjustReason("");
-                                                                }}
-                                                                className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[9px] px-2.5 py-2 rounded transition uppercase tracking-wider cursor-pointer"
-                                                            >
-                                                                Adjust
-                                                            </button>
+                                                            <div className="flex gap-1.5">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setAdjustingCreditsId(rover.id);
+                                                                        setInlineCreditsAmount("");
+                                                                        setInlineAdjustReason("");
+                                                                    }}
+                                                                    className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[9px] px-2.5 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                                                >
+                                                                    Adjust
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleViewPointHistory(rover.id, rover.fullName)}
+                                                                    className="bg-zinc-900 border border-amber-500/20 hover:border-amber-500/50 text-amber-500/80 hover:text-amber-400 font-extrabold text-[9px] px-2.5 py-2 rounded transition uppercase tracking-wider cursor-pointer"
+                                                                >
+                                                                    📋 History
+                                                                </button>
+                                                            </div>
+
                                                         </div>
                                                     )}
                                                 </div>
@@ -2149,151 +2267,151 @@ export default function AdminClientPage({
                                         ) : (
                                             quests.map((quest) => (
                                                 <React.Fragment key={quest.id}>
-                                                <tr className="hover:bg-amber-950/5 transition">
-                                                    <td className="p-3.5">
-                                                        <div className="font-bold text-zinc-100">{quest.title}</div>
-                                                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
-                                                            Scheduled: <LocalDateStr date={quest.unlockedAtDate} />
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-3.5 text-[10px] uppercase font-bold text-zinc-400">
-                                                        {quest.verificationType === "DIGITAL_CODE" ? "Cipher Entry" : "Leader Sign-Off"}
-                                                    </td>
-                                                    <td className="p-3.5 font-bold text-amber-300">+{quest.creditReward} CR</td>
-                                                    <td className="p-3.5 text-center">
-                                                        <button
-                                                            onClick={() => handleToggleRelease(quest.id, quest.isReleased)}
-                                                            disabled={loading === `quest-${quest.id}`}
-                                                            className={`px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide cursor-pointer transition ${quest.isReleased
-                                                                ? "bg-green-950/30 border border-green-500/30 text-green-400 hover:bg-green-950/50"
-                                                                : "bg-red-950/30 border-red-500/30 text-red-400 hover:bg-red-950/50"
-                                                                }`}
-                                                        >
-                                                            {loading === `quest-${quest.id}`
-                                                                ? "WAIT_"
-                                                                : quest.isReleased
-                                                                    ? "ACTIVE [ON]"
-                                                                    : "LOCKED [OFF]"}
-                                                        </button>
-                                                    </td>
-                                                    <td className="p-3.5 text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            {/* Submissions toggle — available on all quests */}
+                                                    <tr className="hover:bg-amber-950/5 transition">
+                                                        <td className="p-3.5">
+                                                            <div className="font-bold text-zinc-100">{quest.title}</div>
+                                                            <div className="text-[10px] text-zinc-500 mt-0.5 uppercase">
+                                                                Scheduled: <LocalDateStr date={quest.unlockedAtDate} />
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-3.5 text-[10px] uppercase font-bold text-zinc-400">
+                                                            {quest.verificationType === "DIGITAL_CODE" ? "Cipher Entry" : "Leader Sign-Off"}
+                                                        </td>
+                                                        <td className="p-3.5 font-bold text-amber-300">+{quest.creditReward} CR</td>
+                                                        <td className="p-3.5 text-center">
                                                             <button
-                                                                onClick={() => handleViewQuestSubmissions(quest.id)}
-                                                                disabled={loading === `subs-${quest.id}`}
-                                                                className={`px-2 py-1 rounded font-extrabold transition cursor-pointer text-[10px] uppercase border ${expandedQuestId === quest.id
-                                                                    ? "bg-cyan-700 border-cyan-500 text-white"
-                                                                    : "bg-cyan-950/30 border-cyan-500/30 text-cyan-400 hover:bg-cyan-800/40"
+                                                                onClick={() => handleToggleRelease(quest.id, quest.isReleased)}
+                                                                disabled={loading === `quest-${quest.id}`}
+                                                                className={`px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide cursor-pointer transition ${quest.isReleased
+                                                                    ? "bg-green-950/30 border border-green-500/30 text-green-400 hover:bg-green-950/50"
+                                                                    : "bg-red-950/30 border-red-500/30 text-red-400 hover:bg-red-950/50"
                                                                     }`}
                                                             >
-                                                                {loading === `subs-${quest.id}` ? "LOADING..." : expandedQuestId === quest.id ? "▲ CLOSE" : "📋 SUBS"}
+                                                                {loading === `quest-${quest.id}`
+                                                                    ? "WAIT_"
+                                                                    : quest.isReleased
+                                                                        ? "ACTIVE [ON]"
+                                                                        : "LOCKED [OFF]"}
                                                             </button>
-                                                            {quest.isBlind && (
+                                                        </td>
+                                                        <td className="p-3.5 text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                {/* Submissions toggle — available on all quests */}
                                                                 <button
-                                                                    onClick={() => handleRevealBlindQuest(quest.id, quest.title)}
-                                                                    disabled={loading === `reveal-quest-${quest.id}`}
-                                                                    className="px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-extrabold transition cursor-pointer text-[10px] uppercase animate-pulse shadow-[0_0_10px_rgba(147,51,234,0.4)]"
+                                                                    onClick={() => handleViewQuestSubmissions(quest.id)}
+                                                                    disabled={loading === `subs-${quest.id}`}
+                                                                    className={`px-2 py-1 rounded font-extrabold transition cursor-pointer text-[10px] uppercase border ${expandedQuestId === quest.id
+                                                                        ? "bg-cyan-700 border-cyan-500 text-white"
+                                                                        : "bg-cyan-950/30 border-cyan-500/30 text-cyan-400 hover:bg-cyan-800/40"
+                                                                        }`}
                                                                 >
-                                                                    {loading === `reveal-quest-${quest.id}` ? "REVEALING..." : "👁️ REVEAL"}
+                                                                    {loading === `subs-${quest.id}` ? "LOADING..." : expandedQuestId === quest.id ? "▲ CLOSE" : "📋 SUBS"}
                                                                 </button>
-                                                            )}
-                                                            <button
-                                                                onClick={() => handleSendReminderClick(quest)}
-                                                                className="px-2 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-extrabold transition cursor-pointer text-[10px] uppercase"
-                                                            >
-                                                                🔔 Remind
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleEditQuestClick(quest)}
-                                                                className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
-                                                            >
-                                                                EDIT_
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteQuest(quest.id, quest.title)}
-                                                                disabled={loading === `delete-quest-${quest.id}`}
-                                                                className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
-                                                            >
-                                                                {loading === `delete-quest-${quest.id}` ? "DELETING..." : "DELETE_"}
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                {/* Inline submissions drawer */}
-                                                {expandedQuestId === quest.id && (
-                                                    <tr key={`subs-${quest.id}`}>
-                                                        <td colSpan={5} className="p-0 bg-zinc-950/70 border-t border-b border-cyan-500/20">
-                                                            <div className="p-4">
-                                                                <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-400 mb-3 flex items-center gap-2">
-                                                                    📋 SUBMISSION INTAKE LOG — {quest.title}
-                                                                    {questSubmissionsMap[quest.id]?.isRevealed === false && (
-                                                                        <span className="bg-yellow-950/40 border border-yellow-500/30 text-yellow-400 px-2 py-0.5 rounded text-[9px]">
-                                                                            ⚠️ BLIND — correct/incorrect visible after REVEAL
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                {!questSubmissionsMap[quest.id] ? (
-                                                                    <div className="text-zinc-500 italic text-xs">Loading submissions...</div>
-                                                                ) : questSubmissionsMap[quest.id].error ? (
-                                                                    <div className="text-red-400 text-xs">Error: {questSubmissionsMap[quest.id].error}</div>
-                                                                ) : questSubmissionsMap[quest.id].groups?.length === 0 ? (
-                                                                    <div className="text-zinc-500 italic text-xs">No submissions yet for this challenge.</div>
-                                                                ) : (
-                                                                    <table className="w-full text-xs border-collapse">
-                                                                        <thead>
-                                                                            <tr className="text-[10px] uppercase tracking-wider text-zinc-500 border-b border-zinc-700/50">
-                                                                                <th className="text-left py-2 pr-4">Scout</th>
-                                                                                <th className="text-left py-2 pr-4">Unit</th>
-                                                                                <th className="text-left py-2 pr-4">Attempt #</th>
-                                                                                <th className="text-left py-2 pr-4">Submitted Answer(s)</th>
-                                                                                <th className="text-center py-2 pr-4">Status</th>
-                                                                                <th className="text-center py-2">Awarded</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody className="divide-y divide-zinc-800/60">
-                                                                            {questSubmissionsMap[quest.id].groups.map((g: any, gi: number) => (
-                                                                                <tr key={gi} className="hover:bg-zinc-800/20">
-                                                                                    <td className="py-2 pr-4 font-bold text-zinc-200">{g.rover?.fullName ?? "Unknown"}</td>
-                                                                                    <td className="py-2 pr-4 text-zinc-400">{g.rover?.unit ?? "—"}</td>
-                                                                                    <td className="py-2 pr-4 text-zinc-400">{g.answers.length}x</td>
-                                                                                    <td className="py-2 pr-4">
-                                                                                        <div className="flex flex-col gap-0.5">
-                                                                                            {g.answers.map((a: any, ai: number) => (
-                                                                                                <span key={ai} className="font-mono text-amber-300 bg-amber-950/20 px-1.5 py-0.5 rounded text-[10px]">
-                                                                                                    {a.answer}
-                                                                                                    <span className="text-zinc-600 ml-1.5 text-[9px]">
-                                                                                                        {new Date(a.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                                                                                    </span>
-                                                                                                </span>
-                                                                                            ))}
-                                                                                        </div>
-                                                                                    </td>
-                                                                                    <td className="py-2 pr-4 text-center">
-                                                                                        {g.isCorrect === null ? (
-                                                                                            <span className="text-zinc-500 text-[10px] uppercase">Pending</span>
-                                                                                        ) : g.isCorrect ? (
-                                                                                            <span className="text-green-400 font-extrabold text-[10px] uppercase bg-green-950/30 border border-green-500/30 px-2 py-0.5 rounded">✓ Correct</span>
-                                                                                        ) : (
-                                                                                            <span className="text-red-400 font-extrabold text-[10px] uppercase bg-red-950/30 border border-red-500/30 px-2 py-0.5 rounded">✗ Wrong</span>
-                                                                                        )}
-                                                                                    </td>
-                                                                                    <td className="py-2 text-center">
-                                                                                        {g.wasAwarded ? (
-                                                                                            <span className="text-amber-400 text-[10px] font-bold">💰 Yes</span>
-                                                                                        ) : (
-                                                                                            <span className="text-zinc-600 text-[10px]">—</span>
-                                                                                        )}
-                                                                                    </td>
-                                                                                </tr>
-                                                                            ))}
-                                                                        </tbody>
-                                                                    </table>
+                                                                {quest.isBlind && (
+                                                                    <button
+                                                                        onClick={() => handleRevealBlindQuest(quest.id, quest.title)}
+                                                                        disabled={loading === `reveal-quest-${quest.id}`}
+                                                                        className="px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-extrabold transition cursor-pointer text-[10px] uppercase animate-pulse shadow-[0_0_10px_rgba(147,51,234,0.4)]"
+                                                                    >
+                                                                        {loading === `reveal-quest-${quest.id}` ? "REVEALING..." : "👁️ REVEAL"}
+                                                                    </button>
                                                                 )}
+                                                                <button
+                                                                    onClick={() => handleSendReminderClick(quest)}
+                                                                    className="px-2 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-extrabold transition cursor-pointer text-[10px] uppercase"
+                                                                >
+                                                                    🔔 Remind
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleEditQuestClick(quest)}
+                                                                    className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                                >
+                                                                    EDIT_
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteQuest(quest.id, quest.title)}
+                                                                    disabled={loading === `delete-quest-${quest.id}`}
+                                                                    className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                                >
+                                                                    {loading === `delete-quest-${quest.id}` ? "DELETING..." : "DELETE_"}
+                                                                </button>
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                )}
+                                                    {/* Inline submissions drawer */}
+                                                    {expandedQuestId === quest.id && (
+                                                        <tr key={`subs-${quest.id}`}>
+                                                            <td colSpan={5} className="p-0 bg-zinc-950/70 border-t border-b border-cyan-500/20">
+                                                                <div className="p-4">
+                                                                    <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-400 mb-3 flex items-center gap-2">
+                                                                        📋 SUBMISSION INTAKE LOG — {quest.title}
+                                                                        {questSubmissionsMap[quest.id]?.isRevealed === false && (
+                                                                            <span className="bg-yellow-950/40 border border-yellow-500/30 text-yellow-400 px-2 py-0.5 rounded text-[9px]">
+                                                                                ⚠️ BLIND — correct/incorrect visible after REVEAL
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    {!questSubmissionsMap[quest.id] ? (
+                                                                        <div className="text-zinc-500 italic text-xs">Loading submissions...</div>
+                                                                    ) : questSubmissionsMap[quest.id].error ? (
+                                                                        <div className="text-red-400 text-xs">Error: {questSubmissionsMap[quest.id].error}</div>
+                                                                    ) : questSubmissionsMap[quest.id].groups?.length === 0 ? (
+                                                                        <div className="text-zinc-500 italic text-xs">No submissions yet for this challenge.</div>
+                                                                    ) : (
+                                                                        <table className="w-full text-xs border-collapse">
+                                                                            <thead>
+                                                                                <tr className="text-[10px] uppercase tracking-wider text-zinc-500 border-b border-zinc-700/50">
+                                                                                    <th className="text-left py-2 pr-4">Scout</th>
+                                                                                    <th className="text-left py-2 pr-4">Unit</th>
+                                                                                    <th className="text-left py-2 pr-4">Attempt #</th>
+                                                                                    <th className="text-left py-2 pr-4">Submitted Answer(s)</th>
+                                                                                    <th className="text-center py-2 pr-4">Status</th>
+                                                                                    <th className="text-center py-2">Awarded</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody className="divide-y divide-zinc-800/60">
+                                                                                {questSubmissionsMap[quest.id].groups.map((g: any, gi: number) => (
+                                                                                    <tr key={gi} className="hover:bg-zinc-800/20">
+                                                                                        <td className="py-2 pr-4 font-bold text-zinc-200">{g.rover?.fullName ?? "Unknown"}</td>
+                                                                                        <td className="py-2 pr-4 text-zinc-400">{g.rover?.unit ?? "—"}</td>
+                                                                                        <td className="py-2 pr-4 text-zinc-400">{g.answers.length}x</td>
+                                                                                        <td className="py-2 pr-4">
+                                                                                            <div className="flex flex-col gap-0.5">
+                                                                                                {g.answers.map((a: any, ai: number) => (
+                                                                                                    <span key={ai} className="font-mono text-amber-300 bg-amber-950/20 px-1.5 py-0.5 rounded text-[10px]">
+                                                                                                        {a.answer}
+                                                                                                        <span className="text-zinc-600 ml-1.5 text-[9px]">
+                                                                                                            {new Date(a.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                                                                        </span>
+                                                                                                    </span>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        </td>
+                                                                                        <td className="py-2 pr-4 text-center">
+                                                                                            {g.isCorrect === null ? (
+                                                                                                <span className="text-zinc-500 text-[10px] uppercase">Pending</span>
+                                                                                            ) : g.isCorrect ? (
+                                                                                                <span className="text-green-400 font-extrabold text-[10px] uppercase bg-green-950/30 border border-green-500/30 px-2 py-0.5 rounded">✓ Correct</span>
+                                                                                            ) : (
+                                                                                                <span className="text-red-400 font-extrabold text-[10px] uppercase bg-red-950/30 border border-red-500/30 px-2 py-0.5 rounded">✗ Wrong</span>
+                                                                                            )}
+                                                                                        </td>
+                                                                                        <td className="py-2 text-center">
+                                                                                            {g.wasAwarded ? (
+                                                                                                <span className="text-amber-400 text-[10px] font-bold">💰 Yes</span>
+                                                                                            ) : (
+                                                                                                <span className="text-zinc-600 text-[10px]">—</span>
+                                                                                            )}
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
                                                 </React.Fragment>
                                             ))
 
@@ -2386,12 +2504,19 @@ export default function AdminClientPage({
                                                         EDIT_
                                                     </button>
                                                     <button
+                                                        onClick={() => handleViewPointHistory(r.id, r.fullName)}
+                                                        className="px-2 py-1 rounded bg-purple-950/30 border border-purple-500/30 text-purple-400 hover:bg-purple-500 hover:text-black transition cursor-pointer text-[10px]"
+                                                    >
+                                                        HISTORY_
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleDeleteRover(r.id, r.fullName)}
                                                         disabled={loading === `delete-rover-${r.id}`}
                                                         className="px-2 py-1 rounded bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition cursor-pointer text-[10px]"
                                                     >
                                                         {loading === `delete-rover-${r.id}` ? "DELETING..." : "DELETE_"}
                                                     </button>
+
                                                 </div>
                                             </td>
                                         </tr>
@@ -2438,11 +2563,10 @@ export default function AdminClientPage({
                                                 <td className="p-3 font-mono text-[11px]">{node.latitude.toFixed(6)}, {node.longitude.toFixed(6)}</td>
                                                 <td className="p-3">{node.radiusMeters}m</td>
                                                 <td className="p-3">
-                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${
-                                                        node.isHotSpot
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${node.isHotSpot
                                                             ? "bg-amber-950/40 border border-amber-500/30 text-amber-400"
                                                             : "bg-zinc-800 text-zinc-500"
-                                                    }`}>
+                                                        }`}>
                                                         {node.isHotSpot ? "🚨 HOTSPOT" : "NORMAL"}
                                                     </span>
                                                 </td>
@@ -2532,8 +2656,8 @@ export default function AdminClientPage({
 
                                                 <td className="p-3">
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.type === "AUCTION"
-                                                            ? "bg-purple-950/50 border border-purple-500/30 text-purple-400"
-                                                            : "bg-blue-950/50 border border-blue-500/30 text-blue-400"
+                                                        ? "bg-purple-950/50 border border-purple-500/30 text-purple-400"
+                                                        : "bg-blue-950/50 border border-blue-500/30 text-blue-400"
                                                         }`}>
                                                         {item.type}
                                                     </span>
@@ -2547,8 +2671,8 @@ export default function AdminClientPage({
                                                 </td>
                                                 <td className="p-3">
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.isAvailable
-                                                            ? "bg-green-950/50 border border-green-500/30 text-green-400"
-                                                            : "bg-red-950/50 border border-red-500/30 text-red-400"
+                                                        ? "bg-green-950/50 border border-green-500/30 text-green-400"
+                                                        : "bg-red-950/50 border border-red-500/30 text-red-400"
                                                         }`}>
                                                         {item.isAvailable ? "ACTIVE" : "LOCKED"}
                                                     </span>
@@ -2606,8 +2730,8 @@ export default function AdminClientPage({
                             const filtered = completions.filter((c) => {
                                 const matchQuest = subFilterQuest ? c.quest.title === subFilterQuest : true;
                                 const matchUser = subFilterUser ? c.rover.fullName === subFilterUser : true;
-                                const matchDate = subFilterDate 
-                                    ? new Date(c.completedAt).toISOString().split("T")[0] === subFilterDate 
+                                const matchDate = subFilterDate
+                                    ? new Date(c.completedAt).toISOString().split("T")[0] === subFilterDate
                                     : true;
                                 return matchQuest && matchUser && matchDate;
                             });
@@ -2696,11 +2820,10 @@ export default function AdminClientPage({
                                                                 <LocalDateStr date={c.completedAt} />
                                                             </td>
                                                             <td className="p-3 font-mono">
-                                                                <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${
-                                                                    c.isVerified 
+                                                                <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${c.isVerified
                                                                         ? "bg-green-950/30 border border-green-500/30 text-green-400"
                                                                         : "bg-red-950/30 border border-red-500/30 text-red-400"
-                                                                }`}>
+                                                                    }`}>
                                                                     {c.isVerified ? "✓ APPROVED" : "✗ REJECTED / PENDING"}
                                                                 </span>
                                                             </td>
@@ -2832,11 +2955,10 @@ export default function AdminClientPage({
                                                     <LocalDateStr date={p.createdAt} />
                                                 </td>
                                                 <td className="p-3">
-                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${
-                                                        p.isDelivered
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${p.isDelivered
                                                             ? "bg-green-950/30 border border-green-500/30 text-green-400"
                                                             : "bg-amber-950/30 border border-amber-500/30 text-amber-400"
-                                                    }`}>
+                                                        }`}>
                                                         {p.isDelivered ? "✓ DELIVERED / GIVEN" : "⏳ PENDING COLLECTION"}
                                                     </span>
                                                 </td>
@@ -2855,11 +2977,10 @@ export default function AdminClientPage({
                                                             setLoading(null);
                                                         }}
                                                         disabled={loading !== null}
-                                                        className={`px-2 py-1 rounded text-[10px] font-extrabold uppercase transition cursor-pointer border ${
-                                                            p.isDelivered
+                                                        className={`px-2 py-1 rounded text-[10px] font-extrabold uppercase transition cursor-pointer border ${p.isDelivered
                                                                 ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black font-mono"
                                                                 : "bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500 hover:text-black font-mono"
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {p.isDelivered ? "Mark Pending" : "Mark Delivered"}
                                                     </button>
@@ -2917,8 +3038,8 @@ export default function AdminClientPage({
                                                 </td>
                                                 <td className="p-3">
                                                     <div className={`text-[10px] font-bold tracking-wide uppercase ${log.phone === "SYSTEM"
-                                                            ? "text-amber-400"
-                                                            : "text-purple-400"
+                                                        ? "text-amber-400"
+                                                        : "text-purple-400"
                                                         }`}>
                                                         {log.phone === "SYSTEM" ? "🛡️ SYSTEM_AUDIT" : `📱 WA: ${log.phone}`}
                                                     </div>
@@ -2933,10 +3054,10 @@ export default function AdminClientPage({
                                                 </td>
                                                 <td className="p-3 text-center">
                                                     <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${log.status === "LOG"
-                                                            ? "bg-amber-950/50 border border-amber-500/30 text-amber-400"
-                                                            : log.status === "SENT"
-                                                                ? "bg-green-950/50 border border-green-500/30 text-green-400"
-                                                                : "bg-red-950/50 border border-red-500/30 text-red-400"
+                                                        ? "bg-amber-950/50 border border-amber-500/30 text-amber-400"
+                                                        : log.status === "SENT"
+                                                            ? "bg-green-950/50 border border-green-500/30 text-green-400"
+                                                            : "bg-red-950/50 border border-red-500/30 text-red-400"
                                                         }`}>
                                                         {log.status}
                                                     </span>
@@ -3616,7 +3737,7 @@ export default function AdminClientPage({
                             <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest">
                                 🛍️ Purchase History: {purchaseHistory.title}
                             </h3>
-                            <button 
+                            <button
                                 onClick={() => setPurchaseHistory(null)}
                                 className="text-zinc-500 hover:text-amber-400 text-xs font-bold uppercase transition"
                             >
@@ -4239,6 +4360,78 @@ export default function AdminClientPage({
                     </div>
                 </div>
             )}
+            {/* Modal: Points History */}
+            {historyScoutId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-amber-500/40 rounded-lg max-w-2xl w-full p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] text-left font-mono my-8">
+                        <div className="flex justify-between items-center border-b border-amber-500/20 pb-2 mb-4">
+                            <h3 className="text-sm font-bold text-amber-400 uppercase tracking-widest">
+                                📊 POINTS_HISTORY: {historyScoutName}
+                            </h3>
+                            <button
+                                onClick={() => setHistoryScoutId(null)}
+                                className="text-zinc-500 hover:text-amber-400 font-bold text-sm cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {loadingHistory ? (
+                            <div className="py-8 text-center text-zinc-500 uppercase tracking-wider text-xs">
+                                ⏳ QUERYING LOG MATRIX...
+                            </div>
+                        ) : historyItems.length === 0 ? (
+                            <div className="py-8 text-center text-zinc-600 uppercase tracking-wider text-xs">
+                                No credit transaction records found.
+                            </div>
+                        ) : (
+                            <div className="max-h-[60vh] overflow-y-auto pr-1">
+                                <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
+                                    <thead>
+                                        <tr className="border-b border-amber-500/20 bg-black/60 text-amber-500 uppercase text-[9px] tracking-wider">
+                                            <th className="p-2.5 bg-black/40">Timestamp</th>
+                                            <th className="p-2.5 bg-black/40">Event</th>
+                                            <th className="p-2.5 bg-black/40 text-right">Delta</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {historyItems.map((item, idx) => {
+                                            const isPositive = item.change > 0;
+                                            return (
+                                                <tr key={idx} className="border-b border-zinc-900 hover:bg-zinc-900/50">
+                                                    <td className="p-2.5 text-zinc-500 font-mono text-[10px] whitespace-nowrap">
+                                                        <LocalDateStr date={item.timestamp} />
+                                                    </td>
+                                                    <td className="p-2.5">
+                                                        <div className="text-zinc-200">{item.description}</div>
+                                                        <div className="text-[9px] text-zinc-500 uppercase mt-0.5">
+                                                            {item.type}
+                                                        </div>
+                                                    </td>
+                                                    <td className={`p-2.5 text-right font-bold font-mono text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                                                        {isPositive ? `+${item.change}` : item.change} CR
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        <div className="flex justify-end mt-4 pt-3 border-t border-zinc-900">
+                            <button
+                                type="button"
+                                onClick={() => setHistoryScoutId(null)}
+                                className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border border-zinc-800 text-xs rounded transition uppercase cursor-pointer"
+                            >
+                                CLOSE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
