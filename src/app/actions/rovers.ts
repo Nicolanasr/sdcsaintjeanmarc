@@ -3084,7 +3084,7 @@ export async function spinLuckyWheel() {
     return { success: false, error: "Rover profile not found." };
   }
 
-  const SPIN_COST = 25;
+  const SPIN_COST = 50;
   if (profile.roverProfile.roverCredits < SPIN_COST) {
     return { success: false, error: `INSUFFICIENT_CREDITS: You need ${SPIN_COST} CR to spin the Cyber-Wheel.` };
   }
@@ -3098,11 +3098,11 @@ export async function spinLuckyWheel() {
   // Weighted Selection
   const outcomes = [
     { type: "LOSE", label: "Better luck next time!", weight: 350 },
-    { type: "SMALL_CREDITS", label: "Won +5 CR!", weight: 250 },
-    { type: "SOCIAL_ANTHEM", label: "Challenge: Sing SDC Anthem (+50 CR)", weight: 200 },
-    { type: "MED_CREDITS", label: "Won +20 CR!", weight: 100 },
+    { type: "SMALL_CREDITS", label: "Won +10 CR!", weight: 250 },
+    { type: "SOCIAL_ANTHEM", label: "Challenge: Sing SDC Anthem (+60 CR)", weight: 150 },
+    { type: "MED_CREDITS", label: "Won +30 CR!", weight: 100 },
     { type: "BIG_CREDITS", label: "Won +50 CR!", weight: 50 },
-    { type: "SOCIAL_LEAVES", label: "Challenge: Leaf Collector (+30 CR)", weight: 50 },
+    { type: "SOCIAL_LEAVES", label: "Challenge: Leaf Collector (+50 CR)", weight: 50 },
     { type: "DECOY_LAUNCHER", label: "Won 1x Decoy Node Launcher!", weight: 25 },
     { type: "SHIELD_GENERATOR", label: "Won 1x Capture Shield Generator!", weight: 20 },
     { type: "JACKPOT", label: "JACKPOT! Won +150 CR!", weight: 5 }
@@ -3126,8 +3126,8 @@ export async function spinLuckyWheel() {
   let pendingQuestDescription = "";
   let pendingQuestReward = 0;
 
-  if (selected.type === "SMALL_CREDITS") creditReward = 5;
-  else if (selected.type === "MED_CREDITS") creditReward = 20;
+  if (selected.type === "SMALL_CREDITS") creditReward = 10;
+  else if (selected.type === "MED_CREDITS") creditReward = 30;
   else if (selected.type === "BIG_CREDITS") creditReward = 50;
   else if (selected.type === "JACKPOT") creditReward = 150;
   else if (selected.type === "DECOY_LAUNCHER") wonItemTitle = "Decoy Node Launcher";
@@ -3135,11 +3135,11 @@ export async function spinLuckyWheel() {
   else if (selected.type === "SOCIAL_ANTHEM") {
     pendingQuestTitle = "Social Challenge: Sing SDC Anthem";
     pendingQuestDescription = "Sing the official Scouts des Cèdres anthem in front of a Leader to claim your reward.";
-    pendingQuestReward = 50;
+    pendingQuestReward = 60;
   } else if (selected.type === "SOCIAL_LEAVES") {
     pendingQuestTitle = "Social Challenge: Leaf Collector";
     pendingQuestDescription = "Collect 3 different leaves from the camp grounds and present them to the Command Tent.";
-    pendingQuestReward = 30;
+    pendingQuestReward = 50;
   }
 
   // Apply rewards
@@ -3163,23 +3163,21 @@ export async function spinLuckyWheel() {
       });
     }
   } else if (pendingQuestTitle) {
-    let quest = await prisma.quest.findFirst({
-      where: { title: pendingQuestTitle }
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const personalQuestTitle = `${pendingQuestTitle} (${profile.fullName}) [${timeStr}]`;
+
+    const quest = await prisma.quest.create({
+      data: {
+        title: personalQuestTitle,
+        description: pendingQuestDescription,
+        verificationType: "LEADER_SIGN_OFF",
+        creditReward: pendingQuestReward,
+        isReleased: false,
+        unlockedAtDate: new Date(),
+        phase: "LIVE_CAMP"
+      }
     });
 
-    if (!quest) {
-      quest = await prisma.quest.create({
-        data: {
-          title: pendingQuestTitle,
-          description: pendingQuestDescription,
-          verificationType: "LEADER_SIGN_OFF",
-          creditReward: pendingQuestReward,
-          isReleased: true,
-          unlockedAtDate: new Date(),
-          phase: "LIVE_CAMP"
-        }
-      });
-    }
 
     const existingCompletion = await prisma.questCompletion.findUnique({
       where: {

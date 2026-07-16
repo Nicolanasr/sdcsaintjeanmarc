@@ -25,7 +25,14 @@ export default async function TerminalPage({ params }: PageProps) {
     const campNow = new Date(Date.now() + 3 * 60 * 60 * 1000);
     const quests = await prisma.quest.findMany({
         where: {
-            isReleased: true,
+            OR: [
+                { isReleased: true },
+                {
+                    completions: {
+                        some: { roverId: session.profile.id }
+                    }
+                }
+            ],
             ...(isAdmin ? {} : { unlockedAtDate: { lte: campNow } }),
         },
         orderBy: { unlockedAtDate: "asc" },
@@ -35,6 +42,7 @@ export default async function TerminalPage({ params }: PageProps) {
             },
         },
     });
+
 
     // Group quests by calendar date (formatted as text)
     const groupedQuests: Record<string, typeof quests> = {};

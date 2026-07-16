@@ -11,13 +11,13 @@ interface LuckyWheelProps {
 
 const OUTCOMES = [
     { type: "LOSE", label: "Better luck next time!", color: "#27272a" },
-    { type: "SMALL_CREDITS", label: "Won +5 CR!", color: "#f59e0b" },
-    { type: "SOCIAL_ANTHEM", label: "Challenge: Sing SDC Anthem (+50 CR)", color: "#6366f1" },
-    { type: "MED_CREDITS", label: "Won +20 CR!", color: "#d97706" },
+    { type: "SMALL_CREDITS", label: "Won +10 CR!", color: "#f59e0b" },
+    { type: "SOCIAL_ANTHEM", label: "Challenge: Sing SDC Anthem (+60 CR)", color: "#6366f1" },
+    { type: "MED_CREDITS", label: "Won +30 CR!", color: "#d97706" },
     { type: "BIG_CREDITS", label: "Won +50 CR!", color: "#b45309" },
-    { type: "SOCIAL_LEAVES", label: "Challenge: Leaf Collector (+30 CR)", color: "#4f46e5" },
+    { type: "SOCIAL_LEAVES", label: "Challenge: Leaf Collector (+50 CR)", color: "#4f46e5" },
     { type: "DECOY_LAUNCHER", label: "Won 1x Decoy Node Launcher!", color: "#ea580c" },
-    { type: "SHIELD_GENERATOR", label: "Won 1x Capture Shield Generator!", color: "#06b6d4" },
+    { type: "SHIELD_GENERATOR", label: "Won 1x Capture Shield Generator!", color: "#10b981" },
     { type: "JACKPOT", label: "JACKPOT! Won +150 CR!", color: "#db2777" }
 ];
 
@@ -118,8 +118,8 @@ export default function LuckyWheel({ currentCredits, onSpinCompleted }: LuckyWhe
         setOutcome(null);
         setError(null);
 
-        if (credits < 25) {
-            setError("INSUFFICIENT_CREDITS: You need 25 CR to spin the Cyber-Wheel.");
+        if (credits < 50) {
+            setError("INSUFFICIENT_CREDITS: You need 50 CR to spin the Cyber-Wheel.");
             return;
         }
 
@@ -239,10 +239,10 @@ export default function LuckyWheel({ currentCredits, onSpinCompleted }: LuckyWhe
 
             <button
                 onClick={handleSpin}
-                disabled={spinning || credits < 25}
+                disabled={spinning || credits < 50}
                 className="w-full max-w-xs bg-amber-500 hover:bg-amber-400 disabled:opacity-30 disabled:pointer-events-none text-black font-extrabold text-xs py-3.5 rounded transition uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.2)] font-mono"
             >
-                🚀 {spinning ? "SPINNING MATRIX..." : "SPIN FOR 25 CR"}
+                🚀 {spinning ? "SPINNING MATRIX..." : "SPIN FOR 50 CR"}
             </button>
         </div>
     );
