@@ -2521,12 +2521,19 @@ export async function adminGetUserPointHistory(userId: string) {
       orderBy: { createdAt: "desc" },
     });
 
-    // 3. Fetch manual admin adjustments and node captures from whatsAppLog system logs
+    // 3. Fetch manual admin adjustments, node captures, and wheel spins from whatsAppLog system logs
+    const userProfile = await prisma.profile.findUnique({
+      where: { id: userId }
+    });
+
     const logs = await prisma.whatsAppLog.findMany({
       where: {
         phone: "SYSTEM",
-        body: { in: ["ADMIN_CREDITS_ADJUSTED", "GEONODE_CAPTURED", "GEONODE_GPS_CAPTURED"] },
-        error: { contains: userId }
+        body: { in: ["ADMIN_CREDITS_ADJUSTED", "GEONODE_CAPTURED", "GEONODE_GPS_CAPTURED", "LUCKY_WHEEL_SPIN"] },
+        OR: [
+          { error: { contains: userId } },
+          ...(userProfile ? [{ error: { contains: userProfile.fullName } }] : [])
+        ]
       },
       orderBy: { createdAt: "desc" }
     });
@@ -2562,7 +2569,7 @@ export async function adminGetUserPointHistory(userId: string) {
       });
     });
 
-    // Add Logs (Adjustments / Captures)
+    // Add Logs (Adjustments / Captures / Wheel Spins)
     logs.forEach((log) => {
       if (log.body === "ADMIN_CREDITS_ADJUSTED") {
         // Try parsing the amount
@@ -2591,6 +2598,29 @@ export async function adminGetUserPointHistory(userId: string) {
           change: 50,
           timestamp: log.createdAt,
         });
+      } else if (log.body === "LUCKY_WHEEL_SPIN") {
+        const costMatch = log.error?.match(/paid (\d+) CR/);
+        const spinCost = costMatch ? parseInt(costMatch[1], 10) : 50;
+
+        history.push({
+          id: `${log.id}-spin`,
+          type: "PURCHASE",
+          description: "Spun the Cyber-Wheel (Cost)",
+          change: -spinCost,
+          timestamp: log.createdAt,
+        });
+
+        const wonMatch = log.error?.match(/Won \+(\d+) CR/);
+        const wonAmount = wonMatch ? parseInt(wonMatch[1], 10) : 0;
+        if (wonAmount > 0) {
+          history.push({
+            id: `${log.id}-win`,
+            type: "QUEST",
+            description: "Won credits on Cyber-Wheel",
+            change: wonAmount,
+            timestamp: log.createdAt,
+          });
+        }
       }
     });
 
@@ -2622,11 +2652,18 @@ export async function getScoutPointHistory() {
       orderBy: { createdAt: "desc" },
     });
 
+    const userProfile = await prisma.profile.findUnique({
+      where: { id: userId }
+    });
+
     const logs = await prisma.whatsAppLog.findMany({
       where: {
         phone: "SYSTEM",
-        body: { in: ["ADMIN_CREDITS_ADJUSTED", "GEONODE_CAPTURED", "GEONODE_GPS_CAPTURED"] },
-        error: { contains: userId }
+        body: { in: ["ADMIN_CREDITS_ADJUSTED", "GEONODE_CAPTURED", "GEONODE_GPS_CAPTURED", "LUCKY_WHEEL_SPIN"] },
+        OR: [
+          { error: { contains: userId } },
+          ...(userProfile ? [{ error: { contains: userProfile.fullName } }] : [])
+        ]
       },
       orderBy: { createdAt: "desc" }
     });
@@ -2680,6 +2717,29 @@ export async function getScoutPointHistory() {
           change: 50,
           timestamp: log.createdAt,
         });
+      } else if (log.body === "LUCKY_WHEEL_SPIN") {
+        const costMatch = log.error?.match(/paid (\d+) CR/);
+        const spinCost = costMatch ? parseInt(costMatch[1], 10) : 50;
+
+        history.push({
+          id: `${log.id}-spin`,
+          type: "PURCHASE",
+          description: "Spun the Cyber-Wheel (Cost)",
+          change: -spinCost,
+          timestamp: log.createdAt,
+        });
+
+        const wonMatch = log.error?.match(/Won \+(\d+) CR/);
+        const wonAmount = wonMatch ? parseInt(wonMatch[1], 10) : 0;
+        if (wonAmount > 0) {
+          history.push({
+            id: `${log.id}-win`,
+            type: "QUEST",
+            description: "Won credits on Cyber-Wheel",
+            change: wonAmount,
+            timestamp: log.createdAt,
+          });
+        }
       }
     });
 
@@ -3205,7 +3265,7 @@ export async function spinLuckyWheel() {
 
   await logSystemAction(
     "LUCKY_WHEEL_SPIN",
-    `Rover "${profile.fullName}" spun the Cyber-Wheel, paid 25 CR, and outcome was "${selected.label}".`
+    `Rover "${profile.fullName}" spun the Cyber-Wheel, paid ${SPIN_COST} CR, and outcome was "${selected.label}". [USER_ID: ${profile.id}]`
   );
 
   return {
