@@ -142,7 +142,7 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
                 ) : quest.verificationType === "DIGITAL_CODE" ? (
                     <div>
                         {isCompleted ? (
-                            <div className="bg-green-950/30 border border-green-500/40 text-green-400 text-xs font-bold px-3 py-2 rounded text-center uppercase tracking-wider">
+                            <div className="bg-emerald-950/30 border border-emerald-500/40 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)] text-xs font-extrabold px-3 py-2.5 rounded text-center uppercase tracking-wider">
                                 ✓ Decrypted & Completed
                             </div>
                         ) : (
@@ -159,7 +159,7 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
                                     <button
                                         type="submit"
                                         disabled={loading || !code.trim()}
-                                        className="bg-amber-500 text-black hover:bg-amber-400 font-extrabold text-xs px-4 py-2 rounded transition shadow-[0_0_8px_rgba(245,158,11,0.2)] hover:shadow-[0_0_12px_rgba(245,158,11,0.4)] disabled:opacity-30 cursor-pointer whitespace-nowrap uppercase"
+                                        className="bg-amber-500 text-black hover:bg-amber-400 font-extrabold text-xs px-4 py-2 rounded transition shadow-[0_0_8px_rgba(245,158,11,0.2)] hover:shadow-[0_0_12px_rgba(245,158,11,0.4)] disabled:opacity-30 cursor-pointer whitespace-nowrap uppercase animate-pulse"
                                     >
                                         {loading ? "LOAD..." : "DECRYPT_"}
                                     </button>
@@ -175,22 +175,22 @@ export default function QuestCard({ quest, completion, locale }: QuestCardProps)
                 ) : (
                     <div>
                         {isCompleted ? (
-                            <div className="bg-green-950/30 border border-green-500/40 text-green-400 text-xs font-bold px-3 py-2 rounded text-center uppercase tracking-wider">
+                            <div className="bg-emerald-950/35 border border-emerald-500/50 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)] text-xs font-extrabold px-3 py-2.5 rounded text-center uppercase tracking-wider">
                                 ✓ Completed (Leader Signed Off)
                             </div>
                         ) : isAwaiting ? (
-                            <div className="bg-yellow-950/30 border border-yellow-500/40 text-yellow-400 text-xs font-bold px-3 py-2 rounded text-center uppercase tracking-wider animate-pulse">
+                            <div className="bg-cyan-950/40 border border-cyan-500/50 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.15)] text-xs font-extrabold px-3 py-2.5 rounded text-center uppercase tracking-wider animate-pulse">
                                 ⏳ Awaiting Leader Sign-Off
                             </div>
                         ) : (
                             <div className="flex flex-col gap-2">
-                                <div className="bg-red-950/30 border border-red-500/30 text-red-400 text-xs font-bold px-3 py-1.5 rounded text-center uppercase tracking-wider">
-                                    ⚠️ Locked (Needs Sign-Off)
+                                <div className="bg-amber-950/20 border border-amber-500/30 text-amber-500 text-xs font-extrabold px-3 py-2 rounded text-center uppercase tracking-wider">
+                                    ⚠️ Action Required (Needs Sign-Off)
                                 </div>
                                 <button
                                     onClick={handleRequestSignOff}
                                     disabled={loading}
-                                    className="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:border-amber-400 font-bold text-xs py-2 rounded transition cursor-pointer uppercase tracking-wider"
+                                    className="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:border-amber-400 font-bold text-xs py-2.5 rounded transition cursor-pointer uppercase tracking-wider"
                                 >
                                     {loading ? "PROCESSING..." : "REQUEST_LEADER_SIGN_OFF_"}
                                 </button>

@@ -164,6 +164,10 @@ export default function AdminClientPage({
     const [hotspotThreshold, setHotspotThreshold] = useState<number | "">(initialHotspotThreshold ?? "");
     const [hotspotCooldown, setHotspotCooldown] = useState<number | "">(initialHotspotCooldown);
 
+    // Search query states for tabs
+    const [scoutSearchQuery, setScoutSearchQuery] = useState("");
+    const [challengeSearchQuery, setChallengeSearchQuery] = useState("");
+    const [marketSearchQuery, setMarketSearchQuery] = useState("");
 
     // Workstation active tab state
     const [activeTab, setActiveTab] = useState<"scouts" | "challenges" | "registry" | "marketplace" | "submissions" | "purchases" | "logs">("scouts");
@@ -1931,8 +1935,35 @@ export default function AdminClientPage({
             </section>
 
 
+            {/* Live Metrics Summary Dashboard */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono">
+                <div className="bg-zinc-950/40 border border-amber-500/10 p-4 rounded-lg flex flex-col justify-between">
+                    <span className="text-[10px] text-amber-500/50 uppercase">👥 Scouts Registered</span>
+                    <span className="text-xl font-bold text-amber-400 mt-1">{rovers.length}</span>
+                </div>
+                <div className="bg-zinc-950/40 border border-amber-500/10 p-4 rounded-lg flex flex-col justify-between">
+                    <span className="text-[10px] text-amber-500/50 uppercase">🚩 Node Standings</span>
+                    <div className="flex justify-between items-baseline mt-1 font-bold">
+                        <span className="text-xs text-amber-500/80">A: {nodes.filter(n => n.controllingFaction === 'ALPHA').length}</span>
+                        <span className="text-xs text-amber-500/80">B: {nodes.filter(n => n.controllingFaction === 'BRAVO').length}</span>
+                    </div>
+                </div>
+                <div className="bg-zinc-950/40 border border-amber-500/10 p-4 rounded-lg flex flex-col justify-between">
+                    <span className="text-[10px] text-amber-500/50 uppercase">💰 Alpha Circ. Credits</span>
+                    <span className="text-base font-bold text-amber-400 mt-1">
+                        {rovers.filter(r => r.roverProfile?.faction === 'ALPHA').reduce((sum, r) => sum + (r.roverProfile?.roverCredits ?? 0), 0)} CR
+                    </span>
+                </div>
+                <div className="bg-zinc-950/40 border border-amber-500/10 p-4 rounded-lg flex flex-col justify-between">
+                    <span className="text-[10px] text-amber-500/50 uppercase">💰 Bravo Circ. Credits</span>
+                    <span className="text-base font-bold text-amber-400 mt-1">
+                        {rovers.filter(r => r.roverProfile?.faction === 'BRAVO').reduce((sum, r) => sum + (r.roverProfile?.roverCredits ?? 0), 0)} CR
+                    </span>
+                </div>
+            </div>
+
             {/* Workstation Console Tabs */}
-            <div className="flex flex-wrap border-b border-amber-500/20 bg-zinc-950/40 p-1.5 rounded-t-lg gap-2 text-xs font-bold uppercase tracking-wider">
+            <div className="flex flex-wrap border-b border-amber-500/20 bg-zinc-950/40 p-1.5 rounded-t-lg gap-2 text-xs font-bold uppercase tracking-wider mt-4">
                 <button
                     onClick={() => setActiveTab("scouts")}
                     className={`px-4 py-2 rounded transition cursor-pointer ${activeTab === "scouts"
@@ -2026,11 +2057,25 @@ export default function AdminClientPage({
                         </div>
 
                         <div className="flex flex-col gap-4">
+                            {/* Search Input Filter for Scouts */}
+                            <div className="w-full">
+                                <input
+                                    type="text"
+                                    placeholder="🔍 Search scouts by name or email..."
+                                    value={scoutSearchQuery}
+                                    onChange={(e) => setScoutSearchQuery(e.target.value)}
+                                    className="w-full max-w-md bg-black border border-amber-500/20 focus:border-amber-500 text-zinc-200 placeholder-zinc-700 text-xs px-3.5 py-2.5 rounded focus:outline-none transition font-sans font-medium"
+                                />
+                            </div>
+
                             <div className="flex flex-col gap-4">
                                 {rovers.length === 0 ? (
                                     <p className="text-zinc-600 text-xs py-2">No registered scouts found in database.</p>
                                 ) : (
-                                    rovers.map((rover) => {
+                                    rovers.filter(r => 
+                                        r.fullName.toLowerCase().includes(scoutSearchQuery.toLowerCase()) || 
+                                        (r.email && r.email.toLowerCase().includes(scoutSearchQuery.toLowerCase()))
+                                    ).map((rover) => {
                                         const pendingCompletions = rover.questCompletions.filter((c) => !c.isVerified);
                                         return (
                                             <div
@@ -2107,6 +2152,21 @@ export default function AdminClientPage({
                                                                     className="bg-zinc-950 border border-amber-500/35 text-zinc-100 text-[10px] px-2 py-1 rounded focus:outline-none w-24 font-semibold"
                                                                 />
                                                                 <span className="text-[8px] text-zinc-500 uppercase">Amount (+/-)</span>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {[10, 50, 100, -10, -50].map((amt) => (
+                                                                    <button
+                                                                        key={amt}
+                                                                        onClick={() => {
+                                                                            setInlineCreditsAmount(amt);
+                                                                            setInlineAdjustReason(amt > 0 ? "Milestone bonus" : "Penalty deduction");
+                                                                        }}
+                                                                        type="button"
+                                                                        className="bg-amber-500/10 hover:bg-amber-500/30 text-amber-400 border border-amber-500/20 hover:border-amber-500/50 text-[9px] px-2 py-0.5 rounded font-bold cursor-pointer"
+                                                                    >
+                                                                        {amt > 0 ? `+${amt}` : amt}
+                                                                    </button>
+                                                                ))}
                                                             </div>
                                                             <input
                                                                 type="text"
@@ -2245,6 +2305,17 @@ export default function AdminClientPage({
                             </div>
                         </div>
 
+                        {/* Search Input Filter for Challenges */}
+                        <div className="w-full">
+                            <input
+                                type="text"
+                                placeholder="🔍 Search challenges by title..."
+                                value={challengeSearchQuery}
+                                onChange={(e) => setChallengeSearchQuery(e.target.value)}
+                                className="w-full max-w-md bg-black border border-amber-500/20 focus:border-amber-500 text-zinc-200 placeholder-zinc-700 text-xs px-3.5 py-2.5 rounded focus:outline-none transition font-sans font-medium"
+                            />
+                        </div>
+
                         <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-hidden shadow-[0_0_10px_rgba(0,0,0,0.5)]">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-xs">
@@ -2265,7 +2336,9 @@ export default function AdminClientPage({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            quests.map((quest) => (
+                                            quests.filter(q => 
+                                                q.title.toLowerCase().includes(challengeSearchQuery.toLowerCase())
+                                            ).map((quest) => (
                                                 <React.Fragment key={quest.id}>
                                                     <tr className="hover:bg-amber-950/5 transition">
                                                         <td className="p-3.5">
@@ -2623,6 +2696,17 @@ export default function AdminClientPage({
                             </div>
                         </div>
 
+                        {/* Search Input Filter for Marketplace */}
+                        <div className="w-full">
+                            <input
+                                type="text"
+                                placeholder="🔍 Search items by title..."
+                                value={marketSearchQuery}
+                                onChange={(e) => setMarketSearchQuery(e.target.value)}
+                                className="w-full max-w-md bg-black border border-amber-500/20 focus:border-amber-500 text-zinc-200 placeholder-zinc-700 text-xs px-3.5 py-2.5 rounded focus:outline-none transition font-sans font-medium"
+                            />
+                        </div>
+
                         <div className="bg-zinc-950/40 border border-amber-500/20 rounded-lg overflow-x-auto shadow-[0_0_10px_rgba(0,0,0,0.5)]">
                             <table className="w-full text-left border-collapse text-xs font-semibold text-zinc-300">
                                 <thead>
@@ -2640,7 +2724,9 @@ export default function AdminClientPage({
                                             <td colSpan={5} className="p-8 text-center text-zinc-600">No shop items in catalog.</td>
                                         </tr>
                                     ) : (
-                                        shopItems.map((item) => (
+                                        shopItems.filter(item => 
+                                            item.title.toLowerCase().includes(marketSearchQuery.toLowerCase())
+                                        ).map((item) => (
                                             <tr key={item.id} className="border-b border-amber-500/10 hover:bg-amber-950/5">
                                                 <td className="p-3">
                                                     <div className="font-bold text-zinc-200 flex items-center gap-2">

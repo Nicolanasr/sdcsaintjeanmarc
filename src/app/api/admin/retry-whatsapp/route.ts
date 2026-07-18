@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: "No failed messages to retry", count: 0 });
     }
 
-    const wahaUrl = "https://waha.nicolasnasr.space/api/sendText";
+    const wahaUrl = "https://waha.nicolasnasr.org/api/sendText";
     const apiKey = "scout_world_cup_2026_secret_key";
     let successCount = 0;
 

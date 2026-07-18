@@ -46,7 +46,7 @@ export async function sendWhatsAppMessage(phone: string, text: string): Promise<
   }
 
   const chatId = formatWhatsAppChatId(phone);
-  const wahaUrl = "https://waha.nicolasnasr.space/api/sendText";
+  const wahaUrl = "https://waha.nicolasnasr.org/api/sendText";
   const apiKey = "scout_world_cup_2026_secret_key";
 
   console.log(`[WAHA] Attempting to send message to ${chatId} using session: default`);

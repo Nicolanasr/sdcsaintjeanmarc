@@ -123,6 +123,8 @@ export default function LuckyWheel({ currentCredits, onSpinCompleted }: LuckyWhe
             return;
         }
 
+        const originalCredits = credits;
+        setCredits((c) => Math.max(0, c - 50));
         setSpinning(true);
         cyberAudio.playScan();
 
@@ -130,12 +132,16 @@ export default function LuckyWheel({ currentCredits, onSpinCompleted }: LuckyWhe
             const res = await spinLuckyWheel();
             if (!res.success) {
                 setError(res.error || "Failed to complete spin.");
+                setCredits(originalCredits);
                 setSpinning(false);
                 return;
             }
 
             const winningType = res.outcome;
-            const targetIndex = OUTCOMES.findIndex((o) => o.type === winningType);
+            let targetIndex = OUTCOMES.findIndex((o) => o.type === winningType);
+            if (targetIndex === -1) {
+                targetIndex = 0;
+            }
 
             // Animation parameters
             const numSlices = OUTCOMES.length;

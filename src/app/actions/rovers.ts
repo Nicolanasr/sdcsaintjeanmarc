@@ -674,7 +674,7 @@ export async function captureNodeByPasscode(nodeId: string, passcode: string, la
       }
 
       if (result.status === "PROGRESSING" && result.isNewQueue) {
-        const alertMsg = `🚨 *HELIOS SECURITY BREACH: UNDER SIEGE!* 🚨\n\nFaction *${faction}* has initiated a hack on Hot-Spot *"${node.name}"*!\n\nOccupying Faction: *${node.controllingFaction || "NEUTRAL"}*\nTime remaining to defend: *60 seconds*!\nNavigate: https://sdcsaintjeanmarc.space/rovers/nav`;
+        const alertMsg = `🚨 *HELIOS SECURITY BREACH: UNDER SIEGE!* 🚨\n\nFaction *${faction}* has initiated a hack on Hot-Spot *"${node.name}"*!\n\nOccupying Faction: *${node.controllingFaction || "NEUTRAL"}*\nTime remaining to defend: *60 seconds*!\nNavigate: https://sdcsaintjeanmarc.org/rovers/nav`;
         getOperationHeliosGroupId().then(groupId => {
           sendWhatsAppMessage(groupId, alertMsg).catch(waErr => 
             console.error("[WAHA] Failed to broadcast siege notification:", waErr)
@@ -973,7 +973,7 @@ export async function captureNodeByGPS(nodeId: string, lat: number, lng: number)
       }
 
       if (result.status === "PROGRESSING" && result.isNewQueue) {
-        const alertMsg = `🚨 *HELIOS SECURITY BREACH: UNDER SIEGE!* 🚨\n\nFaction *${faction}* has initiated a hack on Hot-Spot *"${node.name}"*!\n\nOccupying Faction: *${node.controllingFaction || "NEUTRAL"}*\nTime remaining to defend: *60 seconds*!\nNavigate: https://sdcsaintjeanmarc.space/rovers/nav`;
+        const alertMsg = `🚨 *HELIOS SECURITY BREACH: UNDER SIEGE!* 🚨\n\nFaction *${faction}* has initiated a hack on Hot-Spot *"${node.name}"*!\n\nOccupying Faction: *${node.controllingFaction || "NEUTRAL"}*\nTime remaining to defend: *60 seconds*!\nNavigate: https://sdcsaintjeanmarc.org/rovers/nav`;
         getOperationHeliosGroupId().then(groupId => {
           sendWhatsAppMessage(groupId, alertMsg).catch(waErr => 
             console.error("[WAHA] Failed to broadcast siege notification:", waErr)
